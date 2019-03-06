@@ -15,6 +15,7 @@ Features include:
   * contextualization failure
   * infrastructure taking too long to deploy or configure
 * clouds can be grouped into regions
+* can automatically deploy Ansible hosts with public IP addresses, with only one per cloud, in order to use Ansible for contextualization
 
 IMC uses [Infrastructure Manager](https://github.com/grycap/im) to deploy and configure infrastructure on clouds, including OpenStack, AWS, Azure and Google Compute Platform. It can use either Ansible or Cloud-Init for contextualization. [Open Policy Agent](https://www.openpolicyagent.org) is used for making decisions about what clouds, VM flavours and images to use.
 
@@ -68,3 +69,42 @@ Each flavour has an optional `tags`, which should contain key-value pairs. This 
 }
 ```
 Tags can be taken into account with requirements and preferences.
+
+## Deployment
+Deploy Infrastructure Manager following the instructions https://github.com/grycap/im. Alternatively an existing deployment can be used. For testing it is adequate to run the IM Docker container:
+```
+docker run -d --name=im -p 127.0.0.1:8899:8899 grycap/im:1.7.4
+```
+
+Deploy Open Policy Agent:
+```
+docker run -p 127.0.0.1:8181:8181 -v <directory>:/policies --name=opa -d openpolicyagent/opa:latest run --server /policies
+```
+where `<directory>` should be replaced with the path to the directory on the host containing the policy and data files (i.e. the contents of https://github.com/alahiff/imc/tree/master/policies).
+
+Deploy the IM client. The simplest way to do this is using pip:
+```
+pip install IM-client==1.5.1
+```
+It is important to note that 1.5.2 and 1.5.3 cannot be used as they return incorrect exit codes.
+
+In the home directory of the user which will run IMC, create a file `.im_client.cfg`:
+```
+[im_client]
+xmlrpc_url=http://localhost:8899
+auth_file=/home/cloudadm/.im_auth.dat
+```
+This should be adjusted as necessary to point to the IM XML-RPC service and to the IM client authorization file, which should list all required clouds. See http://www.grycap.upv.es/im/documentation.php for information on what should appear in this file.
+
+## RADL files
+
+IM uses Resource and Application Description Language (RADL) files to describe the infrastructure to be deployed. IMC must be provided with a RADL file, noting that:
+* `${image}` will be replaced with the disk image name (essential)
+* `${instance}` will be replaced with the instance type (essential)
+* `${cloud}` will be replaced with the name of the cloud
+* `${ansible_ip}` will be replaced with the public IP address of an appropriate Ansible machine (if needed)
+* `${ansible_username}` will be replaced with the username of an appropriate Ansible machine (if needed)
+* `${ansible_private_key}` will be replaced with the private key of an appropriate Ansible machine (if needed)
+
+## Usage
+
