@@ -71,30 +71,18 @@ Each flavour has an optional `tags`, which should contain key-value pairs. This 
 Tags can be taken into account with requirements and preferences.
 
 ## Deployment
+### Infrastructure Manager
 Deploy Infrastructure Manager following the instructions https://github.com/grycap/im. Alternatively an existing deployment can be used. For testing it is adequate to run the IM Docker container:
 ```
 docker run -d --name=im -p 127.0.0.1:8899:8899 grycap/im:1.7.4
 ```
 
+### Open Policy Agent
 Deploy Open Policy Agent:
 ```
 docker run -p 127.0.0.1:8181:8181 -v <directory>:/policies --name=opa -d openpolicyagent/opa:latest run --server /policies
 ```
 where `<directory>` should be replaced with the path to the directory on the host containing the policy and data files (i.e. the contents of https://github.com/alahiff/imc/tree/master/policies).
-
-Deploy the IM client. The simplest way to do this is using pip:
-```
-pip install IM-client==1.5.1
-```
-It is important to note that 1.5.2 and 1.5.3 cannot be used as they return incorrect exit codes.
-
-In the home directory of the user which will run IMC, create a file `.im_client.cfg`:
-```
-[im_client]
-xmlrpc_url=http://localhost:8899
-auth_file=/home/cloudadm/.im_auth.dat
-```
-This should be adjusted as necessary to point to the IM XML-RPC service and to the IM client authorization file, which should list all required clouds. See http://www.grycap.upv.es/im/documentation.php for information on what should appear in this file.
 
 ## RADL files
 
