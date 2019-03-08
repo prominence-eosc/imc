@@ -82,7 +82,7 @@ Deploy Open Policy Agent:
 ```
 docker run -p 127.0.0.1:8181:8181 -v <directory>:/policies --name=opa -d openpolicyagent/opa:latest run --server /policies
 ```
-where `<directory>` should be replaced with the path to the directory on the host containing the policy and data files (i.e. the contents of https://github.com/alahiff/imc/tree/master/policies).
+where `<directory>` should be replaced with the path to the directory on the host containing the policy and data files (i.e. the contents of https://github.com/prominence-eosc/imc/tree/master/policies).
 
 ## RADL files
 
