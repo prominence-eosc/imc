@@ -4,7 +4,7 @@ This is the specification of the IMC REST API. This is still considered a work i
 
 ## Infrastructure API
 
-The Infrastructure API exposes endpoints for managing infrastructure.
+The Infrastructure API exposes endpoints for managing infrastructure. Note that the API is asynchronous, i.e. it immediately gives a response but the action is carried out in the background.
 
 ### Describe infrastructure
 
