@@ -18,6 +18,7 @@ ENTRYPOINT ["/usr/sbin/uwsgi", \
             "--plugins-dir", "/usr/lib/uwsgi", \
             "--plugins", "http,python", \
             "--http-socket", ":5000", \
+            "--threads", "2", \
             "--uid", "uwsgi", \
             "--manage-script-name", \
             "--master", \
