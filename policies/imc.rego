@@ -133,6 +133,23 @@ satisfies_dynamic_quotas(cloud) {
   not status[cloud.name].quota
 }
 
+# Network
+satisfies_network(cloud) {
+  not input.requirements.resources.network.bandwidth
+}
+
+satisfies_network(cloud) {
+  not input.requirements.resources.network
+}
+
+satisfies_network(cloud) {
+  not cloud.network.bandwidth
+}
+
+satisfies_network(cloud) {
+  input.requirements.resources.network.bandwidth <= cloud.network.bandwidth
+}
+
 # Get list of sites meeting requirements
 sites[site] {
   cloud = clouds[site]
@@ -145,6 +162,7 @@ sites[site] {
   satisfies_flavour(flavour)
   satisfies_dynamic_quotas(cloud)
   satisfies_static_quotas(cloud)
+  satisfies_network(cloud)
 }
 
 # Get images for a specified cloud
@@ -164,7 +182,7 @@ flavours[pair] {
 
 # Rank sites based on preferences
 rankedsites[pair] {
-  weight = region_weight(site)
+  weight = region_weight(site) + network_weight(site)
   site = input.clouds[i]
   pair = {"site":site, "weight":weight}
 }
@@ -181,6 +199,40 @@ region_weight(site) = output {
   i = cloud.region
   not input.preferences.regions[i]
   output = 0
+}
+
+# Network weight
+network_weight(site) = output {
+  cloud = clouds[site]
+  not cloud.network
+  output = 0
+}
+
+network_weight(site) = output {
+  cloud = clouds[site]
+  not cloud.network.bandwidth
+  output = 0
+}
+
+network_weight(site) = output {
+  not input.preferences.resources
+  output = 0
+}
+
+network_weight(site) = output {
+  not input.preferences.resources.network
+  output = 0
+}
+
+network_weight(site) = output {
+  not input.preferences.resources.network.bandwidth
+  output = 0
+}
+
+network_weight(site) = output {
+  cloud = clouds[site]
+  input.preferences.resources.network.bandwidth <= cloud.network.bandwidth
+  output = 0.9
 }
 
 # Flavour weight - resources
