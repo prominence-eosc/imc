@@ -68,7 +68,15 @@ Each flavour has an optional `tags`, which should contain key-value pairs. This 
     "infiniband":"true"
 }
 ```
-Tags can be taken into account with requirements and preferences.
+Tags can be taken into account with requirements and preferences. 
+
+A inter-node network bandwidth capability can also be specified for a cloud, e.g.:
+```json
+"network":{
+  "bandwidth":50
+}
+```
+This taken into account as a requirement or preference. For the case of a preference, region preferences have priority over network preferences. If you have multiple sites within a region, sites within that region with a network bandwidth larger than the preference will be ranked higher than others.
 
 ## Deployment
 ### Infrastructure Manager
