@@ -62,8 +62,8 @@ def db_init():
 
         db.commit()
         db.close()
-    except Exception as e:
-        print(e)
+    except Exception as ex:
+        print(ex)
         exit(1)
 
 # Configuration
@@ -166,8 +166,8 @@ def create_im_auth(cloud, token):
     try:
         with open('%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR']) as file:
             data = json.load(file)
-    except IOError:
-        logger.critical('Unable to open JSON config file')
+    except Exception as ex:
+        logger.critical('Unable to load JSON config file due to: %s', ex)
         return None
 
     info1 = {}
@@ -203,8 +203,8 @@ def get_new_token(username, password, client_id, client_secret, refresh_token, s
         response = requests.post(url + '/token', auth=(username, password), timeout=10, data=data)
     except requests.exceptions.Timeout:
         return (None, 0, 0, 'timed out')
-    except requests.exceptions.RequestException as e:
-        return (None, 0, 0, e)
+    except requests.exceptions.RequestException as ex:
+        return (None, 0, 0, ex)
 
     if response.status_code == 200:
         access_token = response.json()['access_token']
@@ -222,7 +222,7 @@ def check_token(token, url):
         response = requests.get(url + '/userinfo', headers=header, timeout=10)
     except requests.exceptions.Timeout:
         return 2
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         return 2
 
     if response.status_code == 200:
@@ -236,9 +236,9 @@ def check_if_token_required(cloud):
     try:
         with open('/etc/prominence/imc.json') as file:
             data = json.load(file)
-    except IOError:
-        logger.critical('Unable to open file containing tokens')
-        exit(1)
+    except Exception as ex:
+        logger.critical('Unable to open file containing tokens due to: %s', ex)
+        return (None, None, None, None, None, None, None)
 
     if 'credentials' in data:
         if cloud in data['credentials']:
@@ -279,9 +279,9 @@ def check_ansible_node(ip_addr, username):
     """
     try:
         k = paramiko.RSAKey.from_private_key_file(CONFIG.get('ansible', 'private_key'))
-    except Exception as e:
-        logger.crit('Unable to open private key file for Ansible due to: %s', e)
-        exit(1)
+    except Exception as ex:
+        logger.crit('Unable to open private key file for Ansible due to: %s', ex)
+        return False
 
     success = False
     try:
@@ -291,17 +291,30 @@ def check_ansible_node(ip_addr, username):
         stdin, stdout, stderr = client.exec_command('pwd')
         client.close()
         success = True
-    except Exception as e:
+    except Exception as ex:
         logger.info('Unable to execute command on Ansible node with ip %s', ip_addr)
     return success
 
-def db_deployment_get_im_infra_id(infra_id):
+def db_connect():
+    """
+    Connect to the DB
+    """
+    try:
+        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
+    except Exception as ex:
+        logger.critical('[db_connect] Unable to connect to sqlite DB because of %s', ex)
+        return None
+    return db
+
+def db_close(db):
+    db.close
+
+def db_deployment_get_im_infra_id(db, infra_id):
     im_infra_id = None
     status = None
     cloud = None
 
     try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
         cursor = db.cursor()
         cursor.execute('SELECT im_infra_id,status,cloud FROM deployments WHERE id="%s"' % infra_id)
 
@@ -310,14 +323,12 @@ def db_deployment_get_im_infra_id(infra_id):
             status = row[1]
             cloud = row[2]
 
-        db.close()
-
     except Exception as e:
         logger.critical('[db_get] Unable to connect to sqlite DB because of %s', e)
 
     return (im_infra_id, status, cloud)
 
-def db_deployment_create_with_retries(infra_id):
+def db_deployment_create_with_retries(db, infra_id):
     """
     Create deployment with retries & backoff
     """
@@ -325,42 +336,57 @@ def db_deployment_create_with_retries(infra_id):
     count = 0
     success = False
     while count < max_retries and not success:
-        success = db_deployment_create(infra_id)
-        count += 1
-        time.sleep(count/2)
+        success = db_deployment_create(db, infra_id)
+        if not success:
+            count += 1
+            db_close(db)
+            time.sleep(count/2)
+            db = db_connect()
     return success
 
-def db_deployment_create(infra_id):
+def db_deployment_create(db, infra_id):
     """
     Create deployment
     """
     try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
         cursor = db.cursor()
         cursor.execute('INSERT INTO deployments (id,status,creation) VALUES ("%s","accepted",%d)' % (infra_id, time.time()))
         db.commit()
-        db.close()
     except Exception as e:
         logger.critical('[db_set] Unable to connect to sqlite DB because of %s', e)
         return False
     return True
 
-def db_deployment_update_infra(infra_id, im_infra_id):
+def db_deployment_update_infra_with_retries(db, infra_id):
+    """
+    Create deployment with retries & backoff
+    """
+    max_retries = 10
+    count = 0
+    success = False
+    while count < max_retries and not success:
+        success = db_deployment_update_infra(db, infra_id)
+        if not success:
+            count += 1
+            db_close(db)
+            time.sleep(count/2)
+            db = db_connect()
+    return success
+
+def db_deployment_update_infra(db, infra_id):
     """
     Update deployment with IM infra id
     """
     try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
         cursor = db.cursor()
-        cursor.execute('UPDATE deployments SET im_infra_id="%s",status="creating" WHERE id="%s"' % (im_infra_id, infra_id))
+        cursor.execute('UPDATE deployments SET status="creating" WHERE id="%s"' % infra_id)
         db.commit()
-        db.close()
     except Exception as e:
         logger.critical('[db_deployment_update_infra] Unable to connect to sqlite DB because of %s', e)
         return False
     return True
 
-def db_deployment_update_status_with_retries(infra_id, status, cloud=None):
+def db_deployment_update_status_with_retries(db, infra_id, status, cloud=None, im_infra_id=None):
     """
     Update deployment status with retries
     """
@@ -368,23 +394,27 @@ def db_deployment_update_status_with_retries(infra_id, status, cloud=None):
     count = 0
     success = False
     while count < max_retries and not success:
-        success = db_deployment_update_status(infra_id, status, cloud)
-        count += 1
+        success = db_deployment_update_status(db, infra_id, status, cloud, im_infra_id)
+        if not success:
+            count += 1
+            db_close(db)
+            time.sleep(count/2)
+            db = db_connect()
     return success
 
-def db_deployment_update_status(id, status, cloud=None):
+def db_deployment_update_status(db, id, status, cloud=None, im_infra_id=None):
     """
     Update deployment status
     """
     try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
         cursor = db.cursor()
-        if cloud is not None:
+        if cloud is not None and im_infra_id is not None:
+            cursor.execute('UPDATE deployments SET status="%s",cloud="%s",im_infra_id="%s" WHERE id="%s"' % (status, cloud, im_infra_id, id))
+        elif cloud is not None:
             cursor.execute('UPDATE deployments SET status="%s",cloud="%s" WHERE id="%s"' % (status, cloud, id))
         else:
             cursor.execute('UPDATE deployments SET status="%s" WHERE id="%s"' % (status, id))
         db.commit()
-        db.close()
     except Exception as e:
         logger.critical('[db_deployment_update_status] Unable to connect to sqlite DB because of %s', e)
         return False
@@ -402,7 +432,7 @@ def db_set_token(cloud, token, expiry, creation):
         db.close()
     except Exception as e:
         logger.critical('[db_set] Unable to connect to sqlite DB because of %s', e)
-        exit(1)
+        return False
     return True
 
 def db_set_ansible_node(cloud, infrastructure_id, public_ip, username):
@@ -417,8 +447,8 @@ def db_set_ansible_node(cloud, infrastructure_id, public_ip, username):
         db.close()
     except Exception as e:
         logger.critical('[db_set] Unable to connect to sqlite DB because of %s', e)
-        exit(1)
-
+        return False
+    return True
 
 def db_get_ansible_node(cloud):
     """
@@ -444,7 +474,6 @@ def db_get_ansible_node(cloud):
 
     except Exception as e:
         logger.critical('[db_get] Unable to connect to sqlite DB because of %s', e)
-        exit(1)
 
     return (infrastructure_id, public_ip, username, timestamp)
 
@@ -486,7 +515,8 @@ def db_delete_ansible_node(cloud):
         db.close()
     except Exception as e:
         logger.critical('[db_delete] Unable to connect to sqlite DB because of %s', e)
-        exit(1)
+        return False
+    return True
 
 def db_delete_token(cloud):
     """
@@ -500,7 +530,8 @@ def db_delete_token(cloud):
         db.close()
     except Exception as e:
         logger.critical('[db_delete] Unable to connect to sqlite DB because of %s', e)
-        exit(1)
+        return False
+    return True
 
 def delete_ansible_node(cloud):
     """
@@ -511,7 +542,7 @@ def delete_ansible_node(cloud):
 
     if infrastructure_id is None:
         logger.critical('[delete_ansible_node] Unable to get infrastructure id for Ansible node in cloud %s', cloud)
-        exit(1)
+        return False
 
     logger.info('[delete_ansible_node] About to delete Ansible node from clouds %s with infrastructure id %s', cloud, infrastructure_id)
 
@@ -524,13 +555,15 @@ def delete_ansible_node(cloud):
     (status, msg) = client.getauth()
     if status != 0:
         logger.critical('Error reading IM auth file: %s', msg)
-        exit(1)
+        return False
     (return_code, msg) = client.destroy(infrastructure_id, int(CONFIG.get('timeouts', 'deletion')))
     if return_code != 0:
         logger.critical('Unable to destroy Ansible node infrastructure with id "%s" on cloud "%s" due to "%s"', infrastructure_id, cloud, msg)
 
     # Delete from the DB
     db_delete_ansible_node(cloud)
+
+    return True
 
 def setup_ansible_node(cloud):
     """
@@ -597,9 +630,10 @@ def get_static_ansible_node(cloud):
     try:
         with open('/etc/prominence/imc.json') as file:
             data = json.load(file)
-    except IOError:
-        logger.critical('Unable to open file containing static Ansible nodes')
-        exit(1)
+    except Exception as ex:
+        logger.critical('Unable to open file containing static Ansible nodes due to: %s', ex)
+        return (None, None)
+
 
     if 'ansible' in data:
         if cloud in data['ansible']:
@@ -619,7 +653,7 @@ def get_public_ip(infrastructure_id):
     (status, msg) = client.getauth()
     if status != 0:
         logger.critical('Error reading IM auth file: %s', msg)
-        exit(1)
+        return None
 
     # Get data associated with the Infra ID & find the public IP
     (state, msg) = client.getdata(infrastructure_id, 60)
@@ -628,7 +662,6 @@ def get_public_ip(infrastructure_id):
         public_ip = m.group(1)
 
     return public_ip
-
 
 def set_status(cloud, state):
     """
@@ -641,7 +674,6 @@ def set_status(cloud, state):
         response = requests.put('%s/v1/data/status/failures/%s' % (OPA_URL, cloud), json=data, timeout=OPA_TIMEOUT)
     except requests.exceptions.RequestException as e:
         logger.warning('Unable to write cloud status to Open Policy Agent due to "%s"', e)
-
 
 def get_clouds(data):
     """
@@ -659,7 +691,6 @@ def get_clouds(data):
         return response.json()['result']
 
     return []
-
 
 def get_ranked_clouds(data, clouds):
     """
@@ -679,7 +710,6 @@ def get_ranked_clouds(data, clouds):
 
     return []
 
-
 def get_image(data, cloud):
     """
     Get name of an image at the specified site meeting any given requirements
@@ -698,7 +728,6 @@ def get_image(data, cloud):
             return response.json()['result'][0]
 
     return None
-
 
 def get_flavour(data, cloud):
     """
@@ -722,7 +751,6 @@ def get_flavour(data, cloud):
 
     return flavour
 
-
 def deploy_ansible_node(cloud):
     """
     Deploy an Ansible node with public IP address
@@ -735,7 +763,7 @@ def deploy_ansible_node(cloud):
             radl_t = Template(data.read())
     except IOError:
         logger.critical('Unable to open RADL template for Ansible node from file "%s"', filename)
-        exit(1)
+        return None
 
     # Generate requirements for the Ansible node
     requirements = {}
@@ -758,11 +786,11 @@ def deploy_ansible_node(cloud):
 
     if image is None:
         logger.critical('Unable to deploy Ansible node because no acceptable image is available')
-        exit(1)
+        return None
 
     if flavour is None:
         logger.critical('Unable to deploy Ansible node because no acceptable flavour is available')
-        exit(1)
+        return None
 
     logger.info('Using image "%s" and flavour "%s" to deploy Ansible node', image, flavour)
 
@@ -772,14 +800,14 @@ def deploy_ansible_node(cloud):
             private_key = data.read()
     except IOError:
         logger.critical('Unable to open private key for Ansible node from file "%s"', filename)
-        exit(1)
+        return None
 
     try:
         with open(CONFIG.get('ansible', 'public_key')) as data:
             public_key = data.read()
     except IOError:
         logger.critical('Unable to open public key for Ansible node from file "%s"', filename)
-        exit(1)
+        return None
 
     # Create complete RADL content
     try:
@@ -790,7 +818,7 @@ def deploy_ansible_node(cloud):
                                  cloud=cloud)
     except Exception as e:
         logger.critical('Error creating RADL from template for Ansible node due to %s', e)
-        exit(1)
+        return None
 
     # Write RADL to temporary file
     file_desc, path = tempfile.mkstemp()
@@ -799,7 +827,7 @@ def deploy_ansible_node(cloud):
             tmp.write(radl)
     except:
         logger.critical('Error writing RADL file for Ansible node')
-        exit(1)
+        return None
 
     time_begin = time.time()
 
@@ -811,8 +839,7 @@ def deploy_ansible_node(cloud):
 
     return infra_id
 
-
-def deploy_job(radl_contents, requirements, preferences, unique_id, dryrun):
+def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     """
     Find an appropriate cloud to deploy infrastructure
     """
@@ -840,13 +867,12 @@ def deploy_job(radl_contents, requirements, preferences, unique_id, dryrun):
 
     if not clouds:
         logger.critical('No clouds exist which meet the requested requirements')
-        exit(1)
+        return False
 
     # Update dynamic information about each cloud if necessary
 
-    # Shuffle list of clouds if needed FIXME
-    #if args.random:
-    #    shuffle(clouds)
+    # Shuffle list of clouds
+    shuffle(clouds)
 
     # Rank clouds as needed
     clouds_ranked = get_ranked_clouds(userdata, clouds)
@@ -855,11 +881,15 @@ def deploy_job(radl_contents, requirements, preferences, unique_id, dryrun):
         clouds_ranked_list.append(item['site'])
     logger.info('Ranked clouds = [%s]', ','.join(clouds_ranked_list))
 
+    # Update status
+    db_deployment_update_infra_with_retries(db, unique_id)
+
     # Try to create infrastructure, exiting on the first successful attempt
     time_begin = time.time()
     success = False
 
     for item in sorted(clouds_ranked, key=lambda k: k['weight'], reverse=True):
+        infra_id = None
         cloud = item['site']
         image = get_image(userdata, cloud)
         flavour = get_flavour(userdata, cloud)
@@ -887,11 +917,11 @@ def deploy_job(radl_contents, requirements, preferences, unique_id, dryrun):
             continue
 
         # Setup Ansible node if necessary
-        if requirements['resources']['instances'] > 1:
+        if requirements['resources']['instances'] > 1 and 'Google' not in cloud:
             (ip_addr, username) = setup_ansible_node(cloud)
             if ip_addr is None or username is None:
                 logger.critical('Unable to find existing or create an Ansible node in cloud %s because ip=%s,username=%s', cloud, ip_addr, username)
-                break
+                continue
             logger.info('Ansible node in cloud %s available, now will deploy infrastructure for the job', cloud)
         else:
             logger.info('Ansible node not required')
@@ -904,7 +934,7 @@ def deploy_job(radl_contents, requirements, preferences, unique_id, dryrun):
                 private_key = data.read()
         except IOError:
             logger.critical('Unable to open private key for Ansible node from file "%s"', filename)
-            exit(1)
+            return False
 
 
         # Create complete RADL content
@@ -918,7 +948,7 @@ def deploy_job(radl_contents, requirements, preferences, unique_id, dryrun):
                                      )
         except Exception as e:
             logger.critical('Error creating RADL from template due to %s', e)
-            exit(1)
+            return False
 
         # Write RADL to temporary file
         file_desc, path = tempfile.mkstemp()
@@ -927,7 +957,7 @@ def deploy_job(radl_contents, requirements, preferences, unique_id, dryrun):
                 tmp.write(radl)
         except:
             logger.critical('Error writing RADL file')
-            exit(1)
+            return False
 
         # Deploy infrastructure
         infra_id = deploy(path, cloud, time_begin, unique_id)
@@ -938,13 +968,13 @@ def deploy_job(radl_contents, requirements, preferences, unique_id, dryrun):
         if infra_id is not None:
             success = True
             if unique_id is not None:
-                db_deployment_update_status(unique_id, 'configured', cloud)
+                print('Success deployment',unique_id,cloud)
+                db_deployment_update_status_with_retries(db, unique_id, 'configured', cloud, infra_id)
             break
 
     if unique_id is not None and infra_id is None:
-        db_deployment_update_status(unique_id, 'failed', 'none')
+        db_deployment_update_status_with_retries(db, unique_id, 'failed', 'none', 'none')
     return success
-
 
 def deploy(path, cloud, time_begin, unique_id):
     """
@@ -959,10 +989,10 @@ def deploy(path, cloud, time_begin, unique_id):
     (status, msg) = client.getauth()
     if status != 0:
         logger.critical('Error reading IM auth file: %s', msg)
-        exit(1)
+        return None
 
     # Retry loop
-    retries_per_cloud = 4
+    retries_per_cloud = int(CONFIG.get('deployment', 'retries'))
     retry = 0
     success = False
     while retry < retries_per_cloud + 1 and success is not True:
@@ -978,9 +1008,9 @@ def deploy(path, cloud, time_begin, unique_id):
         logger.info('Duration of create request %d s on cloud %s', duration, cloud)
 
         if infrastructure_id is not None:
-            logger.info('Created infrastructure with id "%s" on cloud "%s" and waiting for it to be configured', infrastructure_id, cloud)
-            if unique_id is not None:
-                db_deployment_update_infra(unique_id, infrastructure_id)
+            logger.info('Created infrastructure with id "%s" on cloud "%s" for id "%s" and waiting for it to be configured', infrastructure_id, cloud, unique_id)
+            #if unique_id is not None:
+            #    db_deployment_update_infra(db, unique_id, infrastructure_id)
 
             # Wait for infrastructure to enter the configured state
             time_created = time.time()
@@ -990,6 +1020,7 @@ def deploy(path, cloud, time_begin, unique_id):
             while True:
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
+                    logger.info('Giving up, waiting too long so will destroy infrastructure with id "%s"', infrastructure_id)
                     destroy(client, infrastructure_id, cloud)
                     return None
 
@@ -1003,12 +1034,12 @@ def deploy(path, cloud, time_begin, unique_id):
 
                 # Log a change in state
                 if state != state_previous:
-                    logger.info('Infrastructure is in state %s', state)
+                    logger.info('Infrastructure with our id "%s" and IM id "%s" is in state %s', unique_id, infrastructure_id, state)
                     state_previous = state
 
                 # Handle configured state
                 if state == 'configured':
-                    logger.info('Successfully configured infrastructure with id "%s" on cloud "%s"', infrastructure_id, cloud)
+                    logger.info('Successfully configured infrastructure with our id "%s" on cloud "%s"', infrastructure_id, cloud)
                     success = True
                     return infrastructure_id
 
@@ -1028,7 +1059,7 @@ def deploy(path, cloud, time_begin, unique_id):
 
                 # Destroy infrastructure for which deployment failed
                 if state == 'failed':
-                    logger.warning('Infrastructure creation failed, so destroying')
+                    logger.warning('Infrastructure creation failed, so destroying; error was "%s"', msg)
                     set_status(cloud, state)
                     destroy(client, infrastructure_id, cloud)
                     break
@@ -1066,50 +1097,82 @@ def deploy(path, cloud, time_begin, unique_id):
 
 def imc_delete(unique_id):
     """
-    Delete the infrastructure from the specified id
+    Delete the infrastructure with the specified id - wrapper
     """
+    try:
+        imc_delete_(unique_id)
+    except Exception as ex:
+        logger.critical('Exception deleting infrastructure: "%s"' % ex)
+    return
+
+def imc_delete_(unique_id):
+    """
+    Delete the infrastructure with the specified id
+    """
+    db = db_connect()
     logger.info('Deleting infrastructure "%s"', unique_id)
-    db_deployment_update_status(unique_id, 'deleting')
+    db_deployment_update_status_with_retries(db, unique_id, 'deleting')
 
-    (im_infra_id, infra_status, cloud) = db_deployment_get_im_infra_id(unique_id)
+    (im_infra_id, infra_status, cloud) = db_deployment_get_im_infra_id(db, unique_id)
+
     if im_infra_id is not None and cloud is not None:
-        # Check & get auth token if necessary
-        token = get_token(cloud)
+        match_obj_name = re.match(r'\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b', im_infra_id)
+        if match_obj_name:
+            logger.info('Deleting IM infrastructure with id "%s"', im_infra_id)
+            # Check & get auth token if necessary
+            token = get_token(cloud)
 
-        # Setup Infrastructure Manager client
-        im_auth = create_im_auth(cloud, token)
-        client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
-        (status, msg) = client.getauth()
-        if status != 0:
-            logger.critical('Error reading IM auth file: %s', msg)
-            return 1
+            # Setup Infrastructure Manager client
+            im_auth = create_im_auth(cloud, token)
+            client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
+            (status, msg) = client.getauth()
+            if status != 0:
+                logger.critical('Error reading IM auth file: %s', msg)
+                db_close(db)
+                return 1
 
-        destroyed = destroy(client, im_infra_id, cloud)
+            destroyed = destroy(client, im_infra_id, cloud)
 
-        if destroyed:
-            db_deployment_update_status(unique_id, 'deleted')
-
-        logger.info('Destroyed infrastructure "%s" with IM infrastructure id "%s" with exit code %d', unique_id, im_infra_id, return_code)
+            if destroyed:
+                db_deployment_update_status_with_retries(db, unique_id, 'deleted')
+                logger.info('Destroyed infrastructure "%s" with IM infrastructure id "%s"', unique_id, im_infra_id)
+            else:
+                logger.info('Unable to destroy infrastructure "%s" with IM infrastructure id "%s"', unique_id, im_infra_id)
     else:
         logger.info('No need to destroy infrastructure because IM infrastructure id is "%s" and cloud is "%s"', im_infra_id, cloud)
+    db_close(db)
     return 0
 
 def imc_status(unique_id):
     """
     Return the status of the infrastructure from the specified id
     """
-    (im_infra_id, status, cloud) = db_deployment_get_im_infra_id(unique_id)
+    db = db_connect()
+    (im_infra_id, status, cloud) = db_deployment_get_im_infra_id(db, unique_id)
+    db_close(db)
     return (im_infra_id, status, cloud)
 
 def imc_deploy(inputj, unique_id):
+    """
+    Deploy infrastructure given a JSON specification and id - wrapper
+    """
+    try:
+        imc_deploy_(inputj, unique_id)
+    except Exception as ex:
+        logger.critical('Exception deploying infrastructure: "%s"' % ex)
+    return
+
+def imc_deploy_(inputj, unique_id):
     """
     Deploy infrastructure given a JSON specification and id
     """
     dryrun = False
     logger.info('Deploying infrastructure with id %s', unique_id)
 
+    db = db_connect()
+
     # Update DB
-    success = db_deployment_create_with_retries(unique_id)
+    success = db_deployment_create_with_retries(db, unique_id)
     if not success:
         logger.critical('Unable to update DB so unable to deploy infrastructure')
         return 1
@@ -1137,7 +1200,12 @@ def imc_deploy(inputj, unique_id):
         radl_contents = base64.b64decode(inputj['radl'])
 
     # Attempt to deploy infrastructure
-    success = deploy_job(radl_contents, requirements, preferences, unique_id, dryrun)
+    success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
+
+    if not success:
+        db_deployment_update_status_with_retries(db, unique_id, 'unable')
+
+    db_close(db)
 
     if not success:
         logger.critical('Unable to deploy infrastructure on any cloud')
