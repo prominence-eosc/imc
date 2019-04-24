@@ -19,6 +19,7 @@ import requests
 from flask import Flask, request, jsonify
 import paramiko
 import imclient
+import opaclient
 
 app = Flask(__name__)
 
@@ -81,10 +82,6 @@ executor = ProcessPoolExecutor(int(CONFIG.get('pool','size')))
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
 logger = logging.getLogger('imc')
 
- # Interacting with Open Policy Agent
-OPA_TIMEOUT = int(CONFIG.get('opa', 'timeout'))
-OPA_URL = CONFIG.get('opa', 'url')
-
 # Initialize DB
 db_init()
 
@@ -114,6 +111,34 @@ def delete_infrastructure(infra_id):
     """
     executor.submit(imc_delete, infra_id)
     return jsonify({}), 200
+
+def create_basic_radl(filename):
+    """
+    Reads the specified RADL file and generates new RADL with all configure and contextualize
+    blocks removed.
+    """
+    with open(filename) as data:
+        radl = data.readlines()
+
+    ignore = False
+    skip_next_line = False
+    radl_new = ''
+
+    for line in radl:
+        if line.startswith('configure ') or line.startswith('contextualize'):
+            ignore = True
+
+        if not ignore and not skip_next_line:
+            radl_new += line
+
+        if skip_next_line:
+            skip_next_line = False
+
+        if line.startswith('@end') and ignore:
+            ignore = False
+            skip_next_line = True
+
+    return(radl_new)
 
 def get_token(cloud):
     """
@@ -234,7 +259,7 @@ def check_if_token_required(cloud):
     Check if the given cloud requires a token for access
     """
     try:
-        with open('/etc/prominence/imc.json') as file:
+        with open('%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR']) as file:
             data = json.load(file)
     except Exception as ex:
         logger.critical('Unable to open file containing tokens due to: %s', ex)
@@ -565,7 +590,7 @@ def delete_ansible_node(cloud):
 
     return True
 
-def setup_ansible_node(cloud):
+def setup_ansible_node(cloud, db):
     """
     Find or create an Ansible node inside the specified cloud
     """
@@ -580,7 +605,10 @@ def setup_ansible_node(cloud):
             logger.info('Successfully tested Ansible node with ip %s on cloud %s', ip_addr, cloud)
             return (ip_addr, username)
         else:
-            logger.info('Ansible node with ip %s on cloud %s not accessible', ip_addr, cloud)
+            # If we find a static Ansible node and it doesn't work we will not try to create a
+            # dynamic one as there must be a reason why a static node was created
+            logger.critical('Ansible node with ip %s on cloud %s not accessible', ip_addr, cloud)
+            return (None, None)
     logger.info('No functional static Ansible node found for cloud %s', cloud)
 
     # Check if there is a dynamic Ansible node
@@ -598,7 +626,7 @@ def setup_ansible_node(cloud):
     logger.info('No functional dynamic Ansible node found for cloud %s', cloud)
 
     # Try to create a dynamic Ansible node
-    infrastructure_id = deploy_ansible_node(cloud)
+    infrastructure_id = deploy_ansible_node(cloud, db)
 
     if infrastructure_id is None:
         logger.critical('Unable to create Ansible node on cloud "%s"', cloud)
@@ -628,7 +656,7 @@ def get_static_ansible_node(cloud):
     Check if the given cloud has a static Ansible node and return it's details if it does
     """
     try:
-        with open('/etc/prominence/imc.json') as file:
+        with open('%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR']) as file:
             data = json.load(file)
     except Exception as ex:
         logger.critical('Unable to open file containing static Ansible nodes due to: %s', ex)
@@ -663,95 +691,7 @@ def get_public_ip(infrastructure_id):
 
     return public_ip
 
-def set_status(cloud, state):
-    """
-    Write cloud status information
-    """
-    data = {}
-    data['epoch'] = time.time()
-
-    try:
-        response = requests.put('%s/v1/data/status/failures/%s' % (OPA_URL, cloud), json=data, timeout=OPA_TIMEOUT)
-    except requests.exceptions.RequestException as e:
-        logger.warning('Unable to write cloud status to Open Policy Agent due to "%s"', e)
-
-def get_clouds(data):
-    """
-    Get list of clouds meeting requirements
-    """
-    data = {'input':data}
-
-    try:
-        response = requests.post('%s/v1/data/imc/sites' % OPA_URL, json=data, timeout=OPA_TIMEOUT)
-    except requests.exceptions.RequestException as e:
-        logger.critical('Unable to get list of sites from Open Policy Agent due to "%s"', e)
-        return []
-
-    if 'result' in response.json():
-        return response.json()['result']
-
-    return []
-
-def get_ranked_clouds(data, clouds):
-    """
-    Get list of ranked clouds based on preferences
-    """
-    data = {'input':data}
-    data['input']['clouds'] = clouds
-
-    try:
-        response = requests.post('%s/v1/data/imc/rankedsites' % OPA_URL, json=data, timeout=OPA_TIMEOUT)
-    except requests.exceptions.RequestException as e:
-        logger.critical('Unable to get list of ranked sites from Open Policy Agent due to "%s"', e)
-        return []
-
-    if 'result' in response.json():
-        return response.json()['result']
-
-    return []
-
-def get_image(data, cloud):
-    """
-    Get name of an image at the specified site meeting any given requirements
-    """
-    data = {'input':data}
-    data['input']['cloud'] = cloud
-
-    try:
-        response = requests.post('%s/v1/data/imc/images' % OPA_URL, json=data, timeout=OPA_TIMEOUT)
-    except requests.exceptions.RequestException as e:
-        logger.critical('Unable to get image from Open Policy Agent due to "%s"', e)
-        return None
-
-    if 'result' in response.json():
-        if len(response.json()['result']) > 0:
-            return response.json()['result'][0]
-
-    return None
-
-def get_flavour(data, cloud):
-    """
-    Get name of a flavour at the specified site meeting requirements. We are given a list
-    of flavours and weights, and we pick the flavour with the lowest weight.
-    """
-    data = {'input':data}
-    data['input']['cloud'] = cloud
-
-    try:
-        response = requests.post('%s/v1/data/imc/flavours' % OPA_URL, json=data, timeout=OPA_TIMEOUT)
-    except requests.exceptions.RequestException as e:
-        logger.critical('Unable to get flavour from Open Policy Agent due to "%s"', e)
-        return None
-
-    flavour = None
-    if 'result' in response.json():
-        if len(response.json()['result']) > 0:
-            flavours = sorted(response.json()['result'], key=lambda k: k['weight'])
-            flavour = flavours[0]['name']
-
-    return flavour
-
-def deploy_ansible_node(cloud):
+def deploy_ansible_node(cloud, db):
     """
     Deploy an Ansible node with public IP address
     """
@@ -780,9 +720,12 @@ def deploy_ansible_node(cloud):
     # Generate JSON to be given to Open Policy Agent
     userdata = {'requirements':requirements, 'preferences':{}}
 
+    # Setup Open Policy Agent client
+    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+
     # Get the image & flavour
-    image = get_image(userdata, cloud)
-    flavour = get_flavour(userdata, cloud)
+    image = opa_client.get_image(userdata, cloud)
+    flavour = opa_client.get_flavour(userdata, cloud)
 
     if image is None:
         logger.critical('Unable to deploy Ansible node because no acceptable image is available')
@@ -832,7 +775,7 @@ def deploy_ansible_node(cloud):
     time_begin = time.time()
 
     # Deploy infrastructure
-    infra_id = deploy(path, cloud, time_begin, None)
+    infra_id = deploy(path, cloud, time_begin, None, db)
 
     # Remove temporary RADL file
     os.remove(path)
@@ -861,8 +804,11 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     # Generate JSON to be given to Open Policy Agent
     userdata = {'requirements':requirements, 'preferences':preferences}
 
+    # Setup Open Policy Agent client
+    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+
     # Get list of clouds meeting the specified requirements
-    clouds = get_clouds(userdata)
+    clouds = opa_client.get_clouds(userdata)
     logger.info('Suitable clouds = [%s]', ','.join(clouds))
 
     if not clouds:
@@ -875,7 +821,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     shuffle(clouds)
 
     # Rank clouds as needed
-    clouds_ranked = get_ranked_clouds(userdata, clouds)
+    clouds_ranked = opa_client.get_ranked_clouds(userdata, clouds)
     clouds_ranked_list = []
     for item in sorted(clouds_ranked, key=lambda k: k['weight'], reverse=True):
         clouds_ranked_list.append(item['site'])
@@ -891,8 +837,8 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     for item in sorted(clouds_ranked, key=lambda k: k['weight'], reverse=True):
         infra_id = None
         cloud = item['site']
-        image = get_image(userdata, cloud)
-        flavour = get_flavour(userdata, cloud)
+        image = opa_client.get_image(userdata, cloud)
+        flavour = opa_client.get_flavour(userdata, cloud)
         logger.info('Attempting to deploy on cloud "%s" with image "%s" and flavour "%s"', cloud, image, flavour)
 
         if flavour is None:
@@ -918,7 +864,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
 
         # Setup Ansible node if necessary
         if requirements['resources']['instances'] > 1 and 'Google' not in cloud:
-            (ip_addr, username) = setup_ansible_node(cloud)
+            (ip_addr, username) = setup_ansible_node(cloud, db)
             if ip_addr is None or username is None:
                 logger.critical('Unable to find existing or create an Ansible node in cloud %s because ip=%s,username=%s', cloud, ip_addr, username)
                 continue
@@ -959,8 +905,13 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             logger.critical('Error writing RADL file')
             return False
 
+        # Check if we should stop
+        (im_infra_id_new, infra_status_new, cloud_new) = db_deployment_get_im_infra_id(db, unique_id)
+        if infra_status_new == 'deleting':
+            return False
+
         # Deploy infrastructure
-        infra_id = deploy(path, cloud, time_begin, unique_id)
+        infra_id = deploy(path, cloud, time_begin, unique_id, db, int(requirements['resources']['instances']))
 
         # Remove temporary RADL file
         os.remove(path)
@@ -976,12 +927,15 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         db_deployment_update_status_with_retries(db, unique_id, 'failed', 'none', 'none')
     return success
 
-def deploy(path, cloud, time_begin, unique_id):
+def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
     """
     Deploy infrastructure from a specified RADL file
     """
     # Check & get auth token if necessary
     token = get_token(cloud)
+
+    # Setup Open Policy Agent client
+    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Setup Infrastructure Manager client
     im_auth = create_im_auth(cloud, token)
@@ -990,6 +944,14 @@ def deploy(path, cloud, time_begin, unique_id):
     if status != 0:
         logger.critical('Error reading IM auth file: %s', msg)
         return None
+
+    # Create RADL content for initial deployment: for multiple nodes we strip out all configure/contextualize
+    # blocks and will add this back in once we have successfully deployed all required VMs
+    if num_nodes > 1:
+        radl_base = create_basic_radl(path)
+    else:
+        with open(path) as data:
+            radl_base = data.read()
 
     # Retry loop
     retries_per_cloud = int(CONFIG.get('deployment', 'retries'))
@@ -1001,82 +963,170 @@ def deploy(path, cloud, time_begin, unique_id):
         logger.info('Deployment attempt %d of %d', retry+1, retries_per_cloud+1)
         retry += 1
 
+        # Check if we should stop
+        (im_infra_id_new, infra_status_new, cloud_new) = db_deployment_get_im_infra_id(db, unique_id)
+        if infra_status_new == 'deleting':
+            return None
+
         # Create infrastructure
         start = time.time()
-        (infrastructure_id, msg) = client.create(path, int(CONFIG.get('timeouts', 'creation')))
+        (infrastructure_id, msg) = client.create(radl_base, int(CONFIG.get('timeouts', 'creation')))
         duration = time.time() - start
         logger.info('Duration of create request %d s on cloud %s', duration, cloud)
 
         if infrastructure_id is not None:
             logger.info('Created infrastructure with id "%s" on cloud "%s" for id "%s" and waiting for it to be configured', infrastructure_id, cloud, unique_id)
-            #if unique_id is not None:
+            #if unique_id is not None and infrastructure_id is not None:
             #    db_deployment_update_infra(db, unique_id, infrastructure_id)
 
-            # Wait for infrastructure to enter the configured state
             time_created = time.time()
             count_unconfigured = 0
             state_previous = None
 
+            fnodes_to_be_replaced = 0
+            wnodes_to_be_replaced = 0
+            have_nodes = -1
+            initial_step_complete = False
+            multi_node_deletions = 0
+
+            # Wait for infrastructure to enter the configured state
             while True:
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
-                    logger.info('Giving up, waiting too long so will destroy infrastructure with id "%s"', infrastructure_id)
+                    logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with id "%s"', infrastructure_id)
                     destroy(client, infrastructure_id, cloud)
                     return None
 
                 time.sleep(int(CONFIG.get('polling', 'duration')))
-                (state, msg) = client.getstate(infrastructure_id, int(CONFIG.get('timeouts', 'status')))
+                (states, msg) = client.getstates(infrastructure_id, int(CONFIG.get('timeouts', 'status')))
 
-                # Handle situation in which the cloud state cannot be determined
-                if state is None:
-                    logger.info('Unable to determine current state of infrastructure with id "%s" on cloud "%s"', infrastructure_id, cloud)
+                # If state is not known, wait
+                if states is None:
+                    logger.info('State is not known for infrastructure with id "%s" on cloud "%s"', infrastructure_id, cloud)
                     continue
+
+                # Overall state of infrastructure
+                state = states['state']['state']
+                have_nodes = len(states['state']['vm_states'])
 
                 # Log a change in state
                 if state != state_previous:
                     logger.info('Infrastructure with our id "%s" and IM id "%s" is in state %s', unique_id, infrastructure_id, state)
                     state_previous = state
 
-                # Handle configured state
-                if state == 'configured':
-                    logger.info('Successfully configured infrastructure with our id "%s" on cloud "%s"', infrastructure_id, cloud)
+                # Handle final configured state
+                if state == 'configured' and (num_nodes == 1 or (num_nodes > 1 and initial_step_complete)):
+                    logger.info('Successfully configured infrastructure with our id "%s" on cloud "%s"', unique_id, cloud)
                     success = True
                     return infrastructure_id
+
+                # Handle configured state for initial step of multi-node infrastructure
+                if state == 'configured' and num_nodes > 1 and have_nodes == num_nodes and not initial_step_complete:
+                    logger.info('Successfully configured basic infrastructure with our id "%s" on cloud "%s", will now apply final configuration', unique_id, cloud)
+                    initial_step_complete = True
+
+                    with open(path) as data:
+                        radl = data.readlines()
+                    radl_final = ''
+                    for line in radl:
+                        if line.startswith('deploy'):
+                            line = ''
+                        radl_final += line
+                    (exit_code, msg) = client.reconfigure_new(infrastructure_id, radl_final, int(CONFIG.get('timeouts', 'reconfigure')))
+
+                # Handle configured state but some nodes failed and were deleted
+                if state == 'configured' and num_nodes > 1 and have_nodes < num_nodes and not initial_step_complete:
+
+                    if fnodes_to_be_replaced > 0:
+                        logger.info('Creating %d fnodes', fnodes_to_be_replaced)
+                        radl_new = ''
+                        for line in radl_base.split('\n'):
+                            if line.startswith('deploy wnode'):
+                                line = ''
+                            if line.startswith('deploy fnode'):
+                                line = 'deploy fnode %d\n' % fnodes_to_be_replaced
+                            radl_new += line
+                        fnodes_to_be_replaced = 0
+                        (exit_code, msg) = client.add_resource(infrastructure_id, radl_new, 120)
+
+                    if wnodes_to_be_replaced > 0:
+                        logger.info('Creating %d wnodes', wnodes_to_be_replaced)
+                        radl_new = ''
+                        for line in radl_base.split('\n'):
+                            if line.startswith('deploy fnode'):
+                                line = ''
+                            if line.startswith('deploy wnode'):
+                                line = 'deploy wnode %d\n' % wnodes_to_be_replaced
+                            radl_new += line
+                        wnodes_to_be_replaced = 0
+                        (exit_code, msg) = client.add_resource(infrastructure_id, radl_new, 120)
 
                 # Destroy infrastructure which is taking too long to enter the configured state
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'configured')):
                     logger.warning('Waiting too long for infrastructure to be configured, so destroying')
-                    set_status(cloud, 'configuration-too-long')
+                    opa_client.set_status(cloud, 'configuration-too-long')
                     destroy(client, infrastructure_id, cloud)
                     break
 
                 # Destroy infrastructure which is taking too long to enter the running state
-                if time.time() - time_created > int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured':
+                if time.time() - time_created > int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes == 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
-                    set_status(cloud, 'pending-too-long')
+                    opa_client.set_status(cloud, 'pending-too-long')
+                    destroy(client, infrastructure_id, cloud)
+                    break
+
+                if time.time() - time_created > 3*int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes > 1:
+                    logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
+                    opa_client.set_status(cloud, 'pending-too-long')
                     destroy(client, infrastructure_id, cloud)
                     break
 
                 # Destroy infrastructure for which deployment failed
                 if state == 'failed':
-                    logger.warning('Infrastructure creation failed, so destroying; error was "%s"', msg)
-                    set_status(cloud, state)
-                    destroy(client, infrastructure_id, cloud)
-                    break
+                    if num_nodes > 1:
+                        logger.info('Infrastructure creation failed for some VMs, so deleting these (run %d)', multi_node_deletions)
+                        multi_node_deletions += 1
+                        failed_vms = 0
+                        for vm in states['state']['vm_states']:
+                            if states['state']['vm_states'][vm] == 'failed':
+                                failed_vms += 1
+                                # Determine what type of node (fnode or wnode)
+                                (exit_code, vm_info) = client.get_vm_info(infrastructure_id,
+                                                                          int(vm),
+                                                                          int(CONFIG.get('timeouts', 'deletion')))
+                                for info in vm_info['radl']:
+                                    if 'state' in info:
+                                        if 'fnode' in info['id']:
+                                            fnodes_to_be_replaced += 1
+                                        else:
+                                            wnodes_to_be_replaced += 1
+
+                                # Delete the VM
+                                (exit_code, msg_remove) = client.remove_resource(infrastructure_id,
+                                                                                 int(vm),
+                                                                                 int(CONFIG.get('timeouts', 'deletion')))
+                        logger.info('Deleted %d failed VMs from infrastructure with our id %s', failed_vms, unique_id)
+                        continue
+
+                    else:
+                        logger.warning('Infrastructure creation failed, so destroying')
+                        opa_client.set_status(cloud, state)
+                        destroy(client, infrastructure_id, cloud)
+                        break
 
                 # Handle unconfigured infrastructure
                 if state == 'unconfigured':
                     count_unconfigured += 1
                     file_unconf = '/tmp/contmsg-%s-%d.txt' % (unique_id, time.time())
                     contmsg = client.getcontmsg(infrastructure_id, int(CONFIG.get('timeouts', 'deletion')))
-                    if count_unconfigured == 1:
+                    if count_unconfigured < 2:
                         logger.warning('Infrastructure is unconfigured, will try reconfiguring once after writing contmsg to a file')
                         with open(file_unconf, 'w') as unconf:
                             unconf.write(contmsg)
                         client.reconfigure(infrastructure_id, int(CONFIG.get('timeouts', 'reconfigure')))
                     else:
                         logger.warning('Infrastructure has been unconfigured too many times, so destroying after writing contmsg to a file')
-                        set_status(cloud, state)
+                        opa_client.set_status(cloud, state)
                         with open(file_unconf, 'w') as unconf:
                             unconf.write(contmsg)
                         destroy(client, infrastructure_id, cloud)
@@ -1085,10 +1135,10 @@ def deploy(path, cloud, time_begin, unique_id):
             logger.warning('Deployment failure on cloud "%s" for infrastructure with id "%s" with msg="%s"', cloud, infrastructure_id, msg)
             if msg == 'timedout':
                 logger.warning('Infrastructure creation failed due to a timeout')
-                set_status(cloud, 'creation-timeout')
+                opa_client.set_status(cloud, 'creation-timeout')
             else:
                 file_failed = '/tmp/failed-%s-%d.txt' % (unique_id, time.time())
-                set_status(cloud, 'creation-failed')
+                opa_client.set_status(cloud, 'creation-failed')
                 logger.warning('Infrastructure creation failed, writing stdout/err to file "%s"', file_failed)
                 with open(file_failed, 'w') as failed:
                     failed.write(msg)
