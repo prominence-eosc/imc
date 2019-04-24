@@ -10,6 +10,7 @@ RUN apk add --no-cache uwsgi-python \
 
 COPY imc.py /
 COPY imclient.py /
+COPY opaclient.py /
 RUN chown uwsgi /var/log && \
     mkdir /var/lib/prominence && \
     chown uwsgi /var/lib/prominence
