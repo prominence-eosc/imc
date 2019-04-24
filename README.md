@@ -102,5 +102,7 @@ IM uses Resource and Application Description Language (RADL) files to describe t
 * `${ansible_username}` will be replaced with the username of an appropriate Ansible machine (if needed)
 * `${ansible_private_key}` will be replaced with the private key of an appropriate Ansible machine (if needed)
 
+If the RADL needs to contain a `$` character (e.g. for contexutalization) it should be escaped appropriately and written as `$$`.
+
 ## Usage
 
