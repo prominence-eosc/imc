@@ -12,7 +12,7 @@ The Infrastructure API exposes endpoints for managing infrastructure. Note that 
 GET /v1/infrastructures/<id>
 ```
 
-Get information about the specified infrastructure.
+Get information about the specified infrastructure: current status, cloud name (where applicable), Infrastructure Manager id.
 
 #### Example Request
 
@@ -25,6 +25,14 @@ GET /v1/infrastructures/b4486ddb-0bb5-4056-b74a-5adf49928eb6 HTTP/1.1
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+```
+
+```json
+{
+  "status": "configured",
+  "cloud": "MyOpenStack",
+  "infra_id": "e1f8e7e3-a250-4bd5-9ab1-7cb719ad886f"
+}
 ```
 
 ### Query Parameters
