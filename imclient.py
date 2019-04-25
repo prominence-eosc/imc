@@ -1,6 +1,4 @@
 #!/usr/bin/python
-from __future__ import print_function
-import time
 import requests
 
 class IMClient(object):
@@ -24,12 +22,15 @@ class IMClient(object):
             try:
                 with open(self._auth) as auth_file:
                     content = '\\n'.join(auth_file.read().splitlines())
-            except IOError as e:
-                return (1, e)
+            except IOError as ex:
+                return (1, ex)
         self._headers = {'AUTHORIZATION':str(content.replace('____n', '\\\\n'))}
         return (0, None)
 
     def return_headers(self):
+        """
+        Return the headers used for making requests
+        """
         return self._headers
 
     def getstate(self, infra_id, timeout):
@@ -68,8 +69,9 @@ class IMClient(object):
         """
         Get infrastructure status
         """
+        url = '%s/infrastructures/%s/data' % (self._url, infra_id)
         try:
-            response = requests.get(self._url + '/infrastructures/' + infra_id + '/data', headers=self._headers, timeout=timeout)
+            response = requests.get(url, headers=self._headers, timeout=timeout)
         except requests.exceptions.Timeout:
             return ('timedout', None)
         except requests.exceptions.RequestException:
@@ -83,8 +85,9 @@ class IMClient(object):
         """
         Destroy infrastructure
         """
+        url = '%s/infrastructures/%s' % (self._url, infra_id)
         try:
-            response = requests.delete(self._url + '/infrastructures/' + infra_id, headers=self._headers, timeout=timeout)
+            response = requests.delete(url, headers=self._headers, timeout=timeout)
         except requests.exceptions.Timeout:
             return (2, None)
         except requests.exceptions.RequestException:
@@ -105,12 +108,13 @@ class IMClient(object):
         params = {}
         params['async'] = 1
 
+        url = '%s/infrastructures' % self._url
         try:
-            response = requests.post(self._url + '/infrastructures', params=params, headers=headers, timeout=timeout, data=radl)
+            response = requests.post(url, params=params, headers=headers, timeout=timeout, data=radl)
         except requests.exceptions.Timeout:
             return (None, 'timedout')
-        except requests.exceptions.RequestException as e:
-            return (None, e)
+        except requests.exceptions.RequestException as ex:
+            return (None, ex)
 
         if response.status_code == 200:
             return (response.text.split('/infrastructures/')[1], None)

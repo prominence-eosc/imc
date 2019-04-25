@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 from __future__ import print_function
-from concurrent.futures import ProcessPoolExecutor
 import base64
 import os
 import sys
@@ -12,60 +11,14 @@ import json
 import time
 from random import shuffle
 import logging
-import uuid
 import ConfigParser
-import sqlite3
-import requests
-from flask import Flask, request, jsonify
 import paramiko
+
+import database
 import imclient
 import opaclient
-
-app = Flask(__name__)
-
-def db_init():
-    """
-    Initialize database
-    """
-
-    # Setup database table if necessary
-    try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
-        cursor = db.cursor()
-
-        # Create Ansible nodes table
-        cursor.execute('''CREATE TABLE IF NOT EXISTS
-                          ansible_nodes(cloud TEXT NOT NULL PRIMARY KEY,
-                                        infrastructure_id TEXT NOT NULL,
-                                        public_ip TEXT NOT NULL,
-                                        username TEXT NOT NULL,
-                                        creation DATETIME DEFAULT CURRENT_TIMESTAMP,
-                                        last_used DATETIME DEFAULT CURRENT_TIMESTAMP
-                                        )''')
-
-        # Create credentials table
-        cursor.execute('''CREATE TABLE IF NOT EXISTS
-                          credentials(cloud TEXT NOT NULL PRIMARY KEY,
-                                      token TEXT NOT NULL,
-                                      expiry INT NOT NULL,
-                                      creation INT NOT NULL
-                                      )''')
-
-        # Create deployments table
-        cursor.execute('''CREATE TABLE IF NOT EXISTS
-                          deployments(id TEXT NOT NULL PRIMARY KEY,
-                                      status TEXT NOT NULL,
-                                      im_infra_id TEXT,
-                                      cloud TEXT,
-                                      creation INT NOT NULL
-                                      )''')
-
-
-        db.commit()
-        db.close()
-    except Exception as ex:
-        print(ex)
-        exit(1)
+import tokens
+import utilities
 
 # Configuration
 CONFIG = ConfigParser.ConfigParser()
@@ -75,207 +28,10 @@ else:
     print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
     exit(1)
 
-# Setup process pool for handling deployments
-executor = ProcessPoolExecutor(int(CONFIG.get('pool','size')))
-
 # Logging
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
-logger = logging.getLogger('imc')
-
-# Initialize DB
-db_init()
-
-@app.route('/infrastructures', methods=['POST'])
-def create_infrastructure():
-    """
-    Create infrastructure
-    """
-    uid = str(uuid.uuid4())
-    executor.submit(imc_deploy, request.get_json(), uid)
-    return jsonify({'id':uid}), 201
-
-@app.route('/infrastructures/<string:infra_id>', methods=['GET'])
-def get_infrastructure(infra_id):
-    """
-    Get current status of specified infrastructure
-    """
-    (im_infra_id, status, cloud) = imc_status(infra_id)
-    if status is not None:
-        return jsonify({'status':status, 'cloud':cloud, 'infra_id':im_infra_id}), 200
-    return jsonify({'status':'invalid'}), 400
-
-@app.route('/infrastructures/<string:infra_id>', methods=['DELETE'])
-def delete_infrastructure(infra_id):
-    """
-    Delete the specified infrastructure
-    """
-    executor.submit(imc_delete, infra_id)
-    return jsonify({}), 200
-
-def create_basic_radl(filename):
-    """
-    Reads the specified RADL file and generates new RADL with all configure and contextualize
-    blocks removed.
-    """
-    with open(filename) as data:
-        radl = data.readlines()
-
-    ignore = False
-    skip_next_line = False
-    radl_new = ''
-
-    for line in radl:
-        if line.startswith('configure ') or line.startswith('contextualize'):
-            ignore = True
-
-        if not ignore and not skip_next_line:
-            radl_new += line
-
-        if skip_next_line:
-            skip_next_line = False
-
-        if line.startswith('@end') and ignore:
-            ignore = False
-            skip_next_line = True
-
-    return(radl_new)
-
-def get_token(cloud):
-    """
-    Get a token for a cloud
-    """
-    logger.info('Checking if we need a token for cloud %s', cloud)
-
-    # Get details required for generating a new token
-    (username, password, client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud)
-    if username is None or password is None or client_id is None or client_secret is None or refresh_token is None or scope is None or url is None:
-        logger.info('A token is not required for cloud %s', cloud)
-        return None
-
-    # Try to obtain an existing token from the DB
-    logger.info('Try to get an existing token from the DB')
-    (token, expiry, creation) = db_get_token(cloud)
-
-    # Check token
-    if token is not None:
-        check_rt = check_token(token, url)
-        if check_rt != 0:
-            logger.info('Check token failed for cloud %s', cloud)
-    else:
-        logger.info('No token could be obtained from the DB for cloud %s', cloud)
-        check_rt = -1
-
-    logger.info('Token expiry time: %d, current time: %d', expiry, time.time())
-    if expiry - time.time() < 600:
-        logger.info('Token has or is about to expire')
-
-    if token is None or expiry - time.time() < 600 or (check_rt != 0 and time.time() - creation > 600):
-        logger.info('Getting a new token for cloud %s', cloud)
-        # Get new token
-        (token, expiry, creation, msg) = get_new_token(username, password, client_id, client_secret, refresh_token, scope, url)
-
-        # Delete existing token from DB
-        db_delete_token(cloud)
-
-        # Save token to DB
-        db_set_token(cloud, token, expiry, creation)
-    else:
-        logger.info('Using token from DB for cloud %s', cloud)
-
-    return token
-
-def create_im_auth(cloud, token):
-    """
-    Create the "auth file" required for requests to IM, inserting tokens as necessary
-    """
-    try:
-        with open('%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR']) as file:
-            data = json.load(file)
-    except Exception as ex:
-        logger.critical('Unable to load JSON config file due to: %s', ex)
-        return None
-
-    info1 = {}
-    info2 = {}
-    if token is not None:
-        info1['token'] = token
-    else:
-        info2['token'] = 'not-required'
-
-    im_auth_file = ''
-    for item in data['im']['auth']:
-        line = '%s\\n' % data['im']['auth'][item]
-        if item == cloud and token is not None:
-            line = line % info1
-        else:
-            line = line % info2
-        line = line.replace('\n', '____n')
-        im_auth_file += line
-
-    return im_auth_file
-
-def get_new_token(username, password, client_id, client_secret, refresh_token, scope, url):
-    """
-    Get a new access token using a refresh token
-    """
-    creation = time.time()
-    data = {'client_id':client_id,
-            'client_secret':client_secret,
-            'grant_type':'refresh_token',
-            'refresh_token':refresh_token,
-            'scope':scope}
-    try:
-        response = requests.post(url + '/token', auth=(username, password), timeout=10, data=data)
-    except requests.exceptions.Timeout:
-        return (None, 0, 0, 'timed out')
-    except requests.exceptions.RequestException as ex:
-        return (None, 0, 0, ex)
-
-    if response.status_code == 200:
-        access_token = response.json()['access_token']
-        expires_at = int(response.json()['expires_in'] + creation)
-        return (access_token, expires_at, creation, '')
-    return (None, 0, 0, response.text)
-
-def check_token(token, url):
-    """
-    Check whether a token is valid
-    """
-    header = {"Authorization":"Bearer %s" % token}
-
-    try:
-        response = requests.get(url + '/userinfo', headers=header, timeout=10)
-    except requests.exceptions.Timeout:
-        return 2
-    except requests.exceptions.RequestException:
-        return 2
-
-    if response.status_code == 200:
-        return 0
-    return 1
-
-def check_if_token_required(cloud):
-    """
-    Check if the given cloud requires a token for access
-    """
-    try:
-        with open('%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR']) as file:
-            data = json.load(file)
-    except Exception as ex:
-        logger.critical('Unable to open file containing tokens due to: %s', ex)
-        return (None, None, None, None, None, None, None)
-
-    if 'credentials' in data:
-        if cloud in data['credentials']:
-            return (data['credentials'][cloud]['username'],
-                    data['credentials'][cloud]['password'],
-                    data['credentials'][cloud]['client_id'],
-                    data['credentials'][cloud]['client_secret'],
-                    data['credentials'][cloud]['refresh_token'],
-                    data['credentials'][cloud]['scope'],
-                    data['credentials'][cloud]['url'])
-
-    return (None, None, None, None, None, None, None)
+logging.basicConfig(stream=sys.stdout,
+                    level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
+logger = logging.getLogger(__name__)
 
 def destroy(client, infrastructure_id, cloud):
     """
@@ -320,250 +76,12 @@ def check_ansible_node(ip_addr, username):
         logger.info('Unable to execute command on Ansible node with ip %s', ip_addr)
     return success
 
-def db_connect():
-    """
-    Connect to the DB
-    """
-    try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
-    except Exception as ex:
-        logger.critical('[db_connect] Unable to connect to sqlite DB because of %s', ex)
-        return None
-    return db
-
-def db_close(db):
-    db.close
-
-def db_deployment_get_im_infra_id(db, infra_id):
-    im_infra_id = None
-    status = None
-    cloud = None
-
-    try:
-        cursor = db.cursor()
-        cursor.execute('SELECT im_infra_id,status,cloud FROM deployments WHERE id="%s"' % infra_id)
-
-        for row in cursor:
-            im_infra_id = row[0]
-            status = row[1]
-            cloud = row[2]
-
-    except Exception as e:
-        logger.critical('[db_get] Unable to connect to sqlite DB because of %s', e)
-
-    return (im_infra_id, status, cloud)
-
-def db_deployment_create_with_retries(db, infra_id):
-    """
-    Create deployment with retries & backoff
-    """
-    max_retries = 10
-    count = 0
-    success = False
-    while count < max_retries and not success:
-        success = db_deployment_create(db, infra_id)
-        if not success:
-            count += 1
-            db_close(db)
-            time.sleep(count/2)
-            db = db_connect()
-    return success
-
-def db_deployment_create(db, infra_id):
-    """
-    Create deployment
-    """
-    try:
-        cursor = db.cursor()
-        cursor.execute('INSERT INTO deployments (id,status,creation) VALUES ("%s","accepted",%d)' % (infra_id, time.time()))
-        db.commit()
-    except Exception as e:
-        logger.critical('[db_set] Unable to connect to sqlite DB because of %s', e)
-        return False
-    return True
-
-def db_deployment_update_infra_with_retries(db, infra_id):
-    """
-    Create deployment with retries & backoff
-    """
-    max_retries = 10
-    count = 0
-    success = False
-    while count < max_retries and not success:
-        success = db_deployment_update_infra(db, infra_id)
-        if not success:
-            count += 1
-            db_close(db)
-            time.sleep(count/2)
-            db = db_connect()
-    return success
-
-def db_deployment_update_infra(db, infra_id):
-    """
-    Update deployment with IM infra id
-    """
-    try:
-        cursor = db.cursor()
-        cursor.execute('UPDATE deployments SET status="creating" WHERE id="%s"' % infra_id)
-        db.commit()
-    except Exception as e:
-        logger.critical('[db_deployment_update_infra] Unable to connect to sqlite DB because of %s', e)
-        return False
-    return True
-
-def db_deployment_update_status_with_retries(db, infra_id, status, cloud=None, im_infra_id=None):
-    """
-    Update deployment status with retries
-    """
-    max_retries = 10
-    count = 0
-    success = False
-    while count < max_retries and not success:
-        success = db_deployment_update_status(db, infra_id, status, cloud, im_infra_id)
-        if not success:
-            count += 1
-            db_close(db)
-            time.sleep(count/2)
-            db = db_connect()
-    return success
-
-def db_deployment_update_status(db, id, status, cloud=None, im_infra_id=None):
-    """
-    Update deployment status
-    """
-    try:
-        cursor = db.cursor()
-        if cloud is not None and im_infra_id is not None:
-            cursor.execute('UPDATE deployments SET status="%s",cloud="%s",im_infra_id="%s" WHERE id="%s"' % (status, cloud, im_infra_id, id))
-        elif cloud is not None:
-            cursor.execute('UPDATE deployments SET status="%s",cloud="%s" WHERE id="%s"' % (status, cloud, id))
-        else:
-            cursor.execute('UPDATE deployments SET status="%s" WHERE id="%s"' % (status, id))
-        db.commit()
-    except Exception as e:
-        logger.critical('[db_deployment_update_status] Unable to connect to sqlite DB because of %s', e)
-        return False
-    return True
-
-def db_set_token(cloud, token, expiry, creation):
-    """
-    Write token to the DB
-    """
-    try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
-        cursor = db.cursor()
-        cursor.execute('INSERT INTO credentials (cloud, token, expiry, creation) VALUES ("%s", "%s", %d, %d)' % (cloud, token, expiry, creation))
-        db.commit()
-        db.close()
-    except Exception as e:
-        logger.critical('[db_set] Unable to connect to sqlite DB because of %s', e)
-        return False
-    return True
-
-def db_set_ansible_node(cloud, infrastructure_id, public_ip, username):
-    """
-    Write Ansible node details to DB
-    """
-    try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
-        cursor = db.cursor()
-        cursor.execute('INSERT INTO ansible_nodes (cloud, infrastructure_id, public_ip, username) VALUES ("%s", "%s", "%s", "%s")' % (cloud, infrastructure_id, public_ip, username))
-        db.commit()
-        db.close()
-    except Exception as e:
-        logger.critical('[db_set] Unable to connect to sqlite DB because of %s', e)
-        return False
-    return True
-
-def db_get_ansible_node(cloud):
-    """
-    Get details about an Ansible node for the specified cloud
-    """
-    infrastructure_id = None
-    public_ip = None
-    username = None
-    timestamp = None
-
-    try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
-        cursor = db.cursor()
-        cursor.execute('SELECT infrastructure_id, public_ip, username, creation FROM ansible_nodes WHERE cloud="%s"' % cloud)
-
-        for row in cursor:
-            infrastructure_id = row[0]
-            public_ip = row[1]
-            username = row[2]
-            timestamp = row[3]
-
-        db.close()
-
-    except Exception as e:
-        logger.critical('[db_get] Unable to connect to sqlite DB because of %s', e)
-
-    return (infrastructure_id, public_ip, username, timestamp)
-
-def db_get_token(cloud):
-    """
-    Get a token & expiry date for the specified cloud
-    """
-    token = None
-    expiry = -1
-    creation = -1
-
-    try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
-        cursor = db.cursor()
-        cursor.execute('SELECT token,expiry,creation FROM credentials WHERE cloud="%s"' % cloud)
-
-        for row in cursor:
-            token = row[0]
-            expiry = row[1]
-            creation = row[2]
-
-        db.close()
-
-    except Exception as e:
-        logger.critical('[db_get] Unable to connect to sqlite DB because of %s', e)
-        return (token, expiry, creation)
-
-    return (token, expiry, creation)
-
-def db_delete_ansible_node(cloud):
-    """
-    Delete an Ansible node for the specified cloud
-    """
-    try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
-        cursor = db.cursor()
-        cursor.execute('DELETE FROM ansible_nodes WHERE cloud="%s"' % cloud)
-        db.commit()
-        db.close()
-    except Exception as e:
-        logger.critical('[db_delete] Unable to connect to sqlite DB because of %s', e)
-        return False
-    return True
-
-def db_delete_token(cloud):
-    """
-    Delete a token for the specified cloud
-    """
-    try:
-        db = sqlite3.connect(CONFIG.get('ansible', 'db'))
-        cursor = db.cursor()
-        cursor.execute('DELETE FROM credentials WHERE cloud="%s"' % cloud)
-        db.commit()
-        db.close()
-    except Exception as e:
-        logger.critical('[db_delete] Unable to connect to sqlite DB because of %s', e)
-        return False
-    return True
-
-def delete_ansible_node(cloud):
+def delete_ansible_node(cloud, db):
     """
     Delete an Ansible node for the specified cloud
     """
     # Get details about the node
-    (infrastructure_id, public_ip, username, timestamp) = db_get_ansible_node(cloud)
+    (infrastructure_id, public_ip, username, timestamp) = db.get_ansible_node(cloud)
 
     if infrastructure_id is None:
         logger.critical('[delete_ansible_node] Unable to get infrastructure id for Ansible node in cloud %s', cloud)
@@ -572,10 +90,10 @@ def delete_ansible_node(cloud):
     logger.info('[delete_ansible_node] About to delete Ansible node from clouds %s with infrastructure id %s', cloud, infrastructure_id)
 
     #  Get a token if necessary
-    token = get_token(cloud)
+    token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
     # Destroy infrastructure
-    im_auth = create_im_auth(cloud, token)
+    im_auth = utilities.create_im_auth(cloud, token, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
@@ -586,7 +104,7 @@ def delete_ansible_node(cloud):
         logger.critical('Unable to destroy Ansible node infrastructure with id "%s" on cloud "%s" due to "%s"', infrastructure_id, cloud, msg)
 
     # Delete from the DB
-    db_delete_ansible_node(cloud)
+    db.delete_ansible_node(cloud)
 
     return True
 
@@ -609,10 +127,12 @@ def setup_ansible_node(cloud, db):
             # dynamic one as there must be a reason why a static node was created
             logger.critical('Ansible node with ip %s on cloud %s not accessible', ip_addr, cloud)
             return (None, None)
+
     logger.info('No functional static Ansible node found for cloud %s', cloud)
+    return (None, None)
 
     # Check if there is a dynamic Ansible node
-    (ip_addr, username) = get_dynamic_ansible_node(cloud)
+    (ip_addr, username) = get_dynamic_ansible_node(cloud, db)
 
     if ip_addr is not None and username is not None:
         logger.info('Found existing dynamic Ansible node with ip %s on cloud %s', ip_addr, cloud)
@@ -622,7 +142,7 @@ def setup_ansible_node(cloud, db):
             return (ip_addr, username)
         else:
             logger.info('Ansible node with ip %s on cloud %s not accessible, so deleting', ip_addr, cloud)
-            delete_ansible_node(cloud)
+            delete_ansible_node(cloud, db)
     logger.info('No functional dynamic Ansible node found for cloud %s', cloud)
 
     # Try to create a dynamic Ansible node
@@ -640,15 +160,15 @@ def setup_ansible_node(cloud, db):
         return (None, None)
 
     # Set DB
-    db_set_ansible_node(cloud, infrastructure_id, ip_addr, 'cloudadm')
+    db.set_ansible_node(cloud, infrastructure_id, ip_addr, 'cloudadm')
 
     return (ip_addr, 'cloudadm')
 
-def get_dynamic_ansible_node(cloud):
+def get_dynamic_ansible_node(cloud, db):
     """
     Check if the given cloud has a dynamic Ansible node and return its details if it does
     """
-    (infrastructure_id, public_ip, username, timestamp) = db_get_ansible_node(cloud)
+    (infrastructure_id, public_ip, username, timestamp) = db.get_ansible_node(cloud)
     return (public_ip, username)
 
 def get_static_ansible_node(cloud):
@@ -676,7 +196,7 @@ def get_public_ip(infrastructure_id):
     public_ip = None
 
     # Setup Infrastructure Manager client
-    im_auth = create_im_auth(cloud, None)
+    im_auth = utilities.create_im_auth(cloud, None, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
@@ -702,7 +222,7 @@ def deploy_ansible_node(cloud, db):
         with open(CONFIG.get('ansible', 'template')) as data:
             radl_t = Template(data.read())
     except IOError:
-        logger.critical('Unable to open RADL template for Ansible node from file "%s"', filename)
+        logger.critical('Unable to open RADL template for Ansible node from file "%s"', CONFIG.get('ansible', 'template'))
         return None
 
     # Generate requirements for the Ansible node
@@ -828,7 +348,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     logger.info('Ranked clouds = [%s]', ','.join(clouds_ranked_list))
 
     # Update status
-    db_deployment_update_infra_with_retries(db, unique_id)
+    db.deployment_update_infra_with_retries(unique_id)
 
     # Try to create infrastructure, exiting on the first successful attempt
     time_begin = time.time()
@@ -892,8 +412,8 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
                                      ansible_username=username,
                                      ansible_private_key=private_key
                                      )
-        except Exception as e:
-            logger.critical('Error creating RADL from template due to %s', e)
+        except Exception as ex:
+            logger.critical('Error creating RADL from template due to %s', ex)
             return False
 
         # Write RADL to temporary file
@@ -906,7 +426,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             return False
 
         # Check if we should stop
-        (im_infra_id_new, infra_status_new, cloud_new) = db_deployment_get_im_infra_id(db, unique_id)
+        (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new == 'deleting':
             return False
 
@@ -919,12 +439,12 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         if infra_id is not None:
             success = True
             if unique_id is not None:
-                print('Success deployment',unique_id,cloud)
-                db_deployment_update_status_with_retries(db, unique_id, 'configured', cloud, infra_id)
+                print('Success deployment', unique_id, cloud)
+                db.deployment_update_status_with_retries(unique_id, 'configured', cloud, infra_id)
             break
 
     if unique_id is not None and infra_id is None:
-        db_deployment_update_status_with_retries(db, unique_id, 'failed', 'none', 'none')
+        db.deployment_update_status_with_retries(unique_id, 'failed', 'none', 'none')
     return success
 
 def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
@@ -932,13 +452,14 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
     Deploy infrastructure from a specified RADL file
     """
     # Check & get auth token if necessary
-    token = get_token(cloud)
+    token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
     # Setup Open Policy Agent client
-    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'),
+                                     timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Setup Infrastructure Manager client
-    im_auth = create_im_auth(cloud, token)
+    im_auth = utilities.create_im_auth(cloud, token, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
@@ -948,7 +469,7 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
     # Create RADL content for initial deployment: for multiple nodes we strip out all configure/contextualize
     # blocks and will add this back in once we have successfully deployed all required VMs
     if num_nodes > 1:
-        radl_base = create_basic_radl(path)
+        radl_base = utilities.create_basic_radl(path)
     else:
         with open(path) as data:
             radl_base = data.read()
@@ -964,7 +485,7 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
         retry += 1
 
         # Check if we should stop
-        (im_infra_id_new, infra_status_new, cloud_new) = db_deployment_get_im_infra_id(db, unique_id)
+        (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new == 'deleting':
             return None
 
@@ -977,7 +498,7 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
         if infrastructure_id is not None:
             logger.info('Created infrastructure with id "%s" on cloud "%s" for id "%s" and waiting for it to be configured', infrastructure_id, cloud, unique_id)
             #if unique_id is not None and infrastructure_id is not None:
-            #    db_deployment_update_infra(db, unique_id, infrastructure_id)
+            #    db.deployment_update_infra(unique_id, infrastructure_id)
 
             time_created = time.time()
             count_unconfigured = 0
@@ -1087,12 +608,13 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
                         logger.info('Infrastructure creation failed for some VMs, so deleting these (run %d)', multi_node_deletions)
                         multi_node_deletions += 1
                         failed_vms = 0
-                        for vm in states['state']['vm_states']:
-                            if states['state']['vm_states'][vm] == 'failed':
+                        for vm_id in states['state']['vm_states']:
+                            if states['state']['vm_states'][vm_id] == 'failed':
                                 failed_vms += 1
+
                                 # Determine what type of node (fnode or wnode)
                                 (exit_code, vm_info) = client.get_vm_info(infrastructure_id,
-                                                                          int(vm),
+                                                                          int(vm_id),
                                                                           int(CONFIG.get('timeouts', 'deletion')))
                                 for info in vm_info['radl']:
                                     if 'state' in info:
@@ -1103,8 +625,9 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
 
                                 # Delete the VM
                                 (exit_code, msg_remove) = client.remove_resource(infrastructure_id,
-                                                                                 int(vm),
+                                                                                 int(vm_id),
                                                                                  int(CONFIG.get('timeouts', 'deletion')))
+
                         logger.info('Deleted %d failed VMs from infrastructure with our id %s', failed_vms, unique_id)
                         continue
 
@@ -1145,84 +668,87 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
 
     return None
 
-def imc_delete(unique_id):
+def infrastructure_delete(unique_id):
     """
-    Delete the infrastructure with the specified id - wrapper
+    Delete the infrastructure with the specified id (wrapper)
     """
     try:
-        imc_delete_(unique_id)
+        imc_delete(unique_id)
     except Exception as ex:
         logger.critical('Exception deleting infrastructure: "%s"' % ex)
     return
 
-def imc_delete_(unique_id):
+def imc_delete(unique_id):
     """
     Delete the infrastructure with the specified id
     """
-    db = db_connect()
+    db = database.Database(CONFIG.get('ansible', 'db'))
+    db.connect()
     logger.info('Deleting infrastructure "%s"', unique_id)
-    db_deployment_update_status_with_retries(db, unique_id, 'deleting')
+    db.deployment_update_status_with_retries(unique_id, 'deleting')
 
-    (im_infra_id, infra_status, cloud) = db_deployment_get_im_infra_id(db, unique_id)
+    (im_infra_id, infra_status, cloud) = db.deployment_get_im_infra_id(unique_id)
 
     if im_infra_id is not None and cloud is not None:
         match_obj_name = re.match(r'\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b', im_infra_id)
         if match_obj_name:
             logger.info('Deleting IM infrastructure with id "%s"', im_infra_id)
             # Check & get auth token if necessary
-            token = get_token(cloud)
+            token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
             # Setup Infrastructure Manager client
-            im_auth = create_im_auth(cloud, token)
+            im_auth = utilities.create_im_auth(cloud, token, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
             client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
             (status, msg) = client.getauth()
             if status != 0:
                 logger.critical('Error reading IM auth file: %s', msg)
-                db_close(db)
+                db.close()
                 return 1
 
             destroyed = destroy(client, im_infra_id, cloud)
 
             if destroyed:
-                db_deployment_update_status_with_retries(db, unique_id, 'deleted')
+                db.deployment_update_status_with_retries(unique_id, 'deleted')
                 logger.info('Destroyed infrastructure "%s" with IM infrastructure id "%s"', unique_id, im_infra_id)
             else:
                 logger.info('Unable to destroy infrastructure "%s" with IM infrastructure id "%s"', unique_id, im_infra_id)
     else:
         logger.info('No need to destroy infrastructure because IM infrastructure id is "%s" and cloud is "%s"', im_infra_id, cloud)
-    db_close(db)
+    db.close()
     return 0
 
-def imc_status(unique_id):
+def infrastructure_status(unique_id):
     """
     Return the status of the infrastructure from the specified id
     """
-    db = db_connect()
-    (im_infra_id, status, cloud) = db_deployment_get_im_infra_id(db, unique_id)
-    db_close(db)
+    db = database.Database(CONFIG.get('ansible', 'db'))
+    db.connect()
+    (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(unique_id)
+    db.close()
     return (im_infra_id, status, cloud)
 
-def imc_deploy(inputj, unique_id):
+def infrastructure_deploy(inputj, unique_id):
     """
-    Deploy infrastructure given a JSON specification and id - wrapper
+    Deploy infrastructure given a JSON specification and id (wrapper)
     """
     try:
-        imc_deploy_(inputj, unique_id)
+        imc_deploy(inputj, unique_id)
     except Exception as ex:
-        logger.critical('Exception deploying infrastructure: "%s"' % ex)
+        logger.critical('Exception deploying infrastructure: "%s"', ex)
     return
 
-def imc_deploy_(inputj, unique_id):
+def imc_deploy(inputj, unique_id):
     """
     Deploy infrastructure given a JSON specification and id
     """
     dryrun = False
     logger.info('Deploying infrastructure with id %s', unique_id)
 
-    db = db_connect()
+    db = database.Database(CONFIG.get('ansible', 'db'))
+    db.connect()
 
     # Update DB
-    success = db_deployment_create_with_retries(db, unique_id)
+    success = db.deployment_create_with_retries(unique_id)
     if not success:
         logger.critical('Unable to update DB so unable to deploy infrastructure')
         return 1
@@ -1253,15 +779,12 @@ def imc_deploy_(inputj, unique_id):
     success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
 
     if not success:
-        db_deployment_update_status_with_retries(db, unique_id, 'unable')
+        db.deployment_update_status_with_retries(unique_id, 'unable')
 
-    db_close(db)
+    db.close()
 
     if not success:
         logger.critical('Unable to deploy infrastructure on any cloud')
         return 1
 
     return 0
-
-if __name__ == "__main__":
-    app.run()
