@@ -512,6 +512,12 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
 
             # Wait for infrastructure to enter the configured state
             while True:
+                # Check if we should stop
+                (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
+                if infra_status_new == 'deleting':
+                    destroy(client, infrastructure_id, cloud)
+                    return None
+
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
                     logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with id "%s"', infrastructure_id)
