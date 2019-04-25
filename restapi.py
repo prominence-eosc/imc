@@ -23,7 +23,7 @@ else:
 # Setup process pool for handling deployments
 executor = ProcessPoolExecutor(int(CONFIG.get('pool', 'size')))
 
-# Initialize DB
+# Initialize DB if necessary
 dbi = database.Database(CONFIG.get('ansible', 'db'))
 dbi.init()
 
