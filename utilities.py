@@ -8,28 +8,20 @@ logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-def create_basic_radl(filename):
+def create_basic_radl(radl):
     """
-    Reads the specified RADL file and generates new RADL with all configure and contextualize
-    blocks removed.
+    Generates new RADL with all configure and contextualize blocks removed.
     """
-    try:
-        with open(filename) as data:
-            radl = data.readlines()
-    except Exception as ex:
-        logger.critical('Unable to load RADL template due to: %s', ex)
-        return None
-
     ignore = False
     skip_next_line = False
     radl_new = ''
 
-    for line in radl:
+    for line in radl.split('\n'):
         if line.startswith('configure ') or line.startswith('contextualize'):
             ignore = True
 
         if not ignore and not skip_next_line:
-            radl_new += line
+            radl_new += '%s\n' % line
 
         if skip_next_line:
             skip_next_line = False

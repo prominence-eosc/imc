@@ -24,7 +24,12 @@ else:
 executor = ProcessPoolExecutor(int(CONFIG.get('pool', 'size')))
 
 # Initialize DB if necessary
-dbi = database.Database(CONFIG.get('ansible', 'db'))
+dbi = database.Database(CONFIG.get('db', 'host'),
+                        CONFIG.get('db', 'port'),
+                        CONFIG.get('db', 'db'),
+                        CONFIG.get('db', 'username'),
+                        CONFIG.get('db', 'password'))
+
 dbi.init()
 
 @app.route('/infrastructures', methods=['POST'])

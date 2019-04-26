@@ -6,7 +6,6 @@ import os
 import sys
 import re
 from string import Template
-import tempfile
 import json
 import time
 from random import shuffle
@@ -283,22 +282,10 @@ def deploy_ansible_node(cloud, db):
         logger.critical('Error creating RADL from template for Ansible node due to %s', e)
         return None
 
-    # Write RADL to temporary file
-    file_desc, path = tempfile.mkstemp()
-    try:
-        with os.fdopen(file_desc, 'w') as tmp:
-            tmp.write(radl)
-    except:
-        logger.critical('Error writing RADL file for Ansible node')
-        return None
-
     time_begin = time.time()
 
     # Deploy infrastructure
-    infra_id = deploy(path, cloud, time_begin, None, db)
-
-    # Remove temporary RADL file
-    os.remove(path)
+    infra_id = deploy(radl, cloud, time_begin, None, db)
 
     return infra_id
 
@@ -306,15 +293,9 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     """
     Find an appropriate cloud to deploy infrastructure
     """
-    radls = {}
-    radlst = {}
-
-    radls['default'] = radl_contents
-    radlst['default'] = Template(radl_contents)
-
     # Count number of instances
     instances = 0
-    for line in radls['default'].split('\n'):
+    for line in radl_contents.split('\n'):
         m = re.search(r'deploy.*(\d+)', line)
         if m:
             instances += int(m.group(1))
@@ -369,16 +350,6 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             logger.info('Skipping because no image could be determined')
             continue
 
-        # Get correct RADL template for this cloud
-        radl_used = None
-        if cloud in radlst:
-            radl_t = radlst[cloud]
-            radl_used = cloud
-        else:
-            radl_t = radlst['default']
-            radl_used = 'default'
-        logger.info('Using RADL template "%s"', radl_used)
-
         if dryrun:
             continue
 
@@ -405,24 +376,14 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
 
         # Create complete RADL content
         try:
-            radl = radl_t.substitute(instance=flavour,
-                                     image=image,
-                                     cloud=cloud,
-                                     ansible_ip=ip_addr,
-                                     ansible_username=username,
-                                     ansible_private_key=private_key
-                                     )
+            radl = Template(radl_contents).substitute(instance=flavour,
+                                                      image=image,
+                                                      cloud=cloud,
+                                                      ansible_ip=ip_addr,
+                                                      ansible_username=username,
+                                                      ansible_private_key=private_key)
         except Exception as ex:
             logger.critical('Error creating RADL from template due to %s', ex)
-            return False
-
-        # Write RADL to temporary file
-        file_desc, path = tempfile.mkstemp()
-        try:
-            with os.fdopen(file_desc, 'w') as tmp:
-                tmp.write(radl)
-        except:
-            logger.critical('Error writing RADL file')
             return False
 
         # Check if we should stop
@@ -432,10 +393,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             return False
 
         # Deploy infrastructure
-        infra_id = deploy(path, cloud, time_begin, unique_id, db, int(requirements['resources']['instances']))
-
-        # Remove temporary RADL file
-        os.remove(path)
+        infra_id = deploy(radl, cloud, time_begin, unique_id, db, int(requirements['resources']['instances']))
 
         if infra_id is not None:
             success = True
@@ -462,7 +420,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         db.deployment_update_status_with_retries(unique_id, 'failed', 'none', 'none')
     return success
 
-def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
+def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
     """
     Deploy infrastructure from a specified RADL file
     """
@@ -484,10 +442,9 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
     # Create RADL content for initial deployment: for multiple nodes we strip out all configure/contextualize
     # blocks and will add this back in once we have successfully deployed all required VMs
     if num_nodes > 1:
-        radl_base = utilities.create_basic_radl(path)
+        radl_base = utilities.create_basic_radl(radl)
     else:
-        with open(path) as data:
-            radl_base = data.read()
+        radl_base = radl
 
     # Retry loop
     retries_per_cloud = int(CONFIG.get('deployment', 'retries'))
@@ -569,13 +526,11 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
                     logger.info('Successfully configured basic infrastructure with our id "%s" on cloud "%s", will now apply final configuration', unique_id, cloud)
                     initial_step_complete = True
 
-                    with open(path) as data:
-                        radl = data.readlines()
                     radl_final = ''
-                    for line in radl:
+                    for line in radl.split('\n'):
                         if line.startswith('deploy'):
                             line = ''
-                        radl_final += line
+                        radl_final += '%s\n' % line
                     (exit_code, msg) = client.reconfigure_new(infrastructure_id, radl_final, int(CONFIG.get('timeouts', 'reconfigure')))
 
                 # Handle configured state but some nodes failed and were deleted
@@ -589,7 +544,7 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
                                 line = ''
                             if line.startswith('deploy fnode'):
                                 line = 'deploy fnode %d\n' % fnodes_to_be_replaced
-                            radl_new += line
+                            radl_new += '%s\n' % line
                         fnodes_to_be_replaced = 0
                         (exit_code, msg) = client.add_resource(infrastructure_id, radl_new, 120)
 
@@ -601,7 +556,7 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
                                 line = ''
                             if line.startswith('deploy wnode'):
                                 line = 'deploy wnode %d\n' % wnodes_to_be_replaced
-                            radl_new += line
+                            radl_new += '%s\n' % line
                         wnodes_to_be_replaced = 0
                         (exit_code, msg) = client.add_resource(infrastructure_id, radl_new, 120)
 
@@ -714,7 +669,11 @@ def imc_delete(unique_id):
     """
     Delete the infrastructure with the specified id
     """
-    db = database.Database(CONFIG.get('ansible', 'db'))
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
     db.connect()
     logger.info('Deleting infrastructure "%s"', unique_id)
     db.deployment_update_status_with_retries(unique_id, 'deleting')
@@ -753,7 +712,11 @@ def infrastructure_status(unique_id):
     """
     Return the status of the infrastructure from the specified id
     """
-    db = database.Database(CONFIG.get('ansible', 'db'))
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
     db.connect()
     (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(unique_id)
     db.close()
@@ -776,7 +739,11 @@ def imc_deploy(inputj, unique_id):
     dryrun = False
     logger.info('Deploying infrastructure with id %s', unique_id)
 
-    db = database.Database(CONFIG.get('ansible', 'db'))
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
     db.connect()
 
     # Update DB
