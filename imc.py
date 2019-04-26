@@ -428,6 +428,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         # Check if we should stop
         (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new == 'deleting':
+            logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
             return False
 
         # Deploy infrastructure
@@ -439,8 +440,22 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         if infra_id is not None:
             success = True
             if unique_id is not None:
-                print('Success deployment', unique_id, cloud)
-                db.deployment_update_status_with_retries(unique_id, 'configured', cloud, infra_id)
+                # Final check if we should delete the infrastructure
+                (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
+                if infra_status_new == 'deleting':
+                    logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
+
+                    im_auth = utilities.create_im_auth(cloud, token, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+                    client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
+                    (status, msg) = client.getauth()
+                    if status != 0:
+                        logger.critical('Error reading IM auth file: %s', msg)
+                        return False
+
+                    destroy(client, infra_id, cloud)
+                    return False
+                else:
+                    db.deployment_update_status_with_retries(unique_id, 'configured', cloud, infra_id)
             break
 
     if unique_id is not None and infra_id is None:
@@ -487,6 +502,7 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
         # Check if we should stop
         (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new == 'deleting':
+            logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
             return None
 
         # Create infrastructure
@@ -515,6 +531,7 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
                 # Check if we should stop
                 (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deleting':
+                    logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
                     destroy(client, infrastructure_id, cloud)
                     return None
 
@@ -563,7 +580,7 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
 
                 # Handle configured state but some nodes failed and were deleted
                 if state == 'configured' and num_nodes > 1 and have_nodes < num_nodes and not initial_step_complete:
-
+                    logger.info('Infrastructure with our id "%s" is now in the configured state but need to re-create failed VMs', unique_id)
                     if fnodes_to_be_replaced > 0:
                         logger.info('Creating %d fnodes', fnodes_to_be_replaced)
                         radl_new = ''
@@ -616,6 +633,7 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
                         failed_vms = 0
                         for vm_id in states['state']['vm_states']:
                             if states['state']['vm_states'][vm_id] == 'failed':
+                                logger.info('Deleting VM with id %d', int(vm_id))
                                 failed_vms += 1
 
                                 # Determine what type of node (fnode or wnode)
@@ -635,6 +653,14 @@ def deploy(path, cloud, time_begin, unique_id, db, num_nodes=1):
                                                                                  int(CONFIG.get('timeouts', 'deletion')))
 
                         logger.info('Deleted %d failed VMs from infrastructure with our id %s', failed_vms, unique_id)
+
+                        # Check if we have deleted all VMs: in this case IM will return 'unknown' as the status
+                        # so it's best to just start again
+                        if failed_vms == num_nodes:
+                            logger.warning('All VMs failed and deleted, so destroying infrastructure for our id %s', unique_id)
+                            opa_client.set_status(cloud, state)
+                            destroy(client, infrastructure_id, cloud)
+                            break
                         continue
 
                     else:
