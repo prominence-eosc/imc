@@ -3,7 +3,7 @@ import requests
 
 class IMClient(object):
     """
-    Infrastructure Manager client helper
+    Infrastructure Manager helper
     """
 
     def __init__(self, url=None, auth=None, data=None):

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class OPAClient(object):
     """
-    Open Policy Agent client helper
+    Open Policy Agent helper
     """
 
     def __init__(self, url=None, timeout=10):
