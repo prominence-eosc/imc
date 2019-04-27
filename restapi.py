@@ -38,8 +38,20 @@ def create_infrastructure():
     Create infrastructure
     """
     uid = str(uuid.uuid4())
-    executor.submit(imc.infrastructure_deploy, request.get_json(), uid)
-    return jsonify({'id':uid}), 201
+
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
+
+    if db.connect():
+        success = db.deployment_create_with_retries(uid)
+        if success:
+            executor.submit(imc.infrastructure_deploy, request.get_json(), uid)
+            db.close()
+            return jsonify({'id':uid}), 201
+    return jsonify({}), 400
 
 @app.route('/infrastructures/<string:infra_id>', methods=['GET'])
 def get_infrastructure(infra_id):

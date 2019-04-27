@@ -393,7 +393,10 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             return False
 
         # Deploy infrastructure
-        infra_id = deploy(radl, cloud, time_begin, unique_id, db, int(requirements['resources']['instances']))
+        try:
+            infra_id = deploy(radl, cloud, time_begin, unique_id, db, int(requirements['resources']['instances']))
+        except Exception as error:
+            logger.critical('Deployment error, this is a bug: %s', error)
 
         if infra_id is not None:
             success = True
@@ -745,12 +748,6 @@ def imc_deploy(inputj, unique_id):
                            CONFIG.get('db', 'username'),
                            CONFIG.get('db', 'password'))
     db.connect()
-
-    # Update DB
-    success = db.deployment_create_with_retries(unique_id)
-    if not success:
-        logger.critical('Unable to update DB so unable to deploy infrastructure')
-        return 1
 
     # Generate requirements & preferences
     if 'preferences' in inputj:
