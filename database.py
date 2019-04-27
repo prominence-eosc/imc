@@ -83,14 +83,17 @@ class Database(object):
             logger.critical('Unable to connect to the database due to: %s', error)
 
         if self._connection:
-            return 0
-        return 1
+            return True
+        return False
 
     def close(self):
         """
         Close the connection to the DB
         """
-        self._connection.close()
+        try:
+            self._connection.close()
+        except Exception as error:
+            logger.critical('Unable to the database connection due to: %s', error)
 
     def deployment_get_im_infra_id(self, infra_id):
         """
