@@ -167,7 +167,7 @@ class Database(object):
         """
         try:
             cursor = self._connection.cursor()
-            cursor.execute("UPDATE deployments SET status='creating' WHERE id='%s'" % infra_id)
+            cursor.execute("UPDATE deployments SET status='creating',updated=%d WHERE id='%s'" % (time.time(), infra_id))
             self._connection.commit()
             cursor.close()
         except Exception as error:
@@ -198,11 +198,11 @@ class Database(object):
         try:
             cursor = self._connection.cursor()
             if cloud is not None and im_infra_id is not None:
-                cursor.execute("UPDATE deployments SET status='%s',cloud='%s',im_infra_id='%s' WHERE id='%s'" % (status, cloud, im_infra_id, infra_id))
+                cursor.execute("UPDATE deployments SET status='%s',cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (status, cloud, im_infra_id, time.time(), infra_id))
             elif cloud is not None:
-                cursor.execute("UPDATE deployments SET status='%s',cloud='%s' WHERE id='%s'" % (status, cloud, infra_id))
+                cursor.execute("UPDATE deployments SET status='%s',cloud='%s',updated=%d WHERE id='%s'" % (status, cloud, time.time(), infra_id))
             else:
-                cursor.execute("UPDATE deployments SET status='%s' WHERE id='%s'" % (status, infra_id))
+                cursor.execute("UPDATE deployments SET status='%s',updated=%d WHERE id='%s'" % (status, time.time(), infra_id))
             self._connection.commit()
             cursor.close()
         except Exception as error:
