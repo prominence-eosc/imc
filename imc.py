@@ -328,8 +328,14 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         clouds_ranked_list.append(item['site'])
     logger.info('Ranked clouds = [%s]', ','.join(clouds_ranked_list))
 
+    # Check if we should stop
+    (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
+    if infra_status_new == 'deleting':
+        logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
+        return False
+
     # Update status
-    db.deployment_update_infra_with_retries(unique_id)
+    db.deployment_update_status_with_retries(unique_id, 'creating')
 
     # Try to create infrastructure, exiting on the first successful attempt
     time_begin = time.time()
@@ -342,10 +348,12 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         flavour = opa_client.get_flavour(userdata, cloud)
         logger.info('Attempting to deploy on cloud "%s" with image "%s" and flavour "%s"', cloud, image, flavour)
 
+        # If no flavour meets the requirements we should skip the current cloud
         if flavour is None:
             logger.info('Skipping because no flavour could be determined')
             continue
 
+        # If no image meets the requirements we should skip the current cloud
         if image is None:
             logger.info('Skipping because no image could be determined')
             continue
@@ -396,7 +404,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         try:
             infra_id = deploy(radl, cloud, time_begin, unique_id, db, int(requirements['resources']['instances']))
         except Exception as error:
-            logger.critical('Deployment error, this is a bug: %s', error)
+            logger.critical('Deployment error for id %s, this is a bug: %s', unique_id, error)
 
         if infra_id is not None:
             success = True
@@ -405,6 +413,8 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
                 (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deleting':
                     logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
+
+                    token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
                     im_auth = utilities.create_im_auth(cloud, token, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
                     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
@@ -473,8 +483,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
 
         if infrastructure_id is not None:
             logger.info('Created infrastructure with id "%s" on cloud "%s" for id "%s" and waiting for it to be configured', infrastructure_id, cloud, unique_id)
-            #if unique_id is not None and infrastructure_id is not None:
-            #    db.deployment_update_infra(unique_id, infrastructure_id)
+            db.deployment_update_status_with_retries(unique_id, None, cloud, infrastructure_id)
 
             time_created = time.time()
             count_unconfigured = 0
