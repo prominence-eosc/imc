@@ -51,7 +51,7 @@ def create_infrastructure():
             executor.submit(imc.infrastructure_deploy, request.get_json(), uid)
             db.close()
             return jsonify({'id':uid}), 201
-    return jsonify({}), 400
+    return jsonify({'id':uid}), 400
 
 @app.route('/infrastructures/<string:infra_id>', methods=['GET'])
 def get_infrastructure(infra_id):
@@ -68,8 +68,19 @@ def delete_infrastructure(infra_id):
     """
     Delete the specified infrastructure
     """
-    executor.submit(imc.infrastructure_delete, infra_id)
-    return jsonify({}), 200
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
+
+    if db.connect():
+        success = db.deployment_update_status_with_retries(infra_id, 'deleting')
+        if success:
+            executor.submit(imc.infrastructure_delete, infra_id)
+            db.close()
+            return jsonify({'id':uid}), 200
+    return jsonify({'id':uid}), 400
 
 if __name__ == "__main__":
     app.run()

@@ -577,6 +577,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                     destroy(client, infrastructure_id, cloud)
                     break
 
+                # This factor of 3 is a hack, need to fix!
                 if time.time() - time_created > 3*int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes > 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
                     opa_client.set_status(cloud, 'pending-too-long')
@@ -679,7 +680,6 @@ def imc_delete(unique_id):
                            CONFIG.get('db', 'password'))
     db.connect()
     logger.info('Deleting infrastructure "%s"', unique_id)
-    db.deployment_update_status_with_retries(unique_id, 'deleting')
 
     (im_infra_id, infra_status, cloud) = db.deployment_get_im_infra_id(unique_id)
 
@@ -708,6 +708,7 @@ def imc_delete(unique_id):
                 logger.info('Unable to destroy infrastructure "%s" with IM infrastructure id "%s"', unique_id, im_infra_id)
     else:
         logger.info('No need to destroy infrastructure because IM infrastructure id is "%s" and cloud is "%s"', im_infra_id, cloud)
+        db.deployment_update_status_with_retries(unique_id, 'deleted')
     db.close()
     return 0
 
