@@ -59,7 +59,7 @@ def create_infrastructure():
             executor.submit(imc.infrastructure_deploy, request.get_json(), uid)
             logger.info('Infrastructure creation request successfully initiated with id %s', uid)
             return jsonify({'id':uid}), 201
-    logger.info('Infrastructure creation request with id %s failed', uid)
+    logger.critical('Infrastructure creation request with id %s failed, possibly a database issue', uid)
     return jsonify({'id':uid}), 400
 
 @app.route('/infrastructures/<string:infra_id>', methods=['GET'])
@@ -91,7 +91,7 @@ def delete_infrastructure(infra_id):
             executor.submit(imc.infrastructure_delete, infra_id)
             logger.info('Infrastructure deletion request successfully initiated with id %s', infra_id)
             return jsonify({}), 200
-    logger.info('Infrastructure deletion request with id %s failed', infra_id)
+    logger.critical('Infrastructure deletion request with id %s failed, possibly a database issue', infra_id)
     return jsonify({}), 400
 
 if __name__ == "__main__":
