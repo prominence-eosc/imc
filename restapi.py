@@ -3,14 +3,21 @@
 from __future__ import print_function
 from concurrent.futures import ProcessPoolExecutor
 import os
+import sys
 import uuid
 import ConfigParser
+import logging
 from flask import Flask, request, jsonify
 
 import database
 import imc
 
 app = Flask(__name__)
+
+# Logging
+logging.basicConfig(stream=sys.stdout,
+                    level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
+logger = logging.getLogger(__name__)
 
 # Configuration
 CONFIG = ConfigParser.ConfigParser()
@@ -48,9 +55,11 @@ def create_infrastructure():
     if db.connect():
         success = db.deployment_create_with_retries(uid)
         if success:
-            executor.submit(imc.infrastructure_deploy, request.get_json(), uid)
             db.close()
+            executor.submit(imc.infrastructure_deploy, request.get_json(), uid)
+            logger.info('Infrastructure creation request successfully initiated with id %s', uid)
             return jsonify({'id':uid}), 201
+    logger.info('Infrastructure creation request with id %s failed', uid)
     return jsonify({'id':uid}), 400
 
 @app.route('/infrastructures/<string:infra_id>', methods=['GET'])
@@ -58,6 +67,7 @@ def get_infrastructure(infra_id):
     """
     Get current status of specified infrastructure
     """
+    logger.info('Infrastructure status request for id %s', infra_id)
     (im_infra_id, status, cloud) = imc.infrastructure_status(infra_id)
     if status is not None:
         return jsonify({'status':status, 'cloud':cloud, 'infra_id':im_infra_id}), 200
@@ -77,10 +87,12 @@ def delete_infrastructure(infra_id):
     if db.connect():
         success = db.deployment_update_status_with_retries(infra_id, 'deleting')
         if success:
-            executor.submit(imc.infrastructure_delete, infra_id)
             db.close()
-            return jsonify({'id':uid}), 200
-    return jsonify({'id':uid}), 400
+            executor.submit(imc.infrastructure_delete, infra_id)
+            logger.info('Infrastructure deletion request successfully initiated with id %s', infra_id)
+            return jsonify({}), 200
+    logger.info('Infrastructure deletion request with id %s failed', infra_id)
+    return jsonify({}), 400
 
 if __name__ == "__main__":
     app.run()
