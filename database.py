@@ -145,37 +145,7 @@ class Database(object):
             return False
         return True
 
-    def deployment_update_infra_with_retries(self, infra_id):
-        """
-        Create deployment with retries & backoff
-        """
-        max_retries = 10
-        count = 0
-        success = False
-        while count < max_retries and not success:
-            success = self.deployment_update_infra(infra_id)
-            if not success:
-                count += 1
-                self.close()
-                time.sleep(count/2)
-                self.connect()
-        return success
-
-    def deployment_update_infra(self, infra_id):
-        """
-        Update deployment with IM infrastructure id
-        """
-        try:
-            cursor = self._connection.cursor()
-            cursor.execute("UPDATE deployments SET status='creating',updated=%d WHERE id='%s'" % (time.time(), infra_id))
-            self._connection.commit()
-            cursor.close()
-        except Exception as error:
-            logger.critical('[deployment_update_infra] Unable to execute UPDATE query due to: %s', error)
-            return False
-        return True
-
-    def deployment_update_status_with_retries(self, infra_id, status, cloud=None, im_infra_id=None):
+    def deployment_update_status_with_retries(self, infra_id, status=None, cloud=None, im_infra_id=None):
         """
         Update deployment status with retries
         """
@@ -191,17 +161,19 @@ class Database(object):
                 self.connect()
         return success
 
-    def deployment_update_status(self, infra_id, status, cloud=None, im_infra_id=None):
+    def deployment_update_status(self, infra_id, status=None, cloud=None, im_infra_id=None):
         """
         Update deployment status
         """
         try:
             cursor = self._connection.cursor()
-            if cloud is not None and im_infra_id is not None:
+            if cloud is not None and im_infra_id is not None and status is not None:
                 cursor.execute("UPDATE deployments SET status='%s',cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (status, cloud, im_infra_id, time.time(), infra_id))
-            elif cloud is not None:
+            elif cloud is not None and status is not None:
                 cursor.execute("UPDATE deployments SET status='%s',cloud='%s',updated=%d WHERE id='%s'" % (status, cloud, time.time(), infra_id))
-            else:
+            elif im_infra_id is not None and cloud is not None and status is None:
+                cursor.execute("UPDATE deployments SET cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (cloud, im_infra_id, time.time(), infra_id))
+            elif status is not None:
                 cursor.execute("UPDATE deployments SET status='%s',updated=%d WHERE id='%s'" % (status, time.time(), infra_id))
             self._connection.commit()
             cursor.close()
