@@ -85,7 +85,7 @@ def delete_infrastructure(infra_id):
                            CONFIG.get('db', 'password'))
 
     if db.connect():
-        success = db.deployment_update_status_with_retries(infra_id, 'deleting')
+        success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
         if success:
             db.close()
             executor.submit(imc.infrastructure_delete, infra_id)
