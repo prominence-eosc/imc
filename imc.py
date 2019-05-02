@@ -40,7 +40,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     # Count number of instances
     instances = 0
     for line in radl_contents.split('\n'):
-        m = re.search(r'deploy.*(\d+)', line)
+        m = re.search(r'deploy.*\s(\d+)', line)
         if m:
             instances += int(m.group(1))
     logger.info('Found %d instances to deploy', instances)
@@ -186,17 +186,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         db.deployment_update_status_with_retries(unique_id, 'failed', 'none', 'none')
     return success
 
-def infrastructure_delete(unique_id):
-    """
-    Delete the infrastructure with the specified id (wrapper)
-    """
-    try:
-        imc_delete(unique_id)
-    except Exception as ex:
-        logger.critical('Exception deleting infrastructure: "%s"', ex)
-    return
-
-def imc_delete(unique_id):
+def delete(unique_id):
     """
     Delete the infrastructure with the specified id
     """
@@ -244,43 +234,12 @@ def imc_delete(unique_id):
     db.close()
     return 0
 
-def infrastructure_status(unique_id):
-    """
-    Return the status of the infrastructure from the specified id
-    """
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
-    db.connect()
-    (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(unique_id)
-    db.close()
-    return (im_infra_id, status, cloud)
-
-def infrastructure_deploy(inputj, unique_id):
-    """
-    Deploy infrastructure given a JSON specification and id (wrapper)
-    """
-    try:
-        imc_deploy(inputj, unique_id)
-    except Exception as ex:
-        logger.critical('Exception deploying infrastructure: "%s"', ex)
-    return
-
-def imc_deploy(inputj, unique_id):
+def auto_deploy(inputj, unique_id):
     """
     Deploy infrastructure given a JSON specification and id
     """
     dryrun = False
     logger.info('Deploying infrastructure with id %s', unique_id)
-
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
-    db.connect()
 
     # Generate requirements & preferences
     if 'preferences' in inputj:
@@ -304,12 +263,17 @@ def imc_deploy(inputj, unique_id):
     if 'radl' in inputj:
         radl_contents = base64.b64decode(inputj['radl'])
 
-    # Attempt to deploy infrastructure
-    success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
 
-    if not success:
-        db.deployment_update_status_with_retries(unique_id, 'unable')
-
+    success = False
+    if db.connect():
+        success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
+        if not success:
+            db.deployment_update_status_with_retries(unique_id, 'unable')
     db.close()
 
     if not success:
