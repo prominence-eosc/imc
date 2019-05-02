@@ -39,6 +39,45 @@ dbi = database.Database(CONFIG.get('db', 'host'),
 
 dbi.init()
 
+def infrastructure_deploy(input_json, unique_id):
+    """
+    Deploy infrastructure given a JSON specification and id
+    """
+    try:
+        imc.auto_deploy(input_json, unique_id)
+    except Exception as error:
+        logger.critical('Exception deploying infrastructure: "%s"', error)
+    return
+
+def infrastructure_status(unique_id):
+    """
+    Return the status of the infrastructure from the specified id
+    """
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
+
+    im_infra_id = None
+    status = None
+    cloud = None
+
+    if db.connect():
+        (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(unique_id)
+    db.close()
+    return (im_infra_id, status, cloud)
+
+def infrastructure_delete(unique_id):
+    """
+    Delete the infrastructure with the specified id
+    """
+    try:
+        imc.delete(unique_id)
+    except Exception as error:
+        logger.critical('Exception deleting infrastructure: "%s"', error)
+    return
+
 @app.route('/infrastructures', methods=['POST'])
 def create_infrastructure():
     """
@@ -56,7 +95,7 @@ def create_infrastructure():
         success = db.deployment_create_with_retries(uid)
         if success:
             db.close()
-            executor.submit(imc.infrastructure_deploy, request.get_json(), uid)
+            executor.submit(infrastructure_deploy, request.get_json(), uid)
             logger.info('Infrastructure creation request successfully initiated with id %s', uid)
             return jsonify({'id':uid}), 201
     logger.critical('Infrastructure creation request with id %s failed, possibly a database issue', uid)
@@ -68,7 +107,7 @@ def get_infrastructure(infra_id):
     Get current status of specified infrastructure
     """
     logger.info('Infrastructure status request for id %s', infra_id)
-    (im_infra_id, status, cloud) = imc.infrastructure_status(infra_id)
+    (im_infra_id, status, cloud) = infrastructure_status(infra_id)
     if status is not None:
         return jsonify({'status':status, 'cloud':cloud, 'infra_id':im_infra_id}), 200
     return jsonify({'status':'invalid'}), 404
@@ -88,7 +127,7 @@ def delete_infrastructure(infra_id):
         success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
         if success:
             db.close()
-            executor.submit(imc.infrastructure_delete, infra_id)
+            executor.submit(infrastructure_delete, infra_id)
             logger.info('Infrastructure deletion request successfully initiated with id %s', infra_id)
             return jsonify({}), 200
     logger.critical('Infrastructure deletion request with id %s failed, possibly a database issue', infra_id)
