@@ -49,25 +49,6 @@ def infrastructure_deploy(input_json, unique_id):
         logger.critical('Exception deploying infrastructure: "%s"', error)
     return
 
-def infrastructure_status(unique_id):
-    """
-    Return the status of the infrastructure from the specified id
-    """
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
-
-    im_infra_id = None
-    status = None
-    cloud = None
-
-    if db.connect():
-        (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(unique_id)
-    db.close()
-    return (im_infra_id, status, cloud)
-
 def infrastructure_delete(unique_id):
     """
     Delete the infrastructure with the specified id
@@ -107,7 +88,19 @@ def get_infrastructure(infra_id):
     Get current status of specified infrastructure
     """
     logger.info('Infrastructure status request for id %s', infra_id)
-    (im_infra_id, status, cloud) = infrastructure_status(infra_id)
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
+
+    im_infra_id = None
+    status = None
+    cloud = None
+
+    if db.connect():
+        (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(unique_id)
+    db.close()
     if status is not None:
         return jsonify({'status':status, 'cloud':cloud, 'infra_id':im_infra_id}), 200
     return jsonify({'status':'invalid'}), 404
