@@ -132,6 +132,10 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                     logger.info('Infrastructure with our id "%s" and IM id "%s" is in state %s', unique_id, infrastructure_id, state)
                     state_previous = state
 
+                # FIXME
+                if state == 'configured':
+                   logger.info('State is configured, but: num_nodes=%d, have_nodes=%d, initial_step_complete=%d', num_nodes, have_nodes, initial_step_complete)
+
                 # Handle the final configured state
                 if state == 'configured' and (num_nodes == 1 or (num_nodes > 1 and initial_step_complete)):
                     logger.info('Successfully configured infrastructure with our id "%s" on cloud "%s"', unique_id, cloud)
@@ -215,12 +219,18 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                                 (exit_code, vm_info) = client.get_vm_info(infrastructure_id,
                                                                           int(vm_id),
                                                                           int(CONFIG.get('timeouts', 'deletion')))
+                                # FIXME - is found_vm really needed?
+                                found_vm = False
                                 for info in vm_info['radl']:
-                                    if 'state' in info:
+                                    if 'state' in info and 'id' in info:
+                                        found_vm = True
                                         if 'fnode' in info['id']:
                                             fnodes_to_be_replaced += 1
                                         else:
                                             wnodes_to_be_replaced += 1
+
+                                if not found_vm:
+                                    logger.warn('Unable to determine type of VM for infrastructure %s', unique_id)
 
                                 # Delete the VM
                                 (exit_code, msg_remove) = client.remove_resource(infrastructure_id,
