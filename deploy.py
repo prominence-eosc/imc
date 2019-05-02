@@ -132,56 +132,56 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                     logger.info('Infrastructure with our id "%s" and IM id "%s" is in state %s', unique_id, infrastructure_id, state)
                     state_previous = state
 
-                # FIXME
+                # Handle difference situation when state is configured
                 if state == 'configured':
-                   logger.info('State is configured, but: num_nodes=%d, have_nodes=%d, initial_step_complete=%d', num_nodes, have_nodes, initial_step_complete)
+                   logger.info('State is configured for infrastructure with id %s and have: num_nodes=%d, have_nodes=%d, initial_step_complete=%d', unique_id, num_nodes, have_nodes, initial_step_complete)
 
-                # Handle the final configured state
-                if state == 'configured' and (num_nodes == 1 or (num_nodes > 1 and initial_step_complete)):
-                    logger.info('Successfully configured infrastructure with our id "%s" on cloud "%s"', unique_id, cloud)
-                    success = True
-                    return infrastructure_id
+                    # The final configured state
+                    if num_nodes == 1 or (num_nodes > 1 and initial_step_complete):
+                        logger.info('Successfully configured infrastructure with our id "%s" on cloud "%s"', unique_id, cloud)
+                        success = True
+                        return infrastructure_id
 
-                # Handle configured state for initial step of multi-node infrastructure
-                if state == 'configured' and num_nodes > 1 and have_nodes == num_nodes and not initial_step_complete:
-                    logger.info('Successfully configured basic infrastructure with our id "%s" on cloud "%s", will now apply final configuration', unique_id, cloud)
+                    # Configured state for initial step of multi-node infrastructure
+                    if num_nodes > 1 and have_nodes == num_nodes and not initial_step_complete:
+                        logger.info('Successfully configured basic infrastructure with our id "%s" on cloud "%s", will now apply final configuration', unique_id, cloud)
 
-                    initial_step_complete = True
+                        initial_step_complete = True
 
-                    radl_final = ''
-                    for line in radl.split('\n'):
-                        if line.startswith('deploy'):
-                            line = ''
-                        radl_final += '%s\n' % line
-                    (exit_code, msg) = client.reconfigure_new(infrastructure_id, radl_final, int(CONFIG.get('timeouts', 'reconfigure')))
-
-                # Handle configured state but some nodes failed and were deleted
-                if state == 'configured' and num_nodes > 1 and have_nodes < num_nodes and not initial_step_complete:
-                    logger.info('Infrastructure with our id "%s" is now in the configured state but need to re-create failed VMs', unique_id)
-
-                    if fnodes_to_be_replaced > 0:
-                        logger.info('Creating %d fnodes', fnodes_to_be_replaced)
-                        radl_new = ''
-                        for line in radl_base.split('\n'):
-                            if line.startswith('deploy wnode'):
+                        radl_final = ''
+                        for line in radl.split('\n'):
+                            if line.startswith('deploy'):
                                 line = ''
-                            if line.startswith('deploy fnode'):
-                                line = 'deploy fnode %d\n' % fnodes_to_be_replaced
-                            radl_new += '%s\n' % line
-                        fnodes_to_be_replaced = 0
-                        (exit_code, msg) = client.add_resource(infrastructure_id, radl_new, 120)
+                            radl_final += '%s\n' % line
+                        (exit_code, msg) = client.reconfigure_new(infrastructure_id, radl_final, int(CONFIG.get('timeouts', 'reconfigure')))
 
-                    if wnodes_to_be_replaced > 0:
-                        logger.info('Creating %d wnodes', wnodes_to_be_replaced)
-                        radl_new = ''
-                        for line in radl_base.split('\n'):
-                            if line.startswith('deploy fnode'):
-                                line = ''
-                            if line.startswith('deploy wnode'):
-                                line = 'deploy wnode %d\n' % wnodes_to_be_replaced
-                            radl_new += '%s\n' % line
-                        wnodes_to_be_replaced = 0
-                        (exit_code, msg) = client.add_resource(infrastructure_id, radl_new, 120)
+                    # Configured state but some nodes failed and were deleted
+                    if num_nodes > 1 and have_nodes < num_nodes and not initial_step_complete:
+                        logger.info('Infrastructure with our id "%s" is now in the configured state but need to re-create failed VMs', unique_id)
+
+                        if fnodes_to_be_replaced > 0:
+                            logger.info('Creating %d fnodes', fnodes_to_be_replaced)
+                            radl_new = ''
+                            for line in radl_base.split('\n'):
+                                if line.startswith('deploy wnode'):
+                                    line = ''
+                                if line.startswith('deploy fnode'):
+                                    line = 'deploy fnode %d\n' % fnodes_to_be_replaced
+                                radl_new += '%s\n' % line
+                            fnodes_to_be_replaced = 0
+                            (exit_code, msg) = client.add_resource(infrastructure_id, radl_new, 120)
+
+                        if wnodes_to_be_replaced > 0:
+                            logger.info('Creating %d wnodes', wnodes_to_be_replaced)
+                            radl_new = ''
+                            for line in radl_base.split('\n'):
+                                if line.startswith('deploy fnode'):
+                                    line = ''
+                                if line.startswith('deploy wnode'):
+                                    line = 'deploy wnode %d\n' % wnodes_to_be_replaced
+                                radl_new += '%s\n' % line
+                            wnodes_to_be_replaced = 0
+                            (exit_code, msg) = client.add_resource(infrastructure_id, radl_new, 120)
 
                 # Destroy infrastructure which is taking too long to enter the configured state
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'configured')):
