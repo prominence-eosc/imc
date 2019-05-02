@@ -1,5 +1,7 @@
 # IMC
 
+![clouds](imc.png)
+
 ## Overview
 
 It is frequently assumed that when you're using a cloud you have access to an essentially infinite amount of resources, however this is not always the case. IMC is for situations when you have access to many small clouds and you need a tool which can deploy and configure virtual infrastructure across them.
