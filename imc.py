@@ -19,6 +19,7 @@ import imclient
 import opaclient
 import tokens
 import utilities
+import logger as custom_logger
 
 # Configuration
 CONFIG = ConfigParser.ConfigParser()
@@ -31,12 +32,13 @@ else:
 # Logging
 logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
-logger = logging.getLogger(__name__)
 
 def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     """
     Find an appropriate cloud to deploy infrastructure
     """
+    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
+
     # Count number of instances
     instances = 0
     for line in radl_contents.split('\n'):
@@ -75,7 +77,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     # Check if we should stop
     (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
     if infra_status_new == 'deletion-requested':
-        logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
+        logger.info('Deletion requested of infrastructure, aborting deployment')
         return False
 
     # Update status
@@ -142,14 +144,14 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         # Check if we should stop
         (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new == 'deletion-requested':
-            logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
+            logger.info('Deletion requested of infrastructure, aborting deployment')
             return False
 
         # Deploy infrastructure
         try:
             infra_id = deploy.deploy(radl, cloud, time_begin, unique_id, db, int(requirements['resources']['instances']))
         except Exception as error:
-            logger.critical('Deployment error for id %s, this is a bug: %s', unique_id, error)
+            logger.critical('Deployment error, this is a bug: %s', error)
 
         if infra_id is not None:
             success = True
@@ -157,7 +159,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
                 # Final check if we should delete the infrastructure
                 (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deletion-requested':
-                    logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
+                    logger.info('Deletion requested of infrastructure, aborting deployment')
 
                     token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
@@ -172,10 +174,10 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
 
                     if destroyed:
                         db.deployment_update_status_with_retries(unique_id, 'deleted')
-                        logger.info('Destroyed infrastructure "%s" with IM infrastructure id "%s"', unique_id, infra_id)
+                        logger.info('Destroyed infrastructure with IM infrastructure id %s', infra_id)
                     else:
                         db.deployment_update_status_with_retries(unique_id, 'deletion-failed')
-                        logger.critical('Unable to destroy infrastructure "%s" with IM infrastructure id "%s"', unique_id, infra_id)
+                        logger.critical('Unable to destroy infrastructure with IM infrastructure id %s', infra_id)
 
                     return False
                 else:
@@ -190,16 +192,18 @@ def delete(unique_id):
     """
     Delete the infrastructure with the specified id
     """
+    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
+
     db = database.Database(CONFIG.get('db', 'host'),
                            CONFIG.get('db', 'port'),
                            CONFIG.get('db', 'db'),
                            CONFIG.get('db', 'username'),
                            CONFIG.get('db', 'password'))
     db.connect()
-    logger.info('Deleting infrastructure "%s"', unique_id)
+    logger.info('Deleting infrastructure')
 
     (im_infra_id, infra_status, cloud) = db.deployment_get_im_infra_id(unique_id)
-    logger.info('Obtained IM id %s and cloud %s and status %s for infrastructure with id %s', im_infra_id, cloud, infra_status, unique_id)
+    logger.info('Obtained IM id %s and cloud %s and status %s', im_infra_id, cloud, infra_status)
 
     if im_infra_id is not None and cloud is not None:
         match_obj_name = re.match(r'\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b', im_infra_id)
@@ -220,14 +224,14 @@ def delete(unique_id):
             try:
                 destroyed = destroy.destroy(client, im_infra_id, cloud)
             except Exception as error:
-                logger.critical('Deletion bug for id %s, error: %s', unique_id, error)
+                logger.critical('Deletion bug, error: %s', error)
 
             if destroyed:
                 db.deployment_update_status_with_retries(unique_id, 'deleted')
-                logger.info('Destroyed infrastructure "%s" with IM infrastructure id "%s"', unique_id, im_infra_id)
+                logger.info('Destroyed infrastructure with IM infrastructure id %s', im_infra_id)
             else:
                 db.deployment_update_status_with_retries(unique_id, 'deletion-failed')
-                logger.critical('Unable to destroy infrastructure "%s" with IM infrastructure id "%s"', unique_id, im_infra_id)
+                logger.critical('Unable to destroy infrastructure with IM infrastructure id %s', im_infra_id)
     else:
         logger.info('No need to destroy infrastructure because IM infrastructure id is "%s" and cloud is "%s"', im_infra_id, cloud)
         db.deployment_update_status_with_retries(unique_id, 'deleted')
@@ -238,8 +242,10 @@ def auto_deploy(inputj, unique_id):
     """
     Deploy infrastructure given a JSON specification and id
     """
+    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
+
     dryrun = False
-    logger.info('Deploying infrastructure with id %s', unique_id)
+    logger.info('Deploying infrastructure')
 
     # Generate requirements & preferences
     if 'preferences' in inputj:

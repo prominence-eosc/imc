@@ -14,6 +14,7 @@ import imclient
 import opaclient
 import tokens
 import utilities
+import logger as custom_logger
 
 # Configuration
 CONFIG = ConfigParser.ConfigParser()
@@ -26,12 +27,13 @@ else:
 # Logging
 logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
-logger = logging.getLogger(__name__)
 
 def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
     """
     Deploy infrastructure from a specified RADL file
     """
+    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
+
     # Check & get auth token if necessary
     token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
@@ -67,7 +69,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
         # Check if we should stop
         (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new == 'deletion-requested':
-            logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
+            logger.info('Deletion requested of infrastructure, aborting deployment')
             return None
 
         # Create infrastructure
@@ -77,7 +79,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
         logger.info('Duration of create request %d s on cloud %s', duration, cloud)
 
         if infrastructure_id is not None:
-            logger.info('Created infrastructure with id "%s" on cloud "%s" for id "%s" and waiting for it to be configured', infrastructure_id, cloud, unique_id)
+            logger.info('Created infrastructure on cloud "%s" with IM id "%s" and waiting for it to be configured', cloud, infrastructure_id)
             db.deployment_update_status_with_retries(unique_id, None, cloud, infrastructure_id)
 
             time_created = time.time()
@@ -94,13 +96,13 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                 # Check if we should stop
                 (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deletion-requested':
-                    logger.info('Deletion requested of infrastructure with our id "%s", aborting deployment', unique_id)
+                    logger.info('Deletion requested of infrastructure, aborting deployment')
                     destroy.destroy(client, infrastructure_id, cloud)
                     return None
 
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
-                    logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with id "%s"', infrastructure_id)
+                    logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with IM id "%s"', infrastructure_id)
                     destroy.destroy(client, infrastructure_id, cloud)
                     return None
 
@@ -124,27 +126,27 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                 
                 # If the state or number of nodes is unknown, wait
                 if state is None or have_nodes == -1:
-                    logger.warning('Unable to determine state and/or number of VMs from Infrastructure Manager for instructure with id %s', unique_id)
+                    logger.warning('Unable to determine state and/or number of VMs from IM')
                     continue
 
                 # Log a change in state
                 if state != state_previous:
-                    logger.info('Infrastructure with our id "%s" and IM id "%s" is in state %s', unique_id, infrastructure_id, state)
+                    logger.info('Infrastructure with IM id "%s" is in state %s', infrastructure_id, state)
                     state_previous = state
 
                 # Handle difference situation when state is configured
                 if state == 'configured':
-                   logger.info('State is configured for infrastructure with id %s and have: num_nodes=%d, have_nodes=%d, initial_step_complete=%d', unique_id, num_nodes, have_nodes, initial_step_complete)
+                    logger.info('State is configured and have: num_nodes=%d, have_nodes=%d, initial_step_complete=%d', num_nodes, have_nodes, initial_step_complete)
 
                     # The final configured state
                     if num_nodes == 1 or (num_nodes > 1 and initial_step_complete):
-                        logger.info('Successfully configured infrastructure with our id "%s" on cloud "%s"', unique_id, cloud)
+                        logger.info('Successfully configured infrastructure on cloud "%s"', cloud)
                         success = True
                         return infrastructure_id
 
                     # Configured state for initial step of multi-node infrastructure
                     if num_nodes > 1 and have_nodes == num_nodes and not initial_step_complete:
-                        logger.info('Successfully configured basic infrastructure with our id "%s" on cloud "%s", will now apply final configuration', unique_id, cloud)
+                        logger.info('Successfully configured basic infrastructure on cloud "%s", will now apply final configuration', cloud)
 
                         initial_step_complete = True
 
@@ -157,7 +159,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
 
                     # Configured state but some nodes failed and were deleted
                     if num_nodes > 1 and have_nodes < num_nodes and not initial_step_complete:
-                        logger.info('Infrastructure with our id "%s" is now in the configured state but need to re-create failed VMs', unique_id)
+                        logger.info('Infrastructure is now in the configured state but need to re-create failed VMs')
 
                         if fnodes_to_be_replaced > 0:
                             logger.info('Creating %d fnodes', fnodes_to_be_replaced)
@@ -230,22 +232,23 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                                             wnodes_to_be_replaced += 1
 
                                 if not found_vm:
-                                    logger.warn('Unable to determine type of VM for infrastructure %s', unique_id)
+                                    logger.warn('Unable to determine type of VM')
 
                                 # Delete the VM
                                 (exit_code, msg_remove) = client.remove_resource(infrastructure_id,
                                                                                  int(vm_id),
                                                                                  int(CONFIG.get('timeouts', 'deletion')))
 
-                        logger.info('Deleted %d failed VMs from infrastructure with our id %s', failed_vms, unique_id)
+                        logger.info('Deleted %d failed VMs from infrastructure', failed_vms)
 
                         # Check if we have deleted all VMs: in this case IM will return 'unknown' as the status
                         # so it's best to just start again
                         if failed_vms == num_nodes:
-                            logger.warning('All VMs failed and deleted, so destroying infrastructure for our id %s', unique_id)
+                            logger.warning('All VMs failed and deleted, so destroying infrastructure')
                             opa_client.set_status(cloud, state)
                             destroy.destroy(client, infrastructure_id, cloud)
                             break
+
                         continue
 
                     else:
@@ -265,7 +268,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                             with open(file_unconf, 'w') as unconf:
                                 unconf.write(contmsg)
                         except Exception as error:
-                            logger.warning('Unable to write contmsg to file for infrastructure with id %s', unique_id)
+                            logger.warning('Unable to write contmsg to file')
                         client.reconfigure(infrastructure_id, int(CONFIG.get('timeouts', 'reconfigure')))
                     else:
                         logger.warning('Infrastructure has been unconfigured too many times, so destroying after writing contmsg to a file')
@@ -274,7 +277,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                             with open(file_unconf, 'w') as unconf:
                                 unconf.write(contmsg)
                         except Exception as error:
-                            logger.warning('Unable to write contmsg to file for infrastructure with id %s', unique_id)
+                            logger.warning('Unable to write contmsg to file')
                         destroy.destroy(client, infrastructure_id, cloud)
                         break
         else:
@@ -290,7 +293,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                     with open(file_failed, 'w') as failed:
                         failed.write(msg)
                 except Exception as error:
-                    logger.warning('Unable to write contmsg to file for infrastructure with id %s', unique_id)
+                    logger.warning('Unable to write contmsg to file')
 
     return None
 

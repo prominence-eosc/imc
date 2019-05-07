@@ -11,13 +11,13 @@ from flask import Flask, request, jsonify
 
 import database
 import imc
+import logger as custom_logger
 
 app = Flask(__name__)
 
 # Logging
 logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
-logger = logging.getLogger(__name__)
 
 # Configuration
 CONFIG = ConfigParser.ConfigParser()
@@ -43,6 +43,7 @@ def infrastructure_deploy(input_json, unique_id):
     """
     Deploy infrastructure given a JSON specification and id
     """
+    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
     try:
         imc.auto_deploy(input_json, unique_id)
     except Exception as error:
@@ -53,6 +54,7 @@ def infrastructure_delete(unique_id):
     """
     Delete the infrastructure with the specified id
     """
+    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
     try:
         imc.delete(unique_id)
     except Exception as error:
@@ -65,6 +67,7 @@ def create_infrastructure():
     Create infrastructure
     """
     uid = str(uuid.uuid4())
+    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': uid})
 
     db = database.Database(CONFIG.get('db', 'host'),
                            CONFIG.get('db', 'port'),
@@ -77,9 +80,9 @@ def create_infrastructure():
         if success:
             db.close()
             executor.submit(infrastructure_deploy, request.get_json(), uid)
-            logger.info('Infrastructure creation request successfully initiated with id %s', uid)
+            logger.info('Infrastructure creation request successfully initiated')
             return jsonify({'id':uid}), 201
-    logger.critical('Infrastructure creation request with id %s failed, possibly a database issue', uid)
+    logger.critical('Infrastructure creation request failed, possibly a database issue')
     return jsonify({'id':uid}), 400
 
 @app.route('/infrastructures/<string:infra_id>', methods=['GET'])
@@ -87,7 +90,8 @@ def get_infrastructure(infra_id):
     """
     Get current status of specified infrastructure
     """
-    logger.info('Infrastructure status request for id %s', infra_id)
+    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': infra_id})
+    logger.info('Infrastructure status request')
     db = database.Database(CONFIG.get('db', 'host'),
                            CONFIG.get('db', 'port'),
                            CONFIG.get('db', 'db'),
@@ -99,7 +103,7 @@ def get_infrastructure(infra_id):
     cloud = None
 
     if db.connect():
-        (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(unique_id)
+        (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(infra_id)
     db.close()
     if status is not None:
         return jsonify({'status':status, 'cloud':cloud, 'infra_id':im_infra_id}), 200
@@ -110,6 +114,8 @@ def delete_infrastructure(infra_id):
     """
     Delete the specified infrastructure
     """
+    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': infra_id})
+
     db = database.Database(CONFIG.get('db', 'host'),
                            CONFIG.get('db', 'port'),
                            CONFIG.get('db', 'db'),
@@ -121,9 +127,9 @@ def delete_infrastructure(infra_id):
         if success:
             db.close()
             executor.submit(infrastructure_delete, infra_id)
-            logger.info('Infrastructure deletion request successfully initiated with id %s', infra_id)
+            logger.info('Infrastructure deletion request successfully initiated')
             return jsonify({}), 200
-    logger.critical('Infrastructure deletion request with id %s failed, possibly a database issue', infra_id)
+    logger.critical('Infrastructure deletion request failed, possibly a database issue')
     return jsonify({}), 400
 
 if __name__ == "__main__":

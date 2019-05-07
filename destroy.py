@@ -36,4 +36,9 @@ def destroy(client, infrastructure_id, cloud):
         delay = delay*delay_factor
         time.sleep(int(count + delay))
 
+    if destroyed:
+        logger.info('Destroyed infrastructure with IM id "%s"', infrastructure_id)
+    else:
+        logger.critical('Unable to destroy infrastructure with IM id "%s"', infrastructure_id)
+
     return destroyed

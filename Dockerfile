@@ -19,6 +19,7 @@ COPY opaclient.py /
 COPY tokens.py /
 COPY utilities.py /
 COPY ansible.py /
+COPY logger.py /
 
 RUN chown uwsgi /var/log && \
     mkdir /var/lib/prominence && \
