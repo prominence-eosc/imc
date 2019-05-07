@@ -192,7 +192,7 @@ def get_public_ip(infrastructure_id):
 
 def deploy_ansible_node(cloud, db):
     """
-    Deploy an Ansible node with public IP address
+    Deploy an Ansible node with a public IP address
     """
     logger.info('Deploying Ansible node for cloud "%s"', cloud)
 

@@ -92,7 +92,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         cloud = item['site']
         image = opa_client.get_image(userdata, cloud)
         flavour = opa_client.get_flavour(userdata, cloud)
-        logger.info('Attempting to deploy on cloud "%s" with image "%s" and flavour "%s"', cloud, image, flavour)
+        logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image, flavour)
 
         # If no flavour meets the requirements we should skip the current cloud
         if flavour is None:
@@ -208,7 +208,7 @@ def delete(unique_id):
     if im_infra_id is not None and cloud is not None:
         match_obj_name = re.match(r'\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b', im_infra_id)
         if match_obj_name:
-            logger.info('Deleting IM infrastructure with id "%s"', im_infra_id)
+            logger.info('Deleting infrastructure with IM id %s', im_infra_id)
             # Check & get auth token if necessary
             token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
@@ -233,7 +233,7 @@ def delete(unique_id):
                 db.deployment_update_status_with_retries(unique_id, 'deletion-failed')
                 logger.critical('Unable to destroy infrastructure with IM infrastructure id %s', im_infra_id)
     else:
-        logger.info('No need to destroy infrastructure because IM infrastructure id is "%s" and cloud is "%s"', im_infra_id, cloud)
+        logger.info('No need to destroy infrastructure because IM infrastructure id is %s and cloud is %s', im_infra_id, cloud)
         db.deployment_update_status_with_retries(unique_id, 'deleted')
     db.close()
     return 0

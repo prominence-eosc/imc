@@ -73,13 +73,10 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
             return None
 
         # Create infrastructure
-        start = time.time()
         (infrastructure_id, msg) = client.create(radl_base, int(CONFIG.get('timeouts', 'creation')))
-        duration = time.time() - start
-        logger.info('Duration of create request %d s on cloud %s', duration, cloud)
 
         if infrastructure_id is not None:
-            logger.info('Created infrastructure on cloud "%s" with IM id "%s" and waiting for it to be configured', cloud, infrastructure_id)
+            logger.info('Created infrastructure on cloud %s with IM id %s and waiting for it to be configured', cloud, infrastructure_id)
             db.deployment_update_status_with_retries(unique_id, None, cloud, infrastructure_id)
 
             time_created = time.time()
@@ -102,7 +99,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
 
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
-                    logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with IM id "%s"', infrastructure_id)
+                    logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with IM id %s', infrastructure_id)
                     destroy.destroy(client, infrastructure_id, cloud)
                     return None
 
@@ -112,7 +109,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
 
                 # If state is not known, wait
                 if states is None:
-                    logger.info('State is not known for infrastructure with id "%s" on cloud "%s"', infrastructure_id, cloud)
+                    logger.info('State is not known for infrastructure with id %s on cloud %s', infrastructure_id, cloud)
                     continue
 
                 # Overall state of infrastructure
@@ -131,7 +128,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
 
                 # Log a change in state
                 if state != state_previous:
-                    logger.info('Infrastructure with IM id "%s" is in state %s', infrastructure_id, state)
+                    logger.info('Infrastructure with IM id %s is in state %s', infrastructure_id, state)
                     state_previous = state
 
                 # Handle difference situation when state is configured
@@ -140,13 +137,13 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
 
                     # The final configured state
                     if num_nodes == 1 or (num_nodes > 1 and initial_step_complete):
-                        logger.info('Successfully configured infrastructure on cloud "%s"', cloud)
+                        logger.info('Successfully configured infrastructure on cloud %s', cloud)
                         success = True
                         return infrastructure_id
 
                     # Configured state for initial step of multi-node infrastructure
                     if num_nodes > 1 and have_nodes == num_nodes and not initial_step_complete:
-                        logger.info('Successfully configured basic infrastructure on cloud "%s", will now apply final configuration', cloud)
+                        logger.info('Successfully configured basic infrastructure on cloud %s, will now apply final configuration', cloud)
 
                         initial_step_complete = True
 
@@ -199,7 +196,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                     destroy.destroy(client, infrastructure_id, cloud)
                     break
 
-                # This factor of 3 is a hack, need to fix!
+                # FIXME: This factor of 3 is a hack
                 if time.time() - time_created > 3*int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes > 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
                     opa_client.set_status(cloud, 'pending-too-long')
@@ -281,7 +278,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                         destroy.destroy(client, infrastructure_id, cloud)
                         break
         else:
-            logger.warning('Deployment failure on cloud "%s" for infrastructure with id "%s" with msg="%s"', cloud, infrastructure_id, msg)
+            logger.warning('Deployment failure on cloud %s with id %s with msg="%s"', cloud, infrastructure_id, msg)
             if msg == 'timedout':
                 logger.warning('Infrastructure creation failed due to a timeout')
                 opa_client.set_status(cloud, 'creation-timeout')
