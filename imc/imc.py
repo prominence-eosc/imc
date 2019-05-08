@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 from __future__ import print_function
 import base64
 import os
@@ -265,6 +263,10 @@ def auto_deploy(inputj, unique_id):
 
     if 'radl' in inputj:
         radl_contents = base64.b64decode(inputj['radl'])
+
+    if 'requirements' not in inputj or 'radl' not in inputj:
+        logger.warning('Invalid JSON provided: both requirements and radl must exist')
+        return 1
 
     db = database.Database(CONFIG.get('db', 'host'),
                            CONFIG.get('db', 'port'),

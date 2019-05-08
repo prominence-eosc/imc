@@ -1,4 +1,5 @@
-#!/usr/bin/python
+"""Miscellaneous functions"""
+
 import json
 import logging
 import sys

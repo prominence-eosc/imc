@@ -1,4 +1,4 @@
-#!/usr/bin/python
+"""REST API"""
 
 from __future__ import print_function
 from concurrent.futures import ProcessPoolExecutor

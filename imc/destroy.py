@@ -1,4 +1,4 @@
-#!/usr/bin/python
+"""Destroy the specified IM infrastructure, with retries"""
 
 from __future__ import print_function
 import os

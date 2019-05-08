@@ -1,4 +1,4 @@
-#!/usr/bin/python
+"""Deploy infrastructure on the specified cloud"""
 
 from __future__ import print_function
 import os
@@ -60,7 +60,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
     retries_per_cloud = int(CONFIG.get('deployment', 'retries'))
     retry = 0
     success = False
-    while retry < retries_per_cloud + 1 and success is not True:
+    while retry < retries_per_cloud + 1 and not success:
         if retry > 0:
             time.sleep(int(CONFIG.get('polling', 'duration')))
         logger.info('Deployment attempt %d of %d', retry+1, retries_per_cloud+1)

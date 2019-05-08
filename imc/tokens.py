@@ -1,4 +1,4 @@
-#!/usr/bin/python
+"""Functions for handling tokens"""
 
 import json
 import logging

@@ -1,3 +1,5 @@
+"""Add id to each log message"""
+
 import logging
 
 class CustomAdapter(logging.LoggerAdapter):

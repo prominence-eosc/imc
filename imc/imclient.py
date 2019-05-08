@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import requests
 
 class IMClient(object):

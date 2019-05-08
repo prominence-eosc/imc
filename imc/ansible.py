@@ -1,4 +1,4 @@
-#!/usr/bin/python
+"""Functions for checking for & deploying an Ansible node"""
 
 from __future__ import print_function
 import base64
