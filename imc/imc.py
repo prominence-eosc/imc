@@ -221,10 +221,7 @@ def delete(unique_id):
                 db.close()
                 return 1
 
-            try:
-                destroyed = destroy.destroy(client, im_infra_id)
-            except Exception as error:
-                logger.critical('Deletion bug, error: %s', error)
+            destroyed = destroy.destroy(client, im_infra_id)
 
             if destroyed:
                 db.deployment_update_status_with_retries(unique_id, 'deleted')
