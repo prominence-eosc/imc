@@ -13,6 +13,17 @@ import database
 import imc
 import logger as custom_logger
 
+def get_db()
+    """
+    Prepare DB
+    """
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
+    return db
+
 app = Flask(__name__)
 
 # Logging
@@ -31,12 +42,7 @@ else:
 executor = ProcessPoolExecutor(int(CONFIG.get('pool', 'size')))
 
 # Initialize DB if necessary
-dbi = database.Database(CONFIG.get('db', 'host'),
-                        CONFIG.get('db', 'port'),
-                        CONFIG.get('db', 'db'),
-                        CONFIG.get('db', 'username'),
-                        CONFIG.get('db', 'password'))
-
+dbi = get_db()
 dbi.init()
 
 def infrastructure_deploy(input_json, unique_id):
@@ -69,12 +75,7 @@ def create_infrastructure():
     uid = str(uuid.uuid4())
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': uid})
 
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
-
+    db = get_db()
     if db.connect():
         success = db.deployment_create_with_retries(uid)
         if success:
@@ -92,16 +93,12 @@ def get_infrastructure(infra_id):
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': infra_id})
     logger.info('Infrastructure status request')
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
 
     im_infra_id = None
     status = None
     cloud = None
 
+    db = get_db()
     if db.connect():
         (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(infra_id)
     db.close()
@@ -116,12 +113,7 @@ def delete_infrastructure(infra_id):
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': infra_id})
 
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
-
+    db = get_db()
     if db.connect():
         success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
         if success:
