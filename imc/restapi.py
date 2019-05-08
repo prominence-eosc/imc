@@ -13,7 +13,7 @@ import database
 import imc
 import logger as custom_logger
 
-def get_db()
+def get_db():
     """
     Prepare DB
     """

@@ -9,17 +9,7 @@ RUN apk add --no-cache uwsgi-python \
                        py-psycopg2
     
 
-COPY restapi.py /
-COPY imc.py /
-COPY database.py /
-COPY deploy.py /
-COPY destroy.py /
-COPY imclient.py /
-COPY opaclient.py /
-COPY tokens.py /
-COPY utilities.py /
-COPY ansible.py /
-COPY logger.py /
+COPY imc /imc
 
 RUN chown uwsgi /var/log && \
     mkdir /var/lib/prominence && \
@@ -33,4 +23,5 @@ ENTRYPOINT ["/usr/sbin/uwsgi", \
             "--uid", "uwsgi", \
             "--manage-script-name", \
             "--master", \
+            "--chdir", "/imc", \
             "--mount", "/=restapi:app"]
