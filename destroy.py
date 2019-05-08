@@ -20,7 +20,7 @@ logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-def destroy(client, infrastructure_id, cloud):
+def destroy(client, infrastructure_id):
     """
     Destroy the specified infrastructure, including retries since clouds can be unreliable
     """

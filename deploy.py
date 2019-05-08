@@ -94,13 +94,13 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                 (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deletion-requested':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
-                    destroy.destroy(client, infrastructure_id, cloud)
+                    destroy.destroy(client, infrastructure_id)
                     return None
 
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
                     logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with IM id %s', infrastructure_id)
-                    destroy.destroy(client, infrastructure_id, cloud)
+                    destroy.destroy(client, infrastructure_id)
                     return None
 
                 # Get the current overall state & states of all VMs in the infrastructure
@@ -186,21 +186,21 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'configured')):
                     logger.warning('Waiting too long for infrastructure to be configured, so destroying')
                     opa_client.set_status(cloud, 'configuration-too-long')
-                    destroy.destroy(client, infrastructure_id, cloud)
+                    destroy.destroy(client, infrastructure_id)
                     break
 
                 # Destroy infrastructure which is taking too long to enter the running state
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes == 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
                     opa_client.set_status(cloud, 'pending-too-long')
-                    destroy.destroy(client, infrastructure_id, cloud)
+                    destroy.destroy(client, infrastructure_id)
                     break
 
                 # FIXME: This factor of 3 is a hack
                 if time.time() - time_created > 3*int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes > 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
                     opa_client.set_status(cloud, 'pending-too-long')
-                    destroy.destroy(client, infrastructure_id, cloud)
+                    destroy.destroy(client, infrastructure_id)
                     break
 
                 # Destroy infrastructure for which deployment failed
@@ -243,7 +243,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                         if failed_vms == num_nodes:
                             logger.warning('All VMs failed and deleted, so destroying infrastructure')
                             opa_client.set_status(cloud, state)
-                            destroy.destroy(client, infrastructure_id, cloud)
+                            destroy.destroy(client, infrastructure_id)
                             break
 
                         continue
@@ -251,7 +251,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                     else:
                         logger.warning('Infrastructure creation failed, so destroying')
                         opa_client.set_status(cloud, state)
-                        destroy.destroy(client, infrastructure_id, cloud)
+                        destroy.destroy(client, infrastructure_id)
                         break
 
                 # Handle unconfigured infrastructure
@@ -275,7 +275,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                                 unconf.write(contmsg)
                         except Exception as error:
                             logger.warning('Unable to write contmsg to file')
-                        destroy.destroy(client, infrastructure_id, cloud)
+                        destroy.destroy(client, infrastructure_id)
                         break
         else:
             logger.warning('Deployment failure on cloud %s with id %s with msg="%s"', cloud, infrastructure_id, msg)

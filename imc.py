@@ -170,7 +170,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
                         logger.critical('Error reading IM auth file: %s', msg)
                         return False
 
-                    destroyed = destroy.destroy(client, infra_id, cloud)
+                    destroyed = destroy.destroy(client, infra_id)
 
                     if destroyed:
                         db.deployment_update_status_with_retries(unique_id, 'deleted')
@@ -222,7 +222,7 @@ def delete(unique_id):
                 return 1
 
             try:
-                destroyed = destroy.destroy(client, im_infra_id, cloud)
+                destroyed = destroy.destroy(client, im_infra_id)
             except Exception as error:
                 logger.critical('Deletion bug, error: %s', error)
 
