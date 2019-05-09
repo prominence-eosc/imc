@@ -74,7 +74,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
 
     # Check if we should stop
     (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
-    if infra_status_new == 'deletion-requested':
+    if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted':
         logger.info('Deletion requested of infrastructure, aborting deployment')
         return False
 
@@ -141,7 +141,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
 
         # Check if we should stop
         (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
-        if infra_status_new == 'deletion-requested':
+        if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted':
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return False
 
@@ -156,7 +156,9 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             if unique_id is not None:
                 # Final check if we should delete the infrastructure
                 (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
-                if infra_status_new == 'deletion-requested':
+                if infra_status_new == 'deleted':
+                    return False
+                elif infra_status_new == 'deletion-requested':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
 
                     token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
