@@ -96,6 +96,9 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                     logger.info('Deletion requested of infrastructure, aborting deployment')
                     destroy.destroy(client, infrastructure_id)
                     return None
+                elif infra_status_new == 'deleted':
+                    logger.info('Deletion requested of infrastructure, aborting deployment, already deleted')
+                    return None
 
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
