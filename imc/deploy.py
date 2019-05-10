@@ -56,10 +56,12 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
     else:
         radl_base = radl
 
-    # Retry loop
     retries_per_cloud = int(CONFIG.get('deployment', 'retries'))
     retry = 0
     success = False
+    time_begin_this_cloud = time.time()
+
+    # Retry loop
     while retry < retries_per_cloud + 1 and not success:
         if retry > 0:
             time.sleep(int(CONFIG.get('polling', 'duration')))
@@ -140,7 +142,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
 
                     # The final configured state
                     if num_nodes == 1 or (num_nodes > 1 and initial_step_complete):
-                        logger.info('Successfully configured infrastructure on cloud %s', cloud)
+                        logger.info('Successfully configured infrastructure on cloud %s, took %d secs', cloud, time.time() - time_begin_this_cloud)
                         success = True
                         return infrastructure_id
 
