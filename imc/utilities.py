@@ -33,9 +33,24 @@ def create_basic_radl(radl):
 
     return radl_new
 
+def create_im_line(name, block, token):
+    """
+    Create a line for an IM auth file
+    """
+    im_auth_line = 'id = %s; ' % name
+    for item in block:
+        if item != 'token':
+            if item == 'password' and token is not None:
+                value = token
+            else:
+                value = block[item]
+            line = '%s = %s; ' % (item, value)
+            im_auth_line += line
+    return im_auth_line
+
 def create_im_auth(cloud, token, config_file):
     """
-    Create the "auth file" required for requests to IM, inserting tokens as necessary
+    Create the auth file required for requests to IM, inserting tokens as necessary
     """
     try:
         with open(config_file) as file:
@@ -44,21 +59,5 @@ def create_im_auth(cloud, token, config_file):
         logger.critical('Unable to load JSON config file due to: %s', ex)
         return None
 
-    info1 = {}
-    info2 = {}
-    if token is not None:
-        info1['token'] = token
-    else:
-        info2['token'] = 'not-required'
-
-    im_auth_file = ''
-    for item in data['im']['auth']:
-        line = '%s\\n' % data['im']['auth'][item]
-        if item == cloud and token is not None:
-            line = line % info1
-        else:
-            line = line % info2
-        line = line.replace('\n', '____n')
-        im_auth_file += line
-
-    return im_auth_file
+    return '%s\\n%s\\n' % (create_im_line('IM', data['credentials']['IM'], None),
+                           create_im_line(cloud, data['credentials'][cloud], token))
