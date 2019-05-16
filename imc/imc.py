@@ -17,6 +17,7 @@ import imclient
 import opaclient
 import tokens
 import utilities
+import cloud_update
 import logger as custom_logger
 
 # Configuration
@@ -51,6 +52,9 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
 
     # Setup Open Policy Agent client
     opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+
+    # Update cloud images & flavours if necessary
+    cloud_update.update_cloud_details(opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
     # Get list of clouds meeting the specified requirements
     clouds = opa_client.get_clouds(userdata)
