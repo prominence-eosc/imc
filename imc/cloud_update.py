@@ -34,6 +34,7 @@ def generate_images_and_flavours(config, cloud):
     Create a list of images and flavours available on the specified cloud
     """
     if config['credentials'][cloud]['type'] == 'OpenStack':
+        details = {}
         if config['credentials'][cloud]['auth_version'] == '3.x_password':
             details['ex_force_auth_url'] = config['credentials'][cloud]['host']
             if 'auth_version' in config['credentials'][cloud]:
