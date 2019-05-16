@@ -114,3 +114,93 @@ class OPAClient(object):
                 flavour = flavours[0]['name']
 
         return flavour
+
+    def get_flavours(self, cloud):
+        """
+        Get all flavours associated with the specified cloud
+        """
+        try:
+            response = requests.get('%s/v1/data/clouds/%s/flavours' % (self._url, cloud),
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to get flavours from Open Policy Agent due to "%s"', ex)
+            return None        
+
+        if 'result' in response.json():
+            if response.json()['result']:
+                return response.json()['result']
+        return None        
+
+    def get_images(self, cloud):
+        """
+        Get all images associated with the specified cloud
+        """
+        try:
+            response = requests.get('%s/v1/data/clouds/%s/images' % (self._url, cloud),
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to get images from Open Policy Agent due to "%s"', ex)
+            return None
+
+        if 'result' in response.json():
+            if response.json()['result']:
+                return response.json()['result']
+        return None
+
+    def set_flavours(self, cloud, data):
+        """
+        Set all flavours associated with the specified cloud
+        """
+        try:
+            response = requests.put('%s/v1/data/clouds/%s/flavours' % (self._url, cloud),
+                                    json=data,
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to write cloud flavours to Open Policy Agent due to "%s"', ex)
+            return False
+        return True
+            
+    def set_images(self, cloud, data):
+        """
+        Set all images associated with the specified cloud
+        """
+        try:
+            response = requests.put('%s/v1/data/clouds/%s/images' % (self._url, cloud),
+                                    json=data,
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to write cloud images to Open Policy Agent due to "%s"', ex)
+            return False
+        return True
+
+    def set_update_time(self, cloud):
+        """
+        Set when the specified cloud was last updated
+        """
+        data = {}
+        data['epoch'] = time.time()
+
+        try:
+            response = requests.put('%s/v1/data/clouds/%s/updated' % (self._url, cloud),
+                                    json=data,
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to write cloud update time to Open Policy Agent due to "%s"', ex)
+            return False
+        return True
+
+    def get_update_time(self, cloud):
+        """
+        Return when the cloud was last updated
+        """
+        try:
+            response = requests.get('%s/v1/data/clouds/%s/updated' % (self._url, cloud),
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to get cloud updated time from Open Policy Agent due to "%s"', ex)
+            return 1
+
+        if 'result' in response.json():
+            if 'epoch' in response.json()['result']:
+                return response.json()['result']['epoch']
+        return 0
