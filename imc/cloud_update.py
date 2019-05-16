@@ -34,22 +34,29 @@ def generate_images_and_flavours(config, cloud):
     Create a list of images and flavours available on the specified cloud
     """
     if config['credentials'][cloud]['type'] == 'OpenStack':
-        auth_version = config['credentials'][cloud]['auth_version']
-        if auth_version == '3.x_password':
-            username = config['credentials'][cloud]['username']
-            password = config['credentials'][cloud]['password']
-            auth_url = config['credentials'][cloud]['host']
-            tenant_name = config['credentials'][cloud]['tenant']
+        if config['credentials'][cloud]['auth_version'] == '3.x_password':
+            details['ex_force_auth_url'] = config['credentials'][cloud]['host']
+            if 'auth_version' in config['credentials'][cloud]:
+                details['ex_force_auth_version'] = config['credentials'][cloud]['auth_version']
+            if 'tenant' in config['credentials'][cloud]:
+                details['ex_tenant_name'] = config['credentials'][cloud]['tenant']
+            if 'domain' in config['credentials'][cloud]:
+                details['ex_domain_name'] = config['credentials'][cloud]['domain']
+            if 'service_region' in config['credentials'][cloud]:
+                details['ex_force_service_region'] = config['credentials'][cloud]['service_region']
 
             provider = get_driver(Provider.OPENSTACK)
             try:
-                conn = provider(username,
-                                password,
-                                ex_force_auth_url=auth_url,
-                                ex_force_auth_version=auth_version,
-                                ex_tenant_name=tenant_name)
+                conn = provider(config['credentials'][cloud]['username'],
+                                config['credentials'][cloud]['password'],
+                                **details)
             except Exception as ex:
+                logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
                 return None
+        else:
+            return None
+    else:
+        return None
 
     output = {}
 
@@ -95,25 +102,28 @@ def update_cloud_details(opa_client, config_file):
         return False
 
     for cloud in config['credentials']:
-        if config['credentials'][cloud]['type'] != "InfrastructureManager" and cloud == 'OpenStack-STFC':
+        if config['credentials'][cloud]['type'] != "InfrastructureManager":
             logger.info('Checking if we need to update cloud %s details', cloud)
             new_data = generate_images_and_flavours(config, cloud)
 
             images_old = opa_client.get_images(cloud)
             flavours_old = opa_client.get_flavours(cloud)
 
+            # Check if the cloud hasn't been updated recently
             update_time = opa_client.get_update_time(cloud)
             requires_update = False
-            if time.time() - update_time > 3600:
+            if time.time() - update_time > 1800:
                 logger.info('Cloud %s has not been updated recently', cloud)
                 requires_update = True
 
-            if images_old is None or requires_update or not compare_dicts(images_old, new_data['images']):
+            # Update cloud VM images if necessary
+            if (images_old is None or requires_update or not compare_dicts(images_old, new_data['images'])) and new_data is not None:
                 logger.info('Updating images for cloud %s', cloud)
                 opa_client.set_images(cloud, new_data['images'])
                 opa_client.set_update_time(cloud)
-
-            if flavours_old is None or requires_update or not compare_dicts(flavours_old, new_data['flavours']):
+ 
+            # Update cloud VM flavours if necessary
+            if (flavours_old is None or requires_update or not compare_dicts(flavours_old, new_data['flavours'])) and new_data is not None:
                 logger.info('Updating flavours for cloud %s', cloud)
                 opa_client.set_flavours(cloud, new_data['flavours'])
                 opa_client.set_update_time(cloud)
