@@ -119,14 +119,16 @@ def update_cloud_details(opa_client, config_file):
 
             # Update cloud VM images if necessary
             if (images_old is None or requires_update or not compare_dicts(images_old, new_data['images'])) and new_data is not None:
-                logger.info('Updating images for cloud %s', cloud)
-                opa_client.set_images(cloud, new_data['images'])
+                if not compare_dicts(images_old, new_data['images']):
+                    logger.info('Updating images for cloud %s', cloud)
+                    opa_client.set_images(cloud, new_data['images'])
                 opa_client.set_update_time(cloud)
  
             # Update cloud VM flavours if necessary
             if (flavours_old is None or requires_update or not compare_dicts(flavours_old, new_data['flavours'])) and new_data is not None:
-                logger.info('Updating flavours for cloud %s', cloud)
-                opa_client.set_flavours(cloud, new_data['flavours'])
+                if not compare_dicts(flavours_old, new_data['flavours']):
+                    logger.info('Updating flavours for cloud %s', cloud)
+                    opa_client.set_flavours(cloud, new_data['flavours'])
                 opa_client.set_update_time(cloud)
 
     return True
