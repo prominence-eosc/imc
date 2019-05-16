@@ -6,8 +6,10 @@ RUN apk add --no-cache uwsgi-python \
                        py-flask \
                        py-futures \
                        py-paramiko \
-                       py-psycopg2
-    
+                       py-psycopg2 \
+                       py-pip && \
+    pip install apache-libcloud
+
 
 COPY imc /imc
 
