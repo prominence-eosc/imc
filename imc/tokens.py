@@ -108,13 +108,14 @@ def check_if_token_required(cloud, config_file):
 
     if 'credentials' in data:
         if cloud in data['credentials']:
-            return (data['credentials'][cloud]['username'],
-                    data['credentials'][cloud]['password'],
-                    data['credentials'][cloud]['client_id'],
-                    data['credentials'][cloud]['client_secret'],
-                    data['credentials'][cloud]['refresh_token'],
-                    data['credentials'][cloud]['scope'],
-                    data['credentials'][cloud]['url'])
+            if 'token' in data['credentials'][cloud]:
+                return (data['credentials'][cloud]['token']['username'],
+                        data['credentials'][cloud]['token']['password'],
+                        data['credentials'][cloud]['token']['client_id'],
+                        data['credentials'][cloud]['token']['client_secret'],
+                        data['credentials'][cloud]['token']['refresh_token'],
+                        data['credentials'][cloud]['token']['scope'],
+                        data['credentials'][cloud]['token']['url'])
 
     return (None, None, None, None, None, None, None)
 
