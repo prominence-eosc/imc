@@ -31,6 +31,22 @@ class OPAClient(object):
         except requests.exceptions.RequestException as ex:
             logger.warning('Unable to write cloud status to Open Policy Agent due to "%s"', ex)
 
+    def set_quotas(self, cloud, instances, cpus, memory):
+        """
+        Write cloud quotas
+        """
+        data = {}
+        data['cpus'] = cpus
+        data['memory'] = memory
+        data['instances'] = instances
+
+        try:
+            response = requests.put('%s/v1/data/status/%s/quota' % (self._url, cloud),
+                                    json=data,
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.warning('Unable to write cloud quotas to Open Policy Agent due to "%s"', ex)
+
     def get_clouds(self, data):
         """
         Get list of clouds meeting requirements
