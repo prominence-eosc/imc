@@ -37,9 +37,30 @@ def create_im_line(name, block, token):
     """
     Create a line for an IM auth file
     """
+    valid_im_fields = ['type',
+                       'username',
+                       'password',
+                       'tenant',
+                       'host',
+                       'proxy',
+                       'project',
+                       'public_key',
+                       'private_key',
+                       'subscription_id',
+                       'domain',
+                       'auth_version',
+                       'api_version',
+                       'base_url',
+                       'network_url',
+                       'image_url',
+                       'volume_url',
+                       'service_region',
+                       'service_name',
+                       'auth_token']
+
     im_auth_line = 'id = %s; ' % name
     for item in block:
-        if item != 'token':
+        if item in valid_im_fields:
             if item == 'password' and token is not None:
                 value = token
             else:
