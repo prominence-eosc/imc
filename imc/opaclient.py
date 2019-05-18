@@ -39,6 +39,7 @@ class OPAClient(object):
         data['cpus'] = cpus
         data['memory'] = memory
         data['instances'] = instances
+        data['epoch'] = time.time()
 
         try:
             response = requests.put('%s/v1/data/status/%s/quota' % (self._url, cloud),
@@ -205,7 +206,7 @@ class OPAClient(object):
             return False
         return True
 
-    def get_update_time(self, cloud):
+    def get_cloud_update_time(self, cloud):
         """
         Return when the cloud was last updated
         """
@@ -220,3 +221,20 @@ class OPAClient(object):
             if 'epoch' in response.json()['result']:
                 return response.json()['result']['epoch']
         return 0
+
+    def get_quota_update_time(self, cloud):
+        """
+        Return when the cloud quotas were last updated
+        """
+        try:
+            response = requests.get('%s/v1/data/status/%s/quota' % (self._url, cloud),
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to get cloud updated time from Open Policy Agent due to "%s"', ex)
+            return 1
+
+        if 'result' in response.json():
+            if 'epoch' in response.json()['result']:
+                return response.json()['result']['epoch']
+        return 0
+
