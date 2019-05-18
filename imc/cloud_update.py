@@ -111,10 +111,10 @@ def update_cloud_details(opa_client, config_file):
             flavours_old = opa_client.get_flavours(cloud)
 
             # Check if the cloud hasn't been updated recently
-            update_time = opa_client.get_update_time(cloud)
+            update_time = opa_client.get_cloud_update_time(cloud)
             requires_update = False
             if time.time() - update_time > 1800:
-                logger.info('Cloud %s has not been updated recently', cloud)
+                logger.info('Images and flavours for cloud %s have not been updated recently', cloud)
                 requires_update = True
 
             # Update cloud VM images if necessary
