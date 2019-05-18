@@ -18,6 +18,7 @@ import opaclient
 import tokens
 import utilities
 import cloud_update
+import cloud_quotas
 import logger as custom_logger
 
 # Configuration
@@ -56,6 +57,9 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     # Update cloud images & flavours if necessary
     cloud_update.update_cloud_details(opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
+    # Update quotas if necessary
+    cloud_quotas.set_quotas(opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+
     # Get list of clouds meeting the specified requirements
     clouds = opa_client.get_clouds(userdata)
     logger.info('Suitable clouds = [%s]', ','.join(clouds))
@@ -63,8 +67,6 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     if not clouds:
         logger.critical('No clouds exist which meet the requested requirements')
         return False
-
-    # Update dynamic information about each cloud if necessary
 
     # Shuffle list of clouds
     shuffle(clouds)
