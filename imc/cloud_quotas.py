@@ -58,6 +58,7 @@ def set_quotas(opa_client, config_file):
 
         if credentials['type'] == 'OpenStack':
             # Check if the cloud hasn't been updated recently
+            logger.info('Checking if we need to update cloud %s quotas', cloud)
             update_time = opa_client.get_cloud_update_time(cloud)
             if time.time() - update_time > 60:
                 logger.info('Quotas for cloud %s have not been updated recently, so getting current values', cloud)
