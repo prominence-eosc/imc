@@ -61,8 +61,13 @@ def generate_images_and_flavours(config, cloud):
 
     output = {}
 
+    try:
+        images = conn.list_images()
+    except Exception as ex:
+        logger.critical('Unable to get list of images from cloud %s due to "%s"', cloud, ex)
+        return None
+
     output_images = {}
-    images = conn.list_images()
     for image in images:
         if image.name in config['images'][cloud]['images']:
             data = config['images'][cloud]['images'][image.name]
@@ -71,7 +76,12 @@ def generate_images_and_flavours(config, cloud):
 
     output['images'] = output_images
 
-    flavours = conn.list_sizes()
+    try:
+        flavours = conn.list_sizes()
+    except Exception as ex:
+        logger.critical('Unable to get list of flavours from cloud %s due to "%s"', cloud, ex)
+        return None
+
     output_flavours = {}
     for flavour in flavours:
         match_obj_name = False
