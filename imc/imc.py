@@ -39,6 +39,9 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
 
+    # Update status as we are now handing deployment of the infrastructure
+    db.deployment_update_status_with_retries(unique_id, 'creating')
+
     # Count number of instances
     instances = 0
     for line in radl_contents.split('\n'):
@@ -83,9 +86,6 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted':
         logger.info('Deletion requested of infrastructure, aborting deployment')
         return False
-
-    # Update status
-    db.deployment_update_status_with_retries(unique_id, 'creating')
 
     # Try to create infrastructure, exiting on the first successful attempt
     time_begin = time.time()
