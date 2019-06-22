@@ -86,6 +86,23 @@ def create_infrastructure():
     logger.critical('Infrastructure creation request failed, possibly a database issue')
     return jsonify({'id':uid}), 400
 
+@app.route('/infrastructures/', methods=['GET'])
+def get_infrastructures():
+    """
+    Get list of infrastructures in the specified state
+    """
+    if 'status' in request.args:
+        cloud = None
+        if 'cloud' in request.args:
+            cloud = request.args.get('cloud')
+        db = get_db()
+        if db.connect():
+            infra = db.deployment_get_infra_in_state_cloud(request.args.get('status'), cloud)
+            db.close()
+            return jsonify(infra), 200
+        
+    return jsonify({}), 400
+
 @app.route('/infrastructures/<string:infra_id>', methods=['GET'])
 def get_infrastructure(infra_id):
     """

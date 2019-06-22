@@ -94,6 +94,24 @@ class Database(object):
         except Exception as error:
             logger.critical('Unable to the database connection due to: %s', error)
 
+    def deployment_get_infra_in_state_cloud(self, state, cloud=None):
+        """
+        Return a list of all infrastructure IDs for infrastructure in the specified state and cloud
+        """
+        query = ""
+        if cloud is not None:
+            query = "and cloud='%s'" % cloud
+        infra = []
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("SELECT id FROM deployments WHERE status='%s' %s" % (state, query))
+            for row in cursor:
+                infra.append(row[0])
+            cursor.close()
+        except Exception as error:
+            logger.critical('[deployment_get_infra_in_state_cloud] Unable to execute query due to: %s', error)
+        return infra
+
     def deployment_get_im_infra_id(self, infra_id):
         """
         Return the IM infrastructure ID, our status and cloud name
