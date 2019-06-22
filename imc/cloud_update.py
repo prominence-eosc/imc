@@ -6,6 +6,7 @@ import time
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
+import libcloud.security
 
 import opaclient
 
@@ -33,6 +34,15 @@ def generate_images_and_flavours(config, cloud):
     """
     Create a list of images and flavours available on the specified cloud
     """
+
+    # To avoid annoying InsecureRequestWarning messages
+    try:
+        import requests.packages
+        from requests.packages.urllib3.exceptions import InsecureRequestWarning
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    except:
+        pass
+
     if config['credentials'][cloud]['type'] == 'OpenStack':
         details = {}
         if config['credentials'][cloud]['auth_version'] == '3.x_password':
@@ -46,6 +56,7 @@ def generate_images_and_flavours(config, cloud):
             if 'service_region' in config['credentials'][cloud]:
                 details['ex_force_service_region'] = config['credentials'][cloud]['service_region']
 
+            libcloud.security.VERIFY_SSL_CERT = False
             provider = get_driver(Provider.OPENSTACK)
             try:
                 conn = provider(config['credentials'][cloud]['username'],
@@ -101,7 +112,7 @@ def generate_images_and_flavours(config, cloud):
 
     return output
 
-def update_cloud_details(opa_client, config_file):
+def update_cloud_details(requirements, opa_client, config_file):
     """
     Update cloud images & flavours if necessary
     """
@@ -113,6 +124,11 @@ def update_cloud_details(opa_client, config_file):
         return False
 
     for cloud in config['credentials']:
+        # Check if we need to consider this cloud at all
+        if 'sites' in requirements:
+            if cloud not in requirements['sites']:
+                continue
+
         if config['credentials'][cloud]['type'] != "InfrastructureManager":
             logger.info('Checking if we need to update cloud %s details', cloud)
             new_data = generate_images_and_flavours(config, cloud)
@@ -132,6 +148,8 @@ def update_cloud_details(opa_client, config_file):
                 if not compare_dicts(images_old, new_data['images']):
                     logger.info('Updating images for cloud %s', cloud)
                     opa_client.set_images(cloud, new_data['images'])
+                else:
+                    logger.info('Images for cloud %s have not changed, not updating', cloud)
                 opa_client.set_update_time(cloud)
  
             # Update cloud VM flavours if necessary
@@ -139,6 +157,8 @@ def update_cloud_details(opa_client, config_file):
                 if not compare_dicts(flavours_old, new_data['flavours']):
                     logger.info('Updating flavours for cloud %s', cloud)
                     opa_client.set_flavours(cloud, new_data['flavours'])
+                else:
+                    logger.info('Flavours for cloud %s have not changed, not updating', cloud)
                 opa_client.set_update_time(cloud)
 
     return True

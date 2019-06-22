@@ -24,7 +24,7 @@ def get_quotas_openstack(cloud, credentials):
             'user_domain_name':credentials['user_domain_name']}
 
     try:
-        with client.Client(2, credentials['username'], **auth) as nova:
+        with client.Client(2, credentials['username'], insecure=True, **auth) as nova:
             quotas = nova.quotas.get(credentials['tenant_id'], detail=True)
     except Exception as ex:
         logger.critical('Unable to get quotas from cloud %s due to "%s"', cloud, ex)
@@ -36,7 +36,7 @@ def get_quotas_openstack(cloud, credentials):
     instances_available = quotas_dict['instances']['limit'] - quotas_dict['instances']['in_use'] - quotas_dict['instances']['reserved']
     return (instances_available, cores_available, int(memory_available/1024))
 
-def set_quotas(opa_client, config_file):
+def set_quotas(requirements, opa_client, config_file):
     """
     Determine the available remaining quotas and set in Open Policy Agent
     """
@@ -56,6 +56,11 @@ def set_quotas(opa_client, config_file):
         cores = None
         memory = None
 
+        # Check if we need to consider this cloud at all
+        if 'sites' in requirements:
+            if cloud not in requirements['sites']:
+                continue
+
         if credentials['type'] == 'OpenStack':
             # Check if the cloud hasn't been updated recently
             logger.info('Checking if we need to update cloud %s quotas', cloud)
@@ -69,5 +74,7 @@ def set_quotas(opa_client, config_file):
         if instances is not None and cores is not None and memory is not None:
             logger.info('Setting updated quotas for cloud %s: instances %d, cpus %d, memory %d', cloud, instances, cores, memory)
             opa_client.set_quotas(cloud, instances, cores, memory)
+        else:
+            logger.info('Not setting updated quotas for cloud %s', cloud)
 
     return True
