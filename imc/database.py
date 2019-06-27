@@ -55,6 +55,7 @@ class Database(object):
             cursor.execute('''CREATE TABLE IF NOT EXISTS
                               deployments(id TEXT NOT NULL PRIMARY KEY,
                                           status TEXT NOT NULL,
+                                          status_reason TEXT,
                                           im_infra_id TEXT,
                                           cloud TEXT,
                                           creation INT NOT NULL,
@@ -111,6 +112,22 @@ class Database(object):
         except Exception as error:
             logger.critical('[deployment_get_infra_in_state_cloud] Unable to execute query due to: %s', error)
         return infra
+
+    def deployment_get_status_reason(self, infra_id):
+        """
+        Return reason for the current status
+        """
+        status_reason = None
+
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("SELECT status_reason FROM deployments WHERE id='%s'" % infra_id)
+            for row in cursor:
+                status_reason = row[0]
+            cursor.close()
+        except Exception as error:
+            logger.critical('[deployment_get_status_reason] Unable to execute query due to: %s', error)
+        return status_reason
 
     def deployment_get_im_infra_id(self, infra_id):
         """
@@ -196,6 +213,36 @@ class Database(object):
             cursor.close()
         except Exception as error:
             logger.critical('[db_deployment_update_status] Unable to execute UPDATE query due to: %s', error)
+            return False
+        return True
+
+    def deployment_update_status_reason_with_retries(self, infra_id, status_reason):
+        """
+        Update deployment status reason with retries
+        """
+        max_retries = 10
+        count = 0
+        success = False
+        while count < max_retries and not success:
+            success = self.deployment_update_status_reason(infra_id, status_reason)
+            if not success:
+                count += 1
+                self.close()
+                time.sleep(count/2)
+                self.connect()
+        return success
+
+    def deployment_update_status_reason(self, infra_id, status_reason):
+        """
+        Update deploymeny status reason
+        """
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("UPDATE deployments SET status_reason='%s' WHERE id='%s'" % (status_reason, infra_id))
+            self._connection.commit()
+            cursor.close()
+        except Exception as error:
+            logger.critical('[db_deployment_update_status_reason] Unable to execute UPDATE query due to: %s', error)
             return False
         return True
 

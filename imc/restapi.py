@@ -113,14 +113,17 @@ def get_infrastructure(infra_id):
 
     im_infra_id = None
     status = None
+    status_reason = None
     cloud = None
 
     db = get_db()
     if db.connect():
         (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(infra_id)
+        if status == 'unable' or status == 'failed':
+            status_reason = db.deployment_get_status_reason(infra_id)
     db.close()
     if status is not None:
-        return jsonify({'status':status, 'cloud':cloud, 'infra_id':im_infra_id}), 200
+        return jsonify({'status':status, 'status_reason':status_reason, 'cloud':cloud, 'infra_id':im_infra_id}), 200
     return jsonify({'status':'invalid'}), 404
 
 @app.route('/infrastructures/<string:infra_id>', methods=['DELETE'])

@@ -69,6 +69,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
 
     if not clouds:
         logger.critical('No clouds exist which meet the requested requirements')
+        db.deployment_update_status_reason(unique_id, 'NoMatchingResources')
         return False
 
     # Shuffle list of clouds
@@ -192,6 +193,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
 
     if unique_id is not None and infra_id is None:
         db.deployment_update_status_with_retries(unique_id, 'failed', 'none', 'none')
+        db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
     return success
 
 def delete(unique_id):
