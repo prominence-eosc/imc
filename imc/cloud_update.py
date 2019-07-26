@@ -15,6 +15,26 @@ logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
 logger = logging.getLogger(__name__)
 
+def is_power2(num):
+    """
+    Check if a number is a power of 2
+    """
+    return num != 0 and ((num & (num - 1)) == 0)
+
+def memory_convert(value):
+    """
+    Different OpenStack admins define memory units differently, try to 
+    handle this
+    """
+    m1 = int(value/1000.0)
+    m2 = int(value/1024.0)
+    m = m2
+    if is_power2(m1):
+        m = m1
+    if is_power2(m2):
+        m = m2
+    return m
+
 def compare_dicts(cloud1, cloud2):
     """
     Compare the dicts containing cloud images or flavours
@@ -104,7 +124,7 @@ def generate_images_and_flavours(config, cloud):
         if not match_obj_name or use:
             data = {"name":flavour.name,
                     "cores":flavour.vcpus,
-                    "memory":int(flavour.ram/1024),
+                    "memory":memory_convert(flavour.ram),
                     "disk":flavour.disk}
             output_flavours[flavour.name] = data
 
