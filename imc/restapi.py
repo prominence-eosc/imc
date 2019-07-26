@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 from concurrent.futures import ProcessPoolExecutor
+from functools import wraps
 import os
 import sys
 import uuid
@@ -67,7 +68,41 @@ def infrastructure_delete(unique_id):
         logger.critical('Exception deleting infrastructure: "%s"', error)
     return
 
+def authenticate():
+    """
+    Sends a 401 response
+    """
+    return jsonify({'error':'Authentication failure'}), 401
+
+def check_token(token):
+    """
+    Check a token
+    """
+    if token == CONFIG.get('auth', 'token'):
+        return True
+
+    return False
+
+def requires_auth(function):
+    """
+    Check authentication
+    """
+    @wraps(function)
+    def decorated(*args, **kwargs):
+        if 'Authorization' not in request.headers:
+            return authenticate()
+        auth = request.headers['Authorization']
+        try:
+            token = auth.split(' ')[1]
+        except:
+            return authenticate()
+        if not check_token(token):
+            return authenticate()
+        return function(*args, **kwargs)
+    return decorated
+
 @app.route('/infrastructures', methods=['POST'])
+@requires_auth
 def create_infrastructure():
     """
     Create infrastructure
@@ -87,6 +122,7 @@ def create_infrastructure():
     return jsonify({'id':uid}), 400
 
 @app.route('/infrastructures/', methods=['GET'])
+@requires_auth
 def get_infrastructures():
     """
     Get list of infrastructures in the specified state
@@ -104,6 +140,7 @@ def get_infrastructures():
     return jsonify({}), 400
 
 @app.route('/infrastructures/<string:infra_id>', methods=['GET'])
+@requires_auth
 def get_infrastructure(infra_id):
     """
     Get current status of specified infrastructure
@@ -127,6 +164,7 @@ def get_infrastructure(infra_id):
     return jsonify({'status':'invalid'}), 404
 
 @app.route('/infrastructures/<string:infra_id>', methods=['DELETE'])
+@requires_auth
 def delete_infrastructure(infra_id):
     """
     Delete the specified infrastructure
