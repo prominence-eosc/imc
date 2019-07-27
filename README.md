@@ -11,7 +11,7 @@ Features include:
   * e.g. I want to deploy a CentOS 7 VM with at least 8 cores and 32 GB of RAM
 * clouds are ranked based on specified preferences
   * e.g. I would prefer my VMs to be deployed on my local private cloud, but if that is full try my national research cloud, but if that is also full then use a public cloud
-* if deployment on a cloud fails, another cloud will be automatically tried
+* if deployment on a cloud fails, another cloud meeting requirements will be automatically tried
 * many types of failures and issues are handled automatically, including:
   * deployment failing completely
   * contextualization failure
