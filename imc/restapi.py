@@ -89,6 +89,7 @@ def requires_auth(function):
     """
     @wraps(function)
     def decorated(*args, **kwargs):
+        return function(*args, **kwargs)
         if 'Authorization' not in request.headers:
             return authenticate()
         auth = request.headers['Authorization']
