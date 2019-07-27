@@ -3,6 +3,15 @@ package imc
 import data.clouds
 import data.status
 
+# Groups
+satisfies_groups(cloud) {
+  input.requirements.groups[i] = cloud.supported_groups[j]
+}
+
+satisfies_groups(cloud) {
+  count(cloud.supported_groups) = 0
+}
+
 # Regions
 satisfies_region(cloud) {
   not input.requirements.regions
@@ -163,6 +172,7 @@ sites[site] {
   satisfies_dynamic_quotas(cloud)
   satisfies_static_quotas(cloud)
   satisfies_network(cloud)
+  satisfies_groups(cloud)
 }
 
 # Get images for a specified cloud
@@ -182,7 +192,7 @@ flavours[pair] {
 
 # Rank sites based on preferences
 rankedsites[pair] {
-  weight = region_weight(site) + network_weight(site)
+  weight = region_weight(site) + site_weight(site) + network_weight(site) - recent_failures_weight(site)*10
   site = input.clouds[i]
   pair = {"site":site, "weight":weight}
 }
@@ -198,6 +208,21 @@ region_weight(site) = output {
   cloud = clouds[site]
   i = cloud.region
   not input.preferences.regions[i]
+  output = 0
+}
+
+# Site weight
+site_weight(site) = output {
+  output = input.preferences.sites[site]
+}
+
+site_weight(site) = output {
+  not input.preferences.sites[site]
+  output = 0  
+}
+
+site_weight(site) = output {
+  not input.preferences.sites
   output = 0
 }
 
@@ -231,7 +256,7 @@ network_weight(site) = output {
 
 network_weight(site) = output {
   cloud = clouds[site]
-  input.preferences.resources.network.bandwidth <= cloud.network.bandwidth
+  input.preferences.resources.network.bandwidth <= cloud.network.bandwidth  
   output = 0.9
 }
 
@@ -259,4 +284,27 @@ flavour_tags_weight(flavour) = output {
 flavour_tags_weight(flavour) = output {
   input.preferences.tags[i] = flavour.tags[i]
   output = 1
+}
+
+# Current time in seconds
+timenow_secs() = output {
+  time.now_ns(ns_output)
+  output = ns_output * 1e-9
+}
+
+# Check for recent failures
+# TODO: should be proportional to the number of recent failures
+recent_failures_weight(site) = output {
+  timenow_secs - status[site]["failures"]["epoch"] < 3600
+  output = 1
+}
+
+recent_failures_weight(site) = output {
+  timenow_secs - status[site]["failures"]["epoch"] >= 3600
+  output = 0
+}
+
+recent_failures_weight(site) = output {
+  not status[site]["failures"]
+  output = 0
 }
