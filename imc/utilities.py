@@ -80,5 +80,13 @@ def create_im_auth(cloud, token, config_file):
         logger.critical('Unable to load JSON config file due to: %s', ex)
         return None
 
+    if 'credentials' not in data:
+        logger.critical('Invalid JSON config file: credentials missing')
+        return None
+
+    if cloud not in data['credentials']:
+        logger.critical('Credentials for the cloud %s are not in the JSON config file', cloud)
+        return None
+
     return '%s\\n%s\\n' % (create_im_line('IM', data['credentials']['IM'], None),
                            create_im_line(cloud, data['credentials'][cloud], token))
