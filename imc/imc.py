@@ -239,6 +239,7 @@ def delete(unique_id):
                 logger.critical('Unable to destroy infrastructure with IM infrastructure id %s', im_infra_id)
         else:
             logger.critical('IM infrastructure id %s does not match regex', im_infra_id)
+            db.deployment_update_status_with_retries(unique_id, 'deleted')
     else:
         logger.info('No need to destroy infrastructure because IM infrastructure id is %s and cloud is %s', im_infra_id, cloud)
         db.deployment_update_status_with_retries(unique_id, 'deleted')
