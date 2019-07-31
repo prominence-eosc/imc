@@ -11,7 +11,7 @@ Features include:
   * e.g. I want to deploy a CentOS 7 VM with at least 8 cores and 32 GB of RAM
 * clouds are ranked based on specified preferences
   * e.g. I would prefer my VMs to be deployed on my local private cloud, but if that is full try my national research cloud, but if that is also full then use a public cloud
-* if deployment on a cloud fails, another cloud will be automatically tried
+* if deployment on a cloud fails, another cloud meeting requirements will be automatically tried
 * many types of failures and issues are handled automatically, including:
   * deployment failing completely
   * contextualization failure
@@ -63,6 +63,8 @@ Configuration for a single cloud has the form:
 }
 ```
 The image name should be in a form directly useable by IM, for example `gce://europe-west2-c/centos-7` (for Google) or `ost://<openstack-endpoint>/<id>` (for OpenStack). Meta-data is provided for each image to easily enable users to select a standard Linux distribution image at any site, e.g. CentOS 7 or Ubuntu 16.04, without needing to know in advance the image name at each site.
+
+The examples directory has some example configs for different clouds.
 
 Each flavour has an optional `tags`, which should contain key-value pairs. This can be used to specify additional information about the VM flavour, for example:
 ```json
