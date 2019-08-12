@@ -16,6 +16,21 @@ def get_quotas_openstack(cloud, credentials):
     """
     Get quotas remaining for an OpenStack cloud
     """
+    if 'password' not in credentials:
+        logger.critical('password is not in the credentials file')
+        return (None, None, None)
+    if 'project_id' not in credentials:
+        logger.critical('project_id is not in the credentials file')
+        return (None, None, None)
+    if 'project_domain_id' not in credentials:
+        logger.critical('project_domain_id is not in the credentials file')
+        return (None, None, None)
+    if 'host' not in credentials:
+        logger.critical('host is not in the credentials file')
+        return (None, None, None)
+    if 'user_domain_name' not in credentials:
+        logger.critical('user_domain_name is not in the credentials file')
+        return (None, None, None)
 
     auth = {'password':credentials['password'],
             'project_id':credentials['project_id'],
