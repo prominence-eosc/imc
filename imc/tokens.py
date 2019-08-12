@@ -46,10 +46,10 @@ def get_token(cloud, db, config_file):
         (token, expiry, creation, msg) = get_new_token(username, password, client_id, client_secret, refresh_token, scope, url)
 
         # Delete existing token from DB
-        db_delete_token(cloud)
+        db.delete_token(cloud)
 
         # Save token to DB
-        db_set_token(cloud, token, expiry, creation)
+        db.set_token(cloud, token, expiry, creation)
     else:
         logger.info('Using token from DB for cloud %s', cloud)
 
