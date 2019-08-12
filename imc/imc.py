@@ -289,7 +289,10 @@ def auto_deploy(inputj, unique_id):
 
     success = False
     if db.connect():
-        success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
+        try:
+            success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
+        except Exception as error:
+            logger.critical('deploy_job failed with exception', error)
         if not success:
             db.deployment_update_status_with_retries(unique_id, 'unable')
     db.close()
