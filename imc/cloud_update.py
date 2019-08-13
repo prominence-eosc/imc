@@ -153,6 +153,11 @@ def update_cloud_details(requirements, opa_client, config_file):
             logger.info('Checking if we need to update cloud %s details', cloud)
             new_data = generate_images_and_flavours(config, cloud)
 
+            # Check if need to continue with this cloud
+            if new_data is None:
+                logger.info('Not continuing with considering updating details for cloud', cloud)
+                continue
+
             images_old = opa_client.get_images(cloud)
             flavours_old = opa_client.get_flavours(cloud)
 
