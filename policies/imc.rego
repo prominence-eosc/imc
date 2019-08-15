@@ -131,13 +131,17 @@ satisfies_static_quotas(cloud) {
   not cloud.quotas
 }
 
+# Quotas - dynamic
 satisfies_dynamic_quotas(cloud) {
   input.requirements.resources.cores * input.requirements.resources.instances <= status[cloud.name].quota.cpus
   input.requirements.resources.memory * input.requirements.resources.instances <= status[cloud.name].quota.memory
   input.requirements.resources.instances <= status[cloud.name].quota.instances
 }
 
-# Quotas - dynamic
+satisfies_dynamic_quotas(cloud) {
+  not status[cloud.name]
+}
+
 satisfies_dynamic_quotas(cloud) {
   not status[cloud.name].quota
 }
@@ -153,6 +157,10 @@ satisfies_network(cloud) {
 
 satisfies_network(cloud) {
   not cloud.network.bandwidth
+}
+
+satisfies_network(cloud) {
+  not cloud.network
 }
 
 satisfies_network(cloud) {
