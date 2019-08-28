@@ -264,8 +264,8 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                     count_unconfigured += 1
                     file_unconf = '/tmp/contmsg-%s-%d.txt' % (unique_id, time.time())
                     contmsg = client.getcontmsg(infrastructure_id, int(CONFIG.get('timeouts', 'deletion')))
-                    if count_unconfigured < 2:
-                        logger.warning('Infrastructure is unconfigured, will try reconfiguring once after writing contmsg to a file')
+                    if count_unconfigured < int(CONFIG.get('deployment', 'reconfigures')) + 1:
+                        logger.warning('Infrastructure is unconfigured, will try reconfiguring after writing contmsg to a file')
                         try:
                             with open(file_unconf, 'w') as unconf:
                                 unconf.write(contmsg)
