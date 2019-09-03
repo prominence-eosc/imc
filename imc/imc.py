@@ -17,7 +17,7 @@ import imclient
 import opaclient
 import tokens
 import utilities
-import cloud_update
+import cloud_images_flavours
 import cloud_quotas
 import logger as custom_logger
 
