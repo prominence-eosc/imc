@@ -119,3 +119,48 @@ def check_if_token_required(cloud, config_file):
 
     return (None, None, None, None, None, None, None)
 
+def get_keystone_url(os_auth_url, path):
+    """
+    Generate keystone URL
+    """
+    url = urlparse(os_auth_url)
+    prefix = url.path.rstrip('/')
+    if prefix.endswith('v2.0') or prefix.endswith('v3'):
+        prefix = os.path.dirname(prefix)
+    path = os.path.join(prefix, path)
+    return urlunparse((url[0], url[1], path, url[3], url[4], url[5]))
+
+def get_unscoped_token(os_auth_url, access_token, username, tenant_name):
+    """
+    Get an unscoped token from an access token
+    """
+    url = get_keystone_url(os_auth_url,
+                           '/v3/OS-FEDERATION/identity_providers/%s/protocols/%s/auth' % (username, tenant_name))
+    r = requests.post(url,
+                      headers={'Authorization': 'Bearer %s' % access_token})
+
+    if 'X-Subject-Token' in r.headers:
+        return r.headers['X-Subject-Token']
+    return None
+
+def get_scoped_token(os_auth_url, os_project_id, unscoped_token):
+    """
+    Get a scoped token from an unscoped token
+    """
+    url = get_keystone_url(os_auth_url, '/v3/auth/tokens')
+    token_body = {
+        "auth": {
+            "identity": {
+                "methods": ["token"],
+                "token": {"id": unscoped_token}
+            },
+            "scope": {"project": {"id": os_project_id}}
+        }
+    }
+    r = requests.post(url, headers={'content-type': 'application/json'},
+                      data=json.dumps(token_body))
+
+    if 'X-Subject-Token' in r.headers:
+        return r.headers['X-Subject-Token']
+    return None
+
