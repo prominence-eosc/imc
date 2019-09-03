@@ -7,7 +7,6 @@ import time
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-import libcloud.security
 
 import opaclient
 import tokens
@@ -56,15 +55,6 @@ def generate_images_and_flavours(config, cloud, token):
     """
     Create a list of images and flavours available on the specified cloud
     """
-
-    # To avoid annoying InsecureRequestWarning messages
-    try:
-        import requests.packages
-        from requests.packages.urllib3.exceptions import InsecureRequestWarning
-        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-    except:
-        pass
-
     if config['credentials'][cloud]['type'] == 'OpenStack':
         details = {}
         if config['credentials'][cloud]['auth_version'] == '3.x_password':
@@ -78,7 +68,6 @@ def generate_images_and_flavours(config, cloud, token):
             if 'service_region' in config['credentials'][cloud]:
                 details['ex_force_service_region'] = config['credentials'][cloud]['service_region']
 
-            libcloud.security.VERIFY_SSL_CERT = False
             provider = get_driver(Provider.OPENSTACK)
             try:
                 conn = provider(config['credentials'][cloud]['username'],
@@ -98,7 +87,6 @@ def generate_images_and_flavours(config, cloud, token):
             if 'service_region' in config['credentials'][cloud]:
                 details['ex_force_service_region'] = config['credentials'][cloud]['service_region']
 
-            libcloud.security.VERIFY_SSL_CERT = False
             provider = get_driver(Provider.OPENSTACK)
             try:
                 conn = provider(config['credentials'][cloud]['username'],
