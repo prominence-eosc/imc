@@ -6,13 +6,14 @@ import time
 from novaclient import client
 
 import opaclient
+import tokens
 
 # Logging
 logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-def get_quotas_openstack(cloud, credentials):
+def get_quotas_openstack(cloud, credentials, token):
     """
     Get quotas remaining for an OpenStack cloud
     """
@@ -32,17 +33,21 @@ def get_quotas_openstack(cloud, credentials):
         logger.critical('user_domain_name is not in the credentials file')
         return (None, None, None)
 
-    auth = {'password':credentials['password'],
-            'project_id':credentials['project_id'],
+    auth = {'project_id':credentials['project_id'],
             'project_domain_id':credentials['project_domain_id'],
             'auth_url':credentials['host'],
             'user_domain_name':credentials['user_domain_name']}
+
+    if token:
+        auth['auth_token'] = token
+    else:
+        auth['password'] = credentials['password']
 
     try:
         nova = client.Client(2, credentials['username'], timeout=30, **auth)
         quotas = nova.quotas.get(credentials['tenant_id'], detail=True)
     except Exception as ex:
-        logger.critical('Unable to get quotas from cloud %s due to "%s"', cloud, ex)
+        logger.critical('Unable to get quotas from cloud %s due to "%s"', cloud, str(ex))
         return (None, None, None)
 
     quotas_dict = quotas.to_dict()
@@ -51,7 +56,7 @@ def get_quotas_openstack(cloud, credentials):
     instances_available = quotas_dict['instances']['limit'] - quotas_dict['instances']['in_use'] - quotas_dict['instances']['reserved']
     return (instances_available, cores_available, int(memory_available/1024))
 
-def set_quotas(requirements, opa_client, config_file):
+def set_quotas(requirements, db, opa_client, config_file):
     """
     Determine the available remaining quotas and set in Open Policy Agent
     """
@@ -76,13 +81,25 @@ def set_quotas(requirements, opa_client, config_file):
             if cloud not in requirements['sites']:
                 continue
 
+        # Get a token if necessary
+        token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+
         if credentials['type'] == 'OpenStack':
+            # Get a scoped token if necessary from Keystone
+            if token:
+                logger.info('Getting a scoped token from Keystone')
+                token = tokens.get_scoped_token(credentials['host'], credentials['project_id'],
+                                                tokens.get_unscoped_token(credentials['host'],
+                                                                          token,
+                                                                          credentials['username'],
+                                                                          credentials['tenant']))
+
             # Check if the cloud hasn't been updated recently
             logger.info('Checking if we need to update cloud %s quotas', cloud)
             update_time = opa_client.get_cloud_update_time(cloud)
             if time.time() - update_time > 60:
                 logger.info('Quotas for cloud %s have not been updated recently, so getting current values', cloud)
-                (instances, cores, memory) = get_quotas_openstack(cloud, credentials)
+                (instances, cores, memory) = get_quotas_openstack(cloud, credentials, token)
         elif credentials['type'] != 'InfrastructureManager':
             logger.warning('Unable to determine quotas for cloud %s of type %s', cloud, credentials['type'])
 
