@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import re
 import sys
 import time
@@ -50,7 +51,7 @@ def compare_dicts(cloud1, cloud2):
             return False
     return True
 
-def generate_images_and_flavours(config, cloud):
+def generate_images_and_flavours(config, cloud, token):
     """
     Create a list of images and flavours available on the specified cloud
     """
@@ -81,6 +82,26 @@ def generate_images_and_flavours(config, cloud):
             try:
                 conn = provider(config['credentials'][cloud]['username'],
                                 config['credentials'][cloud]['password'],
+                                **details)
+            except Exception as ex:
+                logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
+                return None
+        elif config['credentials'][cloud]['auth_version'] == '3.x_oidc_access_token':
+            details['ex_force_auth_url'] = config['credentials'][cloud]['host']
+            if 'auth_version' in config['credentials'][cloud]:
+                details['ex_force_auth_version'] = config['credentials'][cloud]['auth_version']
+            if 'tenant' in config['credentials'][cloud]:
+                details['ex_tenant_name'] = config['credentials'][cloud]['tenant']
+            if 'domain' in config['credentials'][cloud]:
+                details['ex_domain_name'] = config['credentials'][cloud]['domain']
+            if 'service_region' in config['credentials'][cloud]:
+                details['ex_force_service_region'] = config['credentials'][cloud]['service_region']
+
+            libcloud.security.VERIFY_SSL_CERT = False
+            provider = get_driver(Provider.OPENSTACK)
+            try:
+                conn = provider(config['credentials'][cloud]['username'],
+                                token
                                 **details)
             except Exception as ex:
                 logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
@@ -132,7 +153,7 @@ def generate_images_and_flavours(config, cloud):
 
     return output
 
-def update_cloud_details(requirements, opa_client, config_file):
+def update_cloud_details(requirements, db, opa_client, config_file):
     """
     Update cloud images & flavours if necessary
     """
@@ -151,13 +172,19 @@ def update_cloud_details(requirements, opa_client, config_file):
 
         if config['credentials'][cloud]['type'] != "InfrastructureManager":
             logger.info('Checking if we need to update cloud %s details', cloud)
-            new_data = generate_images_and_flavours(config, cloud)
+
+            # Get a token if necessary
+            token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+
+            # Get new images * flavours
+            new_data = generate_images_and_flavours(config, cloud, token)
 
             # Check if need to continue with this cloud
             if new_data is None:
                 logger.info('Not continuing with considering updating details for cloud', cloud)
                 continue
-
+    
+            # Get old images & flavours
             images_old = opa_client.get_images(cloud)
             flavours_old = opa_client.get_flavours(cloud)
 
