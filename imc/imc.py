@@ -58,7 +58,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Update cloud images & flavours if necessary
-    cloud_update.update_cloud_details(requirements, db, opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    cloud_images_flavours.update_cloud_details(requirements, db, opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
     # Update quotas if necessary
     cloud_quotas.set_quotas(requirements, db, opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
@@ -292,6 +292,7 @@ def auto_deploy(inputj, unique_id):
         try:
             success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
         except Exception as error:
+            print(error)
             logger.critical('deploy_job failed with exception', error)
         if not success:
             db.deployment_update_status_with_retries(unique_id, 'unable')

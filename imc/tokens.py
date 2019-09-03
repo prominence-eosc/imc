@@ -2,9 +2,15 @@
 
 import json
 import logging
+import os
 import sys
 import time
 import requests
+
+try:
+    from urlparse import urlparse, urlunparse, urljoin
+except ImportError:
+    from urllib.parse import urlparse, urlunparse, urljoin
 
 # Logging
 logging.basicConfig(stream=sys.stdout,
