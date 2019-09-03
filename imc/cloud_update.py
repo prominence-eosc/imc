@@ -10,6 +10,7 @@ from libcloud.compute.providers import get_driver
 import libcloud.security
 
 import opaclient
+import tokens
 
 # Logging
 logging.basicConfig(stream=sys.stdout,
@@ -101,7 +102,7 @@ def generate_images_and_flavours(config, cloud, token):
             provider = get_driver(Provider.OPENSTACK)
             try:
                 conn = provider(config['credentials'][cloud]['username'],
-                                token
+                                token,
                                 **details)
             except Exception as ex:
                 logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
