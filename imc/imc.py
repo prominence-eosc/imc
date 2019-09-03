@@ -61,7 +61,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     cloud_update.update_cloud_details(requirements, db, opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
     # Update quotas if necessary
-    cloud_quotas.set_quotas(requirements, opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    cloud_quotas.set_quotas(requirements, db, opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
     # Get list of clouds meeting the specified requirements
     clouds = opa_client.get_clouds(userdata)
