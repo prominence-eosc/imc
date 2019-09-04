@@ -82,6 +82,12 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         clouds_ranked_list.append(item['site'])
     logger.info('Ranked clouds = [%s]', ','.join(clouds_ranked_list))
 
+    # Check if we still have any clouds meeting requirements & preferences
+    if not clouds_ranked:
+        logger.critical('No suitables clouds after ranking - if we get to this point there must be a bug in the OPA policy')
+        db.deployment_update_status_reason(unique_id, 'NoMatchingResources')
+        return False
+
     # Check if we should stop
     (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
     if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted':
@@ -293,8 +299,7 @@ def auto_deploy(inputj, unique_id):
         try:
             success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
         except Exception as error:
-            print(error)
-            logger.critical('deploy_job failed with exception', error)
+            logger.critical('deploy_job failed with exception', str(error))
         if not success:
             db.deployment_update_status_with_retries(unique_id, 'unable')
     db.close()
