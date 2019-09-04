@@ -115,6 +115,28 @@ def check_if_token_required(cloud, config_file):
     if 'credentials' in data:
         if cloud in data['credentials']:
             if 'token' in data['credentials'][cloud]:
+                if 'username' not in data['credentials'][cloud]['token']:
+                    logger.error('username not defined in token section of credentials for cloud %s', cloud)
+                    return None
+                if 'password' not in data['credentials'][cloud]['token']:
+                    logger.error('password not defined in token section of credentials for cloud %s', cloud)
+                    return None
+                if 'client_id' not in data['credentials'][cloud]['token']:
+                    logger.error('client_id not defined in token section of credentials for cloud %s', cloud)
+                    return None
+                if 'client_secret' not in data['credentials'][cloud]['token']:
+                    logger.error('client_secret not defined in token section of credentials for cloud %s', cloud)
+                    return None
+                if 'refresh_token' not in data['credentials'][cloud]['token']:
+                    logger.error('refresh_token not defined in token section of credentials for cloud %s', cloud)
+                    return None
+                if 'scope' not in data['credentials'][cloud]['token']:
+                    logger.error('scope not defined in token section of credentials for cloud %s', cloud)
+                    return None
+                if 'url' not in data['credentials'][cloud]['token']:
+                    logger.error('url not defined in token section of credentials for cloud %s', cloud)
+                    return None
+
                 return (data['credentials'][cloud]['token']['username'],
                         data['credentials'][cloud]['token']['password'],
                         data['credentials'][cloud]['token']['client_id'],
