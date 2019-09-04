@@ -1,3 +1,4 @@
+import json
 import logging
 import sys
 import time
@@ -21,17 +22,33 @@ class OPAClient(object):
 
     def set_status(self, cloud, state):
         """
-        Write cloud status information
+        Write cloud status information in the event of a failure
         """
         data = {}
-        data['epoch'] = time.time()
+        data['op'] = 'add'
+        data['path'] = '-'
+        value = {}
+        value['epoch'] = time.time()
+        value['reason'] = state
+        data['value'] = value
 
+        # Try to patch first. If this fails this probably means we need to do a put.
         try:
-            response = requests.put('%s/v1/data/status/failures/%s' % (self._url, cloud),
-                                    json=data,
-                                    timeout=self._timeout)
+            response = requests.patch('%s/v1/data/status/%s/failures' % (self._url, cloud),
+                                      data=json.dumps([data]),
+                                      timeout=self._timeout)
         except requests.exceptions.RequestException as ex:
-            logger.warning('Unable to write cloud status to Open Policy Agent due to "%s"', ex)
+            logger.warning('Unable to patch cloud status to Open Policy Agent due to "%s"', ex)
+
+        if response.status_code == 404:
+            if 'code' in response.json():
+                if response.json()['code'] == 'resource_not_found':
+                    try:
+                        response = requests.put('%s/v1/data/status/%s/failures' % (self._url, cloud),
+                                                data=json.dumps([value]),
+                                                timeout=self._timeout)
+                    except requests.exceptions.RequestException as ex:
+                        logger.warning('Unable to put cloud status to Open Policy Agent due to "%s"', ex)
 
     def set_quotas(self, cloud, instances, cpus, memory):
         """
