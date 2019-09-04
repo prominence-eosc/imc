@@ -262,7 +262,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                 # Handle unconfigured infrastructure
                 if state == 'unconfigured':
                     count_unconfigured += 1
-                    file_unconf = '/tmp/contmsg-%s-%d.txt' % (unique_id, time.time())
+                    file_unconf = '%s/contmsg-%s-%d.txt' % (CONFIG.get('logs', 'contmsg'), unique_id, time.time())
                     contmsg = client.getcontmsg(infrastructure_id, int(CONFIG.get('timeouts', 'deletion')))
                     if count_unconfigured < int(CONFIG.get('deployment', 'reconfigures')) + 1:
                         logger.warning('Infrastructure is unconfigured, will try reconfiguring after writing contmsg to a file')
@@ -288,7 +288,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                 logger.warning('Infrastructure creation failed due to a timeout')
                 opa_client.set_status(cloud, 'creation-timeout')
             else:
-                file_failed = '/tmp/failed-%s-%d.txt' % (unique_id, time.time())
+                file_failed = '%s/failed-%s-%d.txt' % (CONFIG.get('logs', 'contmsg'), unique_id, time.time())
                 opa_client.set_status(cloud, 'creation-failed')
                 logger.warning('Infrastructure creation failed, writing stdout/err to file "%s"', file_failed)
                 try:
