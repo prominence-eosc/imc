@@ -157,6 +157,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             infra_id = deploy.deploy(radl, cloud, time_begin, unique_id, db, int(requirements['resources']['instances']))
         except Exception as error:
             logger.critical('Deployment error, this is a bug: %s', error)
+            print(error)
 
         if infra_id is not None:
             success = True
