@@ -306,11 +306,6 @@ recent_failures_weight(site) = output {
 }
 
 recent_failures_weight(site) = output {
-    timenow_secs - status[site]["failures"][i]["epoch"] >= 3600
-    output = 0
-}
-
-recent_failures_weight(site) = output {
     not status[site]["failures"]
     output = 0
 }
