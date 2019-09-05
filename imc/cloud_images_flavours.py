@@ -163,9 +163,11 @@ def update_cloud_details(requirements, db, opa_client, config_file):
             logger.info('Checking if we need to update cloud %s details', cloud)
 
             # Get a token if necessary
+            logger.info('Getting a new token if necessary')
             token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 
             # Get new images * flavours
+            logger.info('Getting list of new images and flavours')
             new_data = generate_images_and_flavours(config, cloud, token)
 
             # Check if need to continue with this cloud
