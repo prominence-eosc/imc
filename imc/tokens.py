@@ -116,37 +116,36 @@ def check_if_token_required(cloud, data):
     Check if the given cloud requires a token for access
     """
     if 'credentials' in data:
-        if cloud in data['credentials']:
-            if 'token' in data['credentials']:
-                if 'username' not in data['credentials']['token']:
-                    logger.error('username not defined in token section of credentials for cloud %s', cloud)
-                    return None
-                if 'password' not in data['credentials']['token']:
-                    logger.error('password not defined in token section of credentials for cloud %s', cloud)
-                    return None
-                if 'client_id' not in data['credentials']['token']:
-                    logger.error('client_id not defined in token section of credentials for cloud %s', cloud)
-                    return None
-                if 'client_secret' not in data['credentials']['token']:
-                    logger.error('client_secret not defined in token section of credentials for cloud %s', cloud)
-                    return None
-                if 'refresh_token' not in data['credentials']['token']:
-                    logger.error('refresh_token not defined in token section of credentials for cloud %s', cloud)
-                    return None
-                if 'scope' not in data['credentials']['token']:
-                    logger.error('scope not defined in token section of credentials for cloud %s', cloud)
-                    return None
-                if 'url' not in data['credentials']['token']:
-                    logger.error('url not defined in token section of credentials for cloud %s', cloud)
-                    return None
+        if 'token' in data['credentials']:
+            if 'username' not in data['credentials']['token']:
+                logger.error('username not defined in token section of credentials for cloud %s', cloud)
+                return None
+            if 'password' not in data['credentials']['token']:
+                logger.error('password not defined in token section of credentials for cloud %s', cloud)
+                return None
+            if 'client_id' not in data['credentials']['token']:
+                logger.error('client_id not defined in token section of credentials for cloud %s', cloud)
+                return None
+            if 'client_secret' not in data['credentials']['token']:
+                logger.error('client_secret not defined in token section of credentials for cloud %s', cloud)
+                return None
+            if 'refresh_token' not in data['credentials']['token']:
+                logger.error('refresh_token not defined in token section of credentials for cloud %s', cloud)
+                return None
+            if 'scope' not in data['credentials']['token']:
+                logger.error('scope not defined in token section of credentials for cloud %s', cloud)
+                return None
+            if 'url' not in data['credentials']['token']:
+                logger.error('url not defined in token section of credentials for cloud %s', cloud)
+                return None
 
-                return (data['credentials']['token']['username'],
-                        data['credentials']['token']['password'],
-                        data['credentials']['token']['client_id'],
-                        data['credentials']['token']['client_secret'],
-                        data['credentials']['token']['refresh_token'],
-                        data['credentials']['token']['scope'],
-                        data['credentials']['token']['url'])
+            return (data['credentials']['token']['username'],
+                    data['credentials']['token']['password'],
+                    data['credentials']['token']['client_id'],
+                    data['credentials']['token']['client_secret'],
+                    data['credentials']['token']['refresh_token'],
+                    data['credentials']['token']['scope'],
+                    data['credentials']['token']['url'])
 
     return (None, None, None, None, None, None, None)
 
