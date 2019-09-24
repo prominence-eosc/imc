@@ -67,7 +67,6 @@ class OPAClient(object):
         except requests.exceptions.RequestException as ex:
             logger.warning('Unable to write cloud quotas to Open Policy Agent due to "%s"', ex)
 
-    @retry.retry(tries=4, delay=3, backoff=2)
     def get_clouds(self, data):
         """
         Get list of clouds meeting requirements
