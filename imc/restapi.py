@@ -4,15 +4,20 @@ from __future__ import print_function
 from concurrent.futures import ProcessPoolExecutor
 from functools import wraps
 import os
+import re
 import sys
 import uuid
 import ConfigParser
 import logging
 from flask import Flask, request, jsonify
 
+import consistency
 import database
 import imc
+import imclient
 import logger as custom_logger
+import tokens
+import utilities
 
 def get_db():
     """
@@ -126,7 +131,7 @@ def create_infrastructure():
 @requires_auth
 def get_infrastructures():
     """
-    Get list of infrastructures in the specified state
+    Get list of infrastructures in the specified state or type
     """
     if 'status' in request.args:
         cloud = None
@@ -137,6 +142,10 @@ def get_infrastructures():
             infra = db.deployment_get_infra_in_state_cloud(request.args.get('status'), cloud)
             db.close()
             return jsonify(infra), 200
+    elif 'type' in request.args:
+        if request.args.get('type') == 'im':
+            consistency.find_unexpected_im_infras()
+            return jsonify({}), 200
         
     return jsonify({}), 400
 
@@ -156,8 +165,8 @@ def get_infrastructure(infra_id):
 
     db = get_db()
     if db.connect():
-        (im_infra_id, status, cloud) = db.deployment_get_im_infra_id(infra_id)
-        if status == 'unable' or status == 'failed':
+        (im_infra_id, status, cloud, _, _) = db.deployment_get_im_infra_id(infra_id)
+        if status in ('unable', 'failed'):
             status_reason = db.deployment_get_status_reason(infra_id)
     db.close()
     if status is not None:
@@ -172,15 +181,32 @@ def delete_infrastructure(infra_id):
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': infra_id})
 
-    db = get_db()
-    if db.connect():
-        success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
-        if success:
+    if 'type' not in request.args:
+        db = get_db()
+        if db.connect():
+            success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
+            if success:
+                db.close()
+                executor.submit(infrastructure_delete, infra_id)
+                logger.info('Infrastructure deletion request successfully initiated')
+                return jsonify({}), 200
+        logger.critical('Infrastructure deletion request failed, possibly a database issue')
+        return jsonify({}), 400
+    elif request.args.get('type') == 'im':
+        cloud = request.args.get('cloud')
+        db = get_db()
+        if db.connect():
+            clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+            token = tokens.get_token(cloud, db, clouds_info_list)
             db.close()
-            executor.submit(infrastructure_delete, infra_id)
-            logger.info('Infrastructure deletion request successfully initiated')
+            im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
+            client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
+            (status, msg) = client.getauth()
+            if status != 0:
+                logger.critical('Error reading IM auth file: %s', msg)
+                return jsonify({}), 400        
+            client.destroy(infra_id, 30)
             return jsonify({}), 200
-    logger.critical('Infrastructure deletion request failed, possibly a database issue')
     return jsonify({}), 400
 
 if __name__ == "__main__":
