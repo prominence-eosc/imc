@@ -1,8 +1,0 @@
-{
-  "ansible":{
-    "<cloud name>":{
-      "public_ip":"<ip>",
-      "username":"<username>"
-    }
-  }
-}
