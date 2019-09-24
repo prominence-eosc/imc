@@ -51,6 +51,29 @@ executor = ProcessPoolExecutor(int(CONFIG.get('pool', 'size')))
 dbi = get_db()
 dbi.init()
 
+def authenticate():
+    """
+    Sends a 401 response
+    """
+    return jsonify({'error':'Authentication failure'}), 401
+
+def valid_credentials(username, password):
+    """
+    Check if the supplied credentials are valid
+    """
+    return username == CONFIG.get('auth', 'username') and password == CONFIG.get('auth', 'password')
+
+def requires_auth(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        auth = request.authorization
+        if not auth:
+            return authenticate()
+        if not auth.username or not auth.password or not valid_credentials(auth.username, auth.password):
+            return authenticate()
+        return function(*args, **kwargs)
+    return wrapper
+
 def infrastructure_deploy(input_json, unique_id):
     """
     Deploy infrastructure given a JSON specification and id
@@ -72,40 +95,6 @@ def infrastructure_delete(unique_id):
     except Exception as error:
         logger.critical('Exception deleting infrastructure: "%s"', error)
     return
-
-def authenticate():
-    """
-    Sends a 401 response
-    """
-    return jsonify({'error':'Authentication failure'}), 401
-
-def check_token(token):
-    """
-    Check a token
-    """
-    if token == CONFIG.get('auth', 'token'):
-        return True
-
-    return False
-
-def requires_auth(function):
-    """
-    Check authentication
-    """
-    @wraps(function)
-    def decorated(*args, **kwargs):
-        return function(*args, **kwargs)
-        if 'Authorization' not in request.headers:
-            return authenticate()
-        auth = request.headers['Authorization']
-        try:
-            token = auth.split(' ')[1]
-        except:
-            return authenticate()
-        if not check_token(token):
-            return authenticate()
-        return function(*args, **kwargs)
-    return decorated
 
 @app.route('/infrastructures', methods=['POST'])
 @requires_auth
