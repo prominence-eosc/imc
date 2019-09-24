@@ -80,7 +80,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
         # Create infrastructure
         (infrastructure_id, msg) = client.create(radl_base, int(CONFIG.get('timeouts', 'creation')))
 
-        if infrastructure_id is not None:
+        if infrastructure_id:
             logger.info('Created infrastructure on cloud %s with IM id %s and waiting for it to be configured', cloud, infrastructure_id)
             db.deployment_update_status_with_retries(unique_id, None, cloud, infrastructure_id)
 
@@ -116,7 +116,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                 (states, msg) = client.getstates(infrastructure_id, int(CONFIG.get('timeouts', 'status')))
 
                 # If state is not known, wait
-                if states is None:
+                if not states:
                     logger.info('State is not known for infrastructure with id %s on cloud %s', infrastructure_id, cloud)
                     continue
 
@@ -130,7 +130,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                         have_nodes = len(states['state']['vm_states'])
                 
                 # If the state or number of nodes is unknown, wait
-                if state is None or have_nodes == -1:
+                if not state or have_nodes == -1:
                     logger.warning('Unable to determine state and/or number of VMs from IM')
                     continue
 

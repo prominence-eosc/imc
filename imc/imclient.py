@@ -15,7 +15,7 @@ class IMClient(object):
         """
         Generate auth header
         """
-        if self._auth is None and self._data is not None:
+        if not self._auth and self._data:
             content = self._data
         else:
             try:

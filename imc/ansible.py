@@ -62,7 +62,7 @@ def delete_ansible_node(cloud, db):
     # Get details about the node
     (infrastructure_id, public_ip, username, timestamp) = db.get_ansible_node(cloud)
 
-    if infrastructure_id is None:
+    if not infrastructure_id:
         logger.critical('[delete_ansible_node] Unable to get infrastructure id for Ansible node in cloud %s', cloud)
         return False
 
@@ -98,7 +98,7 @@ def setup_ansible_node(cloud, db):
     # Check if there is a static Ansible node
     (ip_addr, username) = get_static_ansible_node(cloud)
 
-    if ip_addr is not None and username is not None:
+    if ip_addr and username:
         logger.info('Found static Ansible node with ip_addr %s on cloud %s', ip_addr, cloud)
         status = check_ansible_node(ip_addr, username)
         if status:
@@ -116,7 +116,7 @@ def setup_ansible_node(cloud, db):
     # Check if there is a dynamic Ansible node
     (ip_addr, username) = get_dynamic_ansible_node(cloud, db)
 
-    if ip_addr is not None and username is not None:
+    if ip_addr and username:
         logger.info('Found existing dynamic Ansible node with ip %s on cloud %s', ip_addr, cloud)
         status = check_ansible_node(ip_addr, username)
         if status:
@@ -130,14 +130,14 @@ def setup_ansible_node(cloud, db):
     # Try to create a dynamic Ansible node
     infrastructure_id = deploy_ansible_node(cloud, db)
 
-    if infrastructure_id is None:
+    if not infrastructure_id:
         logger.critical('Unable to create Ansible node on cloud "%s"', cloud)
         return (None, None)
 
     # Get the public IP
     ip_addr = get_public_ip(infrastructure_id)
 
-    if ip_addr is None:
+    if not ip_addr:
         logger.critical('Newly deployed Ansible node has no public IP')
         return (None, None)
 
@@ -232,11 +232,11 @@ def deploy_ansible_node(cloud, db):
     image = opa_client.get_image(userdata, cloud)
     flavour = opa_client.get_flavour(userdata, cloud)
 
-    if image is None:
+    if not image:
         logger.critical('Unable to deploy Ansible node because no acceptable image is available')
         return None
 
-    if flavour is None:
+    if not flavour:
         logger.critical('Unable to deploy Ansible node because no acceptable flavour is available')
         return None
 

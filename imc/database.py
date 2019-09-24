@@ -100,7 +100,7 @@ class Database(object):
         Return a list of all infrastructure IDs for infrastructure in the specified state and cloud
         """
         query = ""
-        if cloud is not None:
+        if cloud:
             query = "and cloud='%s'" % cloud
         infra = []
         try:
@@ -225,13 +225,13 @@ class Database(object):
         """
         try:
             cursor = self._connection.cursor()
-            if cloud is not None and im_infra_id is not None and status is not None:
+            if cloud and im_infra_id and status:
                 cursor.execute("UPDATE deployments SET status='%s',cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (status, cloud, im_infra_id, time.time(), infra_id))
-            elif cloud is not None and status is not None:
+            elif cloud and status:
                 cursor.execute("UPDATE deployments SET status='%s',cloud='%s',updated=%d WHERE id='%s'" % (status, cloud, time.time(), infra_id))
-            elif im_infra_id is not None and cloud is not None and status is None:
+            elif im_infra_id and cloud and not status:
                 cursor.execute("UPDATE deployments SET cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (cloud, im_infra_id, time.time(), infra_id))
-            elif status is not None:
+            elif status:
                 cursor.execute("UPDATE deployments SET status='%s',updated=%d WHERE id='%s'" % (status, time.time(), infra_id))
             self._connection.commit()
             cursor.close()

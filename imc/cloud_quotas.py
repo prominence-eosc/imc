@@ -105,7 +105,7 @@ def set_quotas(requirements, db, opa_client, config):
         elif credentials['type'] != 'InfrastructureManager':
             logger.warning('Unable to determine quotas for cloud %s of type %s', name, credentials['type'])
 
-        if instances is not None and cores is not None and memory is not None:
+        if instances and cores and memory:
             logger.info('Setting updated quotas for cloud %s: instances %d, cpus %d, memory %d', name, instances, cores, memory)
             opa_client.set_quotas(name, instances, cores, memory)
         else:

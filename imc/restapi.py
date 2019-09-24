@@ -158,7 +158,7 @@ def get_infrastructure(infra_id):
         if status in ('unable', 'failed'):
             status_reason = db.deployment_get_status_reason(infra_id)
     db.close()
-    if status is not None:
+    if status:
         return jsonify({'status':status, 'status_reason':status_reason, 'cloud':cloud, 'infra_id':im_infra_id}), 200
     return jsonify({'status':'invalid'}), 404
 

@@ -35,7 +35,7 @@ def get_token(cloud, db, config):
 
     # Get details required for generating a new token
     (username, password, client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, data)
-    if username is None or password is None or client_id is None or client_secret is None or refresh_token is None or scope is None or url is None:
+    if not username or not password or not client_id or not client_secret or not refresh_token or not scope or not url:
         logger.info('A token is not required for cloud %s', cloud)
         return None
 
@@ -44,7 +44,7 @@ def get_token(cloud, db, config):
     (token, expiry, creation) = db.get_token(cloud)
 
     # Check token
-    if token is not None:
+    if token:
         check_rt = check_token(token, url)
         if check_rt != 0:
             logger.info('Check token failed for cloud %s', cloud)
@@ -56,7 +56,7 @@ def get_token(cloud, db, config):
     if expiry - time.time() < 600:
         logger.info('Token has or is about to expire')
 
-    if token is None or expiry - time.time() < 600 or (check_rt != 0 and time.time() - creation > 600):
+    if not token or expiry - time.time() < 600 or (check_rt != 0 and time.time() - creation > 600):
         logger.info('Getting a new token for cloud %s', cloud)
         # Get new token
         (token, expiry, creation, msg) = get_new_token(username, password, client_id, client_secret, refresh_token, scope, url)

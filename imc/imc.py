@@ -115,12 +115,12 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image, flavour)
 
         # If no flavour meets the requirements we should skip the current cloud
-        if flavour is None:
+        if not flavour:
             logger.info('Skipping because no flavour could be determined')
             continue
 
         # If no image meets the requirements we should skip the current cloud
-        if image is None:
+        if not image:
             logger.info('Skipping because no image could be determined')
             continue
  
@@ -175,9 +175,9 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             logger.critical('Deployment error, this is a bug: %s', error)
             print(error)
 
-        if infra_id is not None:
+        if infra_id:
             success = True
-            if unique_id is not None:
+            if unique_id:
                 # Final check if we should delete the infrastructure
                 (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deleted':
@@ -208,7 +208,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
                     db.deployment_update_status_with_retries(unique_id, 'configured', cloud, infra_id)
             break
 
-    if unique_id is not None and infra_id is None:
+    if unique_id and not infra_id:
         db.deployment_update_status_with_retries(unique_id, 'failed', 'none', 'none')
         db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
     return success
@@ -233,7 +233,7 @@ def delete(unique_id):
     # Get full list of cloud info
     clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
 
-    if im_infra_id is not None and cloud is not None:
+    if im_infra_id and cloud:
         match_obj_name = re.match(r'\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b', im_infra_id)
         if match_obj_name:
             logger.info('Deleting infrastructure with IM id %s', im_infra_id)

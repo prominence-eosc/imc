@@ -74,7 +74,7 @@ def create_im_line(name, block, token):
     im_auth_line = 'id = %s; ' % name
     for item in block:
         if item in valid_im_fields:
-            if item == 'password' and token is not None:
+            if item == 'password' and token:
                 value = token
             else:
                 value = block[item]
