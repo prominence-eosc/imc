@@ -57,11 +57,20 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     # Setup Open Policy Agent client
     opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
 
+    # Update available clouds & their static info if necessary
+    logger.info('Updating static cloud info')
+    utilities.update_clouds(opa_client, CONFIG.get('clouds', 'path'))
+
+    # Get full list of cloud info
+    clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+
     # Update cloud images & flavours if necessary
-    cloud_images_flavours.update_cloud_details(requirements, db, opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    logger.info('Updating cloud images and flavours if necessary')
+    cloud_images_flavours.update_cloud_details(requirements, db, opa_client, clouds_info_list)
 
     # Update quotas if necessary
-    cloud_quotas.set_quotas(requirements, db, opa_client, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    logger.info('Updating cloud quotas if necessary')
+    cloud_quotas.set_quotas(requirements, db, opa_client, clouds_info_list)
 
     # Get list of clouds meeting the specified requirements
     clouds = opa_client.get_clouds(userdata)
@@ -89,7 +98,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         return False
 
     # Check if we should stop
-    (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
+    (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
     if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted':
         logger.info('Deletion requested of infrastructure, aborting deployment')
         return False
@@ -153,7 +162,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             return False
 
         # Check if we should stop
-        (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
+        (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted':
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return False
@@ -169,15 +178,15 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             success = True
             if unique_id is not None:
                 # Final check if we should delete the infrastructure
-                (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
+                (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deleted':
                     return False
                 elif infra_status_new == 'deletion-requested':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
 
-                    token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+                    token = tokens.get_token(cloud, db, clouds_info_list)
 
-                    im_auth = utilities.create_im_auth(cloud, token, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+                    im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
                     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
                     (status, msg) = client.getauth()
                     if status != 0:
@@ -217,18 +226,21 @@ def delete(unique_id):
     db.connect()
     logger.info('Deleting infrastructure')
 
-    (im_infra_id, infra_status, cloud) = db.deployment_get_im_infra_id(unique_id)
+    (im_infra_id, infra_status, cloud, _, _) = db.deployment_get_im_infra_id(unique_id)
     logger.info('Obtained IM id %s and cloud %s and status %s', im_infra_id, cloud, infra_status)
+
+    # Get full list of cloud info
+    clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
 
     if im_infra_id is not None and cloud is not None:
         match_obj_name = re.match(r'\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b', im_infra_id)
         if match_obj_name:
             logger.info('Deleting infrastructure with IM id %s', im_infra_id)
             # Check & get auth token if necessary
-            token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+            token = tokens.get_token(cloud, db, clouds_info_list)
 
             # Setup Infrastructure Manager client
-            im_auth = utilities.create_im_auth(cloud, token, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+            im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
             client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
             (status, msg) = client.getauth()
             if status != 0:
@@ -262,6 +274,10 @@ def auto_deploy(inputj, unique_id):
     dryrun = False
     logger.info('Deploying infrastructure')
 
+    if not inputj:
+        logger.warning('No input JSON provided')
+        return 1        
+
     # Generate requirements & preferences
     if 'preferences' in inputj:
         preferences_new = {}
@@ -282,11 +298,17 @@ def auto_deploy(inputj, unique_id):
         preferences = inputj['preferences']
 
     if 'radl' in inputj:
-        radl_contents = base64.b64decode(inputj['radl'])
+        try:
+            radl_contents = base64.b64decode(inputj['radl'])
+        except Exception as err:
+            logger.warning('Invalid RADL provided: cannot be decoded')
+            return 1
 
     if 'requirements' not in inputj or 'radl' not in inputj:
         logger.warning('Invalid JSON provided: both requirements and radl must exist')
         return 1
+
+    logger.info('Have job requirements, preferences and RADL, about to connect to the DB')
 
     db = database.Database(CONFIG.get('db', 'host'),
                            CONFIG.get('db', 'port'),
@@ -296,9 +318,11 @@ def auto_deploy(inputj, unique_id):
 
     success = False
     if db.connect():
+        logger.info('Connected to DB, about to deploy infrastructure for job')
         try:
             success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
         except Exception as error:
+            print(error)
             logger.critical('deploy_job failed with exception', str(error))
         if not success:
             db.deployment_update_status_with_retries(unique_id, 'unable')

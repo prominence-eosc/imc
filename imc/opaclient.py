@@ -155,6 +155,22 @@ class OPAClient(object):
 
         return flavour
 
+    def get_cloud(self, cloud):
+        """
+        Get all info associated with the specified cloud
+        """
+        try:
+            response = requests.get('%s/v1/data/clouds/%s' % (self._url, cloud),
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to get cloud info from Open Policy Agent due to "%s"', ex)
+            return None
+
+        if 'result' in response.json():
+            if response.json()['result']:
+                return response.json()['result']
+        return None
+
     @retry.retry(tries=4, delay=3, backoff=2)
     def get_flavours(self, cloud):
         """
@@ -212,6 +228,19 @@ class OPAClient(object):
                                     timeout=self._timeout)
         except requests.exceptions.RequestException as ex:
             logger.critical('Unable to write cloud images to Open Policy Agent due to "%s"', ex)
+            return False
+        return True
+
+    def set_cloud(self, cloud, data):
+        """
+        Set all info associated with the specified cloud
+        """
+        try:
+            response = requests.put('%s/v1/data/clouds/%s' % (self._url, cloud),
+                                    json=data,
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to write cloud info to Open Policy Agent due to "%s"', ex)
             return False
         return True
 

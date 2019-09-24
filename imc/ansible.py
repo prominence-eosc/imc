@@ -68,11 +68,14 @@ def delete_ansible_node(cloud, db):
 
     logger.info('[delete_ansible_node] About to delete Ansible node from clouds %s with infrastructure id %s', cloud, infrastructure_id)
 
+    # Get full list of cloud info
+    clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+
     #  Get a token if necessary
-    token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    token = tokens.get_token(cloud, db, clouds_info_list)
 
     # Destroy infrastructure
-    im_auth = utilities.create_im_auth(cloud, token, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
@@ -174,8 +177,11 @@ def get_public_ip(infrastructure_id):
     """
     public_ip = None
 
+    # Get full list of cloud info
+    clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+
     # Setup Infrastructure Manager client
-    im_auth = utilities.create_im_auth(cloud, None, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    im_auth = utilities.create_im_auth(cloud, None, clouds_info_list)
     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:

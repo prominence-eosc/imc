@@ -32,6 +32,33 @@ class IMClient(object):
         """
         return self._headers
 
+    def list_infra_ids(self, timeout):
+        """
+        List infrastructure IDs
+        """
+        url = '%s/infrastructures' % self._url
+
+        headers = self._headers.copy()
+        headers['Accept'] = 'application/json'
+
+        try:
+            response = requests.get(url, headers=headers, timeout=timeout)
+        except requests.exceptions.Timeout:
+            return ('timedout', None)
+        except requests.exceptions.RequestException:
+            return ('timedout', None)    
+
+        if response.status_code != 200:
+            return (None, response.text)
+
+        if 'uri-list' in response.json():
+            uris = []
+            for uri in response.json()['uri-list']:
+                uris.append(uri['uri'])
+            return (None, uris)
+
+        return (None, None)
+
     def getstate(self, infra_id, timeout):
         """
         Get overall infrastructure status

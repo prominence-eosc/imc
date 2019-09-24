@@ -57,33 +57,24 @@ def get_quotas_openstack(cloud, credentials, token):
     instances_available = quotas_dict['instances']['limit'] - quotas_dict['instances']['in_use'] - quotas_dict['instances']['reserved']
     return (instances_available, cores_available, int(memory_available/1024))
 
-def set_quotas(requirements, db, opa_client, config_file):
+def set_quotas(requirements, db, opa_client, config):
     """
     Determine the available remaining quotas and set in Open Policy Agent
     """
-    try:
-        with open(config_file) as file:
-            config = json.load(file)
-    except Exception as ex:
-        logger.critical('Unable to open JSON config file due to: %s', ex)
-        return False
-
-    if 'credentials' not in config:
-        return False
-
-    for cloud in config['credentials']:
-        credentials = config['credentials'][cloud]
+    for cloud in config:
+        name = cloud['name']
+        credentials = cloud['credentials']
         instances = None
         cores = None
         memory = None
 
         # Check if we need to consider this cloud at all
         if 'sites' in requirements:
-            if cloud not in requirements['sites']:
+            if name not in requirements['sites']:
                 continue
 
         # Get a token if necessary
-        token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+        token = tokens.get_token(name, db, config)
 
         if credentials['type'] == 'OpenStack':
             # Get a scoped token if necessary from Keystone
@@ -96,18 +87,18 @@ def set_quotas(requirements, db, opa_client, config_file):
                                                                           credentials['tenant']))
 
             # Check if the cloud hasn't been updated recently
-            logger.info('Checking if we need to update cloud %s quotas', cloud)
-            update_time = opa_client.get_quota_update_time(cloud)
+            logger.info('Checking if we need to update cloud %s quotas', name)
+            update_time = opa_client.get_quota_update_time(name)
             if time.time() - update_time > 60:
-                logger.info('Quotas for cloud %s have not been updated recently, so getting current values', cloud)
-                (instances, cores, memory) = get_quotas_openstack(cloud, credentials, token)
+                logger.info('Quotas for cloud %s have not been updated recently, so getting current values', name)
+                (instances, cores, memory) = get_quotas_openstack(name, credentials, token)
         elif credentials['type'] != 'InfrastructureManager':
-            logger.warning('Unable to determine quotas for cloud %s of type %s', cloud, credentials['type'])
+            logger.warning('Unable to determine quotas for cloud %s of type %s', name, credentials['type'])
 
         if instances is not None and cores is not None and memory is not None:
-            logger.info('Setting updated quotas for cloud %s: instances %d, cpus %d, memory %d', cloud, instances, cores, memory)
-            opa_client.set_quotas(cloud, instances, cores, memory)
+            logger.info('Setting updated quotas for cloud %s: instances %d, cpus %d, memory %d', name, instances, cores, memory)
+            opa_client.set_quotas(name, instances, cores, memory)
         else:
-            logger.info('Not setting updated quotas for cloud %s', cloud)
+            logger.info('Not setting updated quotas for cloud %s', name)
 
     return True

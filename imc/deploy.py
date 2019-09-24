@@ -34,15 +34,18 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
 
+    # Get full list of cloud info
+    clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+
     # Check & get auth token if necessary
-    token = tokens.get_token(cloud, db, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    token = tokens.get_token(cloud, db, clouds_info_list)
 
     # Setup Open Policy Agent client
     opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'),
                                      timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Setup Infrastructure Manager client
-    im_auth = utilities.create_im_auth(cloud, token, '%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
@@ -69,7 +72,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
         retry += 1
 
         # Check if we should stop
-        (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
+        (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted':
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return None
@@ -93,7 +96,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
             # Wait for infrastructure to enter the configured state
             while True:
                 # Check if we should stop
-                (im_infra_id_new, infra_status_new, cloud_new) = db.deployment_get_im_infra_id(unique_id)
+                (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deletion-requested':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
                     destroy.destroy(client, infrastructure_id)
@@ -211,7 +214,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                 # Destroy infrastructure for which deployment failed
                 if state == 'failed':
                     if num_nodes > 1:
-                        logger.info('Infrastructure creation failed for some VMs, so deleting these (run %d)', multi_node_deletions)
+                        logger.info('Infrastructure creation failed for some VMs on cloud %s, so deleting these (run %d)', cloud, multi_node_deletions)
                         multi_node_deletions += 1
                         failed_vms = 0
                         for vm_id in states['state']['vm_states']:
@@ -254,7 +257,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                         continue
 
                     else:
-                        logger.warning('Infrastructure creation failed, so destroying')
+                        logger.warning('Infrastructure creation failed on cloud %s, so destroying', cloud)
                         opa_client.set_status(cloud, state)
                         destroy.destroy(client, infrastructure_id)
                         break
@@ -265,7 +268,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
                     file_unconf = '%s/contmsg-%s-%d.txt' % (CONFIG.get('logs', 'contmsg'), unique_id, time.time())
                     contmsg = client.getcontmsg(infrastructure_id, int(CONFIG.get('timeouts', 'deletion')))
                     if count_unconfigured < int(CONFIG.get('deployment', 'reconfigures')) + 1:
-                        logger.warning('Infrastructure is unconfigured, will try reconfiguring after writing contmsg to a file')
+                        logger.warning('Infrastructure on cloud %s is unconfigured, will try reconfiguring after writing contmsg to a file', cloud)
                         try:
                             with open(file_unconf, 'w') as unconf:
                                 unconf.write(contmsg)

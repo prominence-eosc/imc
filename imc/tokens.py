@@ -17,14 +17,24 @@ logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-def get_token(cloud, db, config_file):
+def get_token(cloud, db, config):
     """
     Get a token for a cloud
     """
     logger.info('Checking if we need a token for cloud %s', cloud)
 
+    # Get config for the required cloud
+    data = {}
+    for cloud_info in config:
+        if cloud_info['name'] == cloud:
+            data = cloud_info
+    
+    if not data:
+        logger.critical('Unable to find info for cloud %s in JSON config', cloud)
+        return None
+
     # Get details required for generating a new token
-    (username, password, client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, config_file)
+    (username, password, client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, data)
     if username is None or password is None or client_id is None or client_secret is None or refresh_token is None or scope is None or url is None:
         logger.info('A token is not required for cloud %s', cloud)
         return None
@@ -101,49 +111,42 @@ def check_token(token, url):
         return 0
     return 1
 
-def check_if_token_required(cloud, config_file):
+def check_if_token_required(cloud, data):
     """
     Check if the given cloud requires a token for access
     """
-    try:
-        with open(config_file) as file:
-            data = json.load(file)
-    except Exception as ex:
-        logger.critical('Unable to open file containing tokens due to: %s', ex)
-        return (None, None, None, None, None, None, None)
-
     if 'credentials' in data:
         if cloud in data['credentials']:
-            if 'token' in data['credentials'][cloud]:
-                if 'username' not in data['credentials'][cloud]['token']:
+            if 'token' in data['credentials']:
+                if 'username' not in data['credentials']['token']:
                     logger.error('username not defined in token section of credentials for cloud %s', cloud)
                     return None
-                if 'password' not in data['credentials'][cloud]['token']:
+                if 'password' not in data['credentials']['token']:
                     logger.error('password not defined in token section of credentials for cloud %s', cloud)
                     return None
-                if 'client_id' not in data['credentials'][cloud]['token']:
+                if 'client_id' not in data['credentials']['token']:
                     logger.error('client_id not defined in token section of credentials for cloud %s', cloud)
                     return None
-                if 'client_secret' not in data['credentials'][cloud]['token']:
+                if 'client_secret' not in data['credentials']['token']:
                     logger.error('client_secret not defined in token section of credentials for cloud %s', cloud)
                     return None
-                if 'refresh_token' not in data['credentials'][cloud]['token']:
+                if 'refresh_token' not in data['credentials']['token']:
                     logger.error('refresh_token not defined in token section of credentials for cloud %s', cloud)
                     return None
-                if 'scope' not in data['credentials'][cloud]['token']:
+                if 'scope' not in data['credentials']['token']:
                     logger.error('scope not defined in token section of credentials for cloud %s', cloud)
                     return None
-                if 'url' not in data['credentials'][cloud]['token']:
+                if 'url' not in data['credentials']['token']:
                     logger.error('url not defined in token section of credentials for cloud %s', cloud)
                     return None
 
-                return (data['credentials'][cloud]['token']['username'],
-                        data['credentials'][cloud]['token']['password'],
-                        data['credentials'][cloud]['token']['client_id'],
-                        data['credentials'][cloud]['token']['client_secret'],
-                        data['credentials'][cloud]['token']['refresh_token'],
-                        data['credentials'][cloud]['token']['scope'],
-                        data['credentials'][cloud]['token']['url'])
+                return (data['credentials']['token']['username'],
+                        data['credentials']['token']['password'],
+                        data['credentials']['token']['client_id'],
+                        data['credentials']['token']['client_secret'],
+                        data['credentials']['token']['refresh_token'],
+                        data['credentials']['token']['scope'],
+                        data['credentials']['token']['url'])
 
     return (None, None, None, None, None, None, None)
 
