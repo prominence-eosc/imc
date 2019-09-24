@@ -143,6 +143,8 @@ def create_clouds_for_opa(path):
                 cloud['region'] = data['region']
             if 'tags' in data:
                 cloud['tags'] = data['tags']
+            if 'quotas' in data:
+                cloud['quotas'] = data['quotas']
             if 'network' in data:
                 cloud['network'] = data['network']
             if 'supported_groups' in data:
