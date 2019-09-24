@@ -56,6 +56,10 @@ def generate_images_and_flavours(config, cloud, token):
     """
     Create a list of images and flavours available on the specified cloud
     """
+    output = {}
+    output['images'] = None
+    output['flavours'] = None
+
     if config['credentials']['type'] == 'OpenStack':
         details = {}
         if config['credentials']['auth_version'] == '3.x_password':
@@ -76,7 +80,7 @@ def generate_images_and_flavours(config, cloud, token):
                                 **details)
             except Exception as ex:
                 logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
-                return None
+                return output
         elif config['credentials']['auth_version'] == '3.x_oidc_access_token':
             details['ex_force_auth_url'] = config['credentials']['host']
             if 'auth_version' in config['credentials']:
@@ -95,19 +99,17 @@ def generate_images_and_flavours(config, cloud, token):
                                 **details)
             except Exception as ex:
                 logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
-                return None
+                return output
         else:
-            return None
+            return output
     else:
-        return None
-
-    output = {}
+        return output
 
     try:
         images = conn.list_images()
     except Exception as ex:
         logger.critical('Unable to get list of images from cloud %s due to "%s"', cloud, ex)
-        return None
+        return output
 
     output_images = {}
     for image in images:
@@ -122,7 +124,7 @@ def generate_images_and_flavours(config, cloud, token):
         flavours = conn.list_sizes()
     except Exception as ex:
         logger.critical('Unable to get list of flavours from cloud %s due to "%s"', cloud, ex)
-        return None
+        return output
 
     output_flavours = {}
     for flavour in flavours:
@@ -166,7 +168,7 @@ def update_cloud_details(requirements, db, opa_client, config):
             new_data = generate_images_and_flavours(cloud, name, token)
 
             # Check if need to continue with this cloud
-            if new_data is None:
+            if not new_data['images'] and not new_data['flavours']:
                 logger.info('Not continuing with considering updating details for cloud', name)
                 continue
     
@@ -182,7 +184,7 @@ def update_cloud_details(requirements, db, opa_client, config):
                 requires_update = True
 
             # Update cloud VM images if necessary
-            if (images_old is None or requires_update or not compare_dicts(images_old, new_data['images'])) and new_data is not None:
+            if (not images_old or requires_update or not compare_dicts(images_old, new_data['images'])) and new_data['images']:
                 if not compare_dicts(images_old, new_data['images']):
                     logger.info('Updating images for cloud %s', name)
                     opa_client.set_images(name, new_data['images'])
@@ -191,7 +193,7 @@ def update_cloud_details(requirements, db, opa_client, config):
                 opa_client.set_update_time(name)
  
             # Update cloud VM flavours if necessary
-            if (flavours_old is None or requires_update or not compare_dicts(flavours_old, new_data['flavours'])) and new_data is not None:
+            if (not flavours_old or requires_update or not compare_dicts(flavours_old, new_data['flavours'])) and new_data['flavours']:
                 if not compare_dicts(flavours_old, new_data['flavours']):
                     logger.info('Updating flavours for cloud %s', name)
                     opa_client.set_flavours(name, new_data['flavours'])
