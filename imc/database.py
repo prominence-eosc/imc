@@ -105,9 +105,9 @@ class Database(object):
         infra = []
         try:
             cursor = self._connection.cursor()
-            cursor.execute("SELECT id FROM deployments WHERE status='%s' %s" % (state, query))
+            cursor.execute("SELECT id,creation,updated FROM deployments WHERE status='%s' %s" % (state, query))
             for row in cursor:
-                infra.append(row[0])
+                infra.append({"id":row[0], "created":row[1], "updated":row[2]})
             cursor.close()
         except Exception as error:
             logger.critical('[deployment_get_infra_in_state_cloud] Unable to execute query due to: %s', error)
@@ -129,6 +129,26 @@ class Database(object):
             logger.critical('[deployment_get_status_reason] Unable to execute query due to: %s', error)
         return status_reason
 
+    def get_infra_from_im_infra_id(self, im_infra_id):
+        """
+        Check if the provided IM infra ID corresponds to known infrastructure
+        """
+        infra_id = None
+        status = None
+        cloud = None
+
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("SELECT id,status,cloud FROM deployments WHERE im_infra_id='%s'" % im_infra_id)
+            for row in cursor:
+                infra_id = row[0]
+                status = row[1]
+                cloud = row[2]
+            cursor.close()
+        except Exception as error:
+            logger.critical('[deployment_infra_from_im_infra_id] Unable to execute query due to: %s', error)
+        return (infra_id, status, cloud)
+
     def deployment_get_im_infra_id(self, infra_id):
         """
         Return the IM infrastructure ID, our status and cloud name
@@ -136,18 +156,22 @@ class Database(object):
         im_infra_id = None
         status = None
         cloud = None
+        created = None
+        updated = None
 
         try:
             cursor = self._connection.cursor()
-            cursor.execute("SELECT im_infra_id,status,cloud FROM deployments WHERE id='%s'" % infra_id)
+            cursor.execute("SELECT im_infra_id,status,cloud,creation,updated FROM deployments WHERE id='%s'" % infra_id)
             for row in cursor:
                 im_infra_id = row[0]
                 status = row[1]
                 cloud = row[2]
+                created = row[3]
+                updated = row[4]
             cursor.close()
         except Exception as error:
             logger.critical('[deployment_get_im_infra_id] Unable to execute query due to: %s', error)
-        return (im_infra_id, status, cloud)
+        return (im_infra_id, status, cloud, created, updated)
 
     def deployment_create_with_retries(self, infra_id):
         """
