@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import time
+import ConfigParser
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
@@ -11,6 +12,14 @@ from libcloud.compute.providers import get_driver
 import opaclient
 import tokens
 import utilities
+
+# Configuration
+CONFIG = ConfigParser.ConfigParser()
+if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
+    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+else:
+    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
+    exit(1)
 
 # Logging
 logging.basicConfig(stream=sys.stdout,
@@ -159,11 +168,20 @@ def update_cloud_details(requirements, db, opa_client, config):
         if cloud['credentials']['type'] != "InfrastructureManager":
             logger.info('Checking if we need to update cloud %s details', name)
 
+            # Check if the cloud hasn't been updated recently
+            update_time = opa_client.get_cloud_update_time(name)
+            requires_update = False
+            if time.time() - update_time > int(CONFIG.get('updates', 'vms')):
+                logger.info('Images and flavours for cloud %s have not been updated recently', name)
+                requires_update = True
+            else:
+                continue
+
             # Get a token if necessary
             logger.info('Getting a new token if necessary')
             token = tokens.get_token(name, db, config)
 
-            # Get new images * flavours
+            # Get new images & flavours
             logger.info('Getting list of new images and flavours')
             new_data = generate_images_and_flavours(cloud, name, token)
 
@@ -175,13 +193,6 @@ def update_cloud_details(requirements, db, opa_client, config):
             # Get old images & flavours
             images_old = opa_client.get_images(name)
             flavours_old = opa_client.get_flavours(name)
-
-            # Check if the cloud hasn't been updated recently
-            update_time = opa_client.get_cloud_update_time(name)
-            requires_update = False
-            if time.time() - update_time > 1800:
-                logger.info('Images and flavours for cloud %s have not been updated recently', name)
-                requires_update = True
 
             # Update cloud VM images if necessary
             if (not images_old or requires_update or not compare_dicts(images_old, new_data['images'])) and new_data['images']:
