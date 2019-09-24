@@ -178,9 +178,6 @@ def compare_dicts(cloud1, cloud2, ignores):
     if not cloud1 or not cloud2:
         return False
 
-    if len(cloud1) != len(cloud2):
-        return False
-
     for item in cloud1:
         if item in cloud2:
             if cloud1[item] != cloud2[item] and item not in ignores:
@@ -202,7 +199,7 @@ def update_clouds(opa_client, path):
         name = new_cloud_info[new_cloud]['name']
         logger.info('Checking cloud %s', name)
         old_cloud = opa_client.get_cloud(name)
-        if not compare_dicts(new_cloud_info[new_cloud], old_cloud, ['images', 'flavours']):
+        if not compare_dicts(new_cloud_info[new_cloud], old_cloud, ['images', 'flavours', 'updated']):
             logger.info('Updating cloud %s', name)
             opa_client.set_cloud(name, new_cloud_info[new_cloud])
 
