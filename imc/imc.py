@@ -131,7 +131,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         # Setup Ansible node if necessary
         if requirements['resources']['instances'] > 1:
             (ip_addr, username) = ansible.setup_ansible_node(cloud, db)
-            if ip_addr is None or username is None:
+            if not ip_addr or not username:
                 logger.critical('Unable to find existing or create an Ansible node in cloud %s because ip=%s,username=%s', cloud, ip_addr, username)
                 continue
             logger.info('Ansible node in cloud %s available, now will deploy infrastructure for the job', cloud)
@@ -140,14 +140,15 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
             ip_addr = None
             username = None
 
-        # Get the private key
-        try:
-            with open(CONFIG.get('ansible', 'private_key')) as data:
-                private_key = data.read()
-        except IOError:
-            logger.critical('Unable to open private key for Ansible node from file "%s"', CONFIG.get('ansible', 'private_key'))
-            return False
-
+        # Get the Ansible private key if necessary
+        private_key = None
+        if ip_addr and username:
+            try:
+                with open(CONFIG.get('ansible', 'private_key')) as data:
+                    private_key = data.read()
+            except IOError:
+                logger.critical('Unable to open private key for Ansible node from file "%s"', CONFIG.get('ansible', 'private_key'))
+                return False
 
         # Create complete RADL content
         try:

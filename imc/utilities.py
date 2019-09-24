@@ -3,9 +3,19 @@
 import glob
 import json
 import logging
+import os
 import sys
+import ConfigParser
 
 import opaclient
+
+# Configuration
+CONFIG = ConfigParser.ConfigParser()
+if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
+    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+else:
+    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
+    exit(1)
 
 # Logging
 logging.basicConfig(stream=sys.stdout,
@@ -76,6 +86,16 @@ def create_im_auth(cloud, token, config):
     """
     Create the auth file required for requests to IM, inserting tokens as necessary
     """
+    # Create IM credentials
+    credentials_im = {}
+    credentials_im['username'] = CONFIG.get('im', 'username')
+    credentials_im['password'] = CONFIG.get('im', 'password')
+    credentials_im['type'] = 'InfrastructureManager'
+
+    # Return only IM credentials if needed
+    if not cloud:
+        return '%s\\n' % create_im_line('IM', credentials_im, None)
+
     data = {}
     for cloud_info in config:
         if cloud_info['name'] == cloud:
@@ -89,14 +109,8 @@ def create_im_auth(cloud, token, config):
         logger.critical('Invalid JSON config file for cloud %s: credentials missing', cloud)
         return None
 
-    if not cloud:
-        return '%s\\n' % create_im_line('IM', data['credentials']['IM'], None)
-    elif cloud not in data['credentials']:
-        logger.critical('Credentials for the cloud %s are not in the JSON config file', cloud)
-        return None
-
-    return '%s\\n%s\\n' % (create_im_line('IM', data['credentials']['IM'], None),
-                           create_im_line(cloud, data['credentials'][cloud], token))
+    return '%s\\n%s\\n' % (create_im_line('IM', credentials_im, None),
+                           create_im_line(cloud, data['credentials'], token))
 
 def create_clouds_list(path):
     """
