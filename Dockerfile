@@ -25,7 +25,7 @@ RUN chown uwsgi /var/log && \
 ENTRYPOINT ["/usr/sbin/uwsgi", \
             "--plugins-dir", "/usr/lib/uwsgi", \
             "--plugins", "http,python", \
-            "--http-socket", ":5000", \
+            "--http-socket", "127.0.0.1:5000", \
             "--threads", "2", \
             "--uid", "uwsgi", \
             "--manage-script-name", \
