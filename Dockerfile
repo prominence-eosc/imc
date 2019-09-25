@@ -18,9 +18,6 @@ RUN apk add --no-cache gcc \
 
 COPY imc /imc
 
-# LibCloud fix
-COPY openstack_identity.py /usr/lib/python2.7/site-packages/libcloud/common/
-
 RUN chown uwsgi /var/log && \
     mkdir /var/lib/prominence && \
     chown uwsgi /var/lib/prominence
