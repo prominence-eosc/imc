@@ -1,64 +1,59 @@
 {
-   "clouds":{
-      "AWS-eu-west-2":{
-         "name":"AWS-eu-west-2",
-         "region":"Public",
-         "supported_groups":[
-         ],
-         "tags":{
-            "multi-node-jobs":"false"
-         },
-         "images":{
-            "aws-ubuntu-16.04":{
-               "name":"aws://eu-west-2/ami-0cbe2951c7cd54704",
-               "architecture":"x86_64",
-               "distribution":"ubuntu",
-               "type":"linux",
-               "version":"16.04"
-            }
-         },
-         "flavours":{
-            "c5.large":{
-               "name":"c5.large",
-               "cores":2,
-               "memory":4
-            },
-            "c5.xlarge":{
-               "name":"c5.xlarge",
-               "cores":4,
-               "memory":8
-            },
-            "c5.2xlarge":{
-               "name":"c5.2xlarge",
-               "cores":8,
-               "memory":16
-            },
-            "c5.4xlarge":{
-               "name":"c5.4xlarge",
-               "cores":16,
-               "memory":32
-            },
-            "m5.large":{
-               "name":"m5.large",
-               "cores":2,
-               "memory":8
-            },
-            "m5.xlarge":{
-               "name":"m5.xlarge",
-               "cores":4,
-               "memory":16
-            },
-            "m5.2xlarge":{
-               "name":"m5.2xlarge",
-               "cores":8,
-               "memory":32
-            },
-            "m5.4xlarge":{
-               "name":"m5.4xlarge",
-               "cores":16,
-               "memory":64
-            }
-         }
-      }
-   }
+  "name": "AWS-eu-west-2",
+  "region": "Public",
+  "supported_groups": [],
+  "tags": {
+    "multi-node-jobs": "false"
+  },
+  "images": {
+    "aws-ubuntu-16.04": {
+      "name": "aws://eu-west-2/ami-0cbe2951c7cd54704",
+      "architecture": "x86_64",
+      "distribution": "ubuntu",
+      "type": "linux",
+      "version": "16.04"
+    }
+  },
+  "flavours": {
+    "c5.large": {
+      "name": "c5.large",
+      "cores": 2,
+      "memory": 4
+    },
+    "c5.xlarge": {
+      "name": "c5.xlarge",
+      "cores": 4,
+      "memory": 8
+    },
+    "c5.2xlarge": {
+      "name": "c5.2xlarge",
+      "cores": 8,
+      "memory": 16
+    },
+    "c5.4xlarge": {
+      "name": "c5.4xlarge",
+      "cores": 16,
+      "memory": 32
+    },
+    "m5.large": {
+      "name": "m5.large",
+      "cores": 2,
+      "memory": 8
+    },
+    "m5.xlarge": {
+      "name": "m5.xlarge",
+      "cores": 4,
+      "memory": 16
+    },
+    "m5.2xlarge": {
+      "name": "m5.2xlarge",
+      "cores": 8,
+      "memory": 32
+    },
+    "m5.4xlarge": {
+      "name": "m5.4xlarge",
+      "cores": 16,
+      "memory": 64
+    }
+  }
 }

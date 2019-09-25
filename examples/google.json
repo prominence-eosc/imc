@@ -1,162 +1,157 @@
 {
-   "clouds":{
-      "Google-europe-west1-c":{
-         "name":"Google-europe-west1-c",
-         "region":"Public",
-         "supported_groups":[
-         ],
-         "images":{
-            "google-centos-7":{
-               "name":"gce://europe-west1-c/centos-7",
-               "architecture":"x86_64",
-               "distribution":"centos",
-               "type":"linux",
-               "version":"7"
-            },
-            "google-ubuntu-18.04":{
-               "name":"gce://europe-west1-c/ubuntu-1804-bionic",
-               "architecture":"x86_64",
-               "distribution":"ubuntu",
-               "type":"linux",
-               "version":"18.04"
-            },
-            "google-ubuntu-16.04":{
-               "name":"gce://europe-west1-c/ubuntu-1604-xenial",
-               "architecture":"x86_64",
-               "distribution":"ubuntu",
-               "type":"linux",
-               "version":"16.04"
-            },
-            "google-ubuntu-14.04":{
-               "name":"gce://europe-west1-c/ubuntu-1404-trusty",
-               "architecture":"x86_64",
-               "distribution":"ubuntu",
-               "type":"linux",
-               "version":"14.04"
-            }
-         },
-         "flavours":{
-            "n1-standard-1":{
-               "name":"n1-standard-1",
-               "cores":1,
-               "memory":3.75,
-               "cost":0.0612
-            },
-            "n1-standard-2":{
-               "name":"n1-standard-2",
-               "cores":2,
-               "memory":7.5,
-               "cost":0.1224
-            },
-            "n1-standard-4":{
-               "name":"n1-standard-4",
-               "cores":4,
-               "memory":15,
-               "cost":0.2448
-            },
-            "n1-standard-8":{
-               "name":"n1-standard-8",
-               "cores":8,
-               "memory":30,
-               "cost":0.4896
-            },
-            "n1-standard-16":{
-               "name":"n1-standard-16",
-               "cores":16,
-               "memory":60,
-               "cost":0.9792
-            },
-            "n1-standard-32":{
-               "name":"n1-standard-32",
-               "cores":32,
-               "memory":120,
-               "cost":1.9584
-            },
-            "n1-standard-64":{
-               "name":"n1-standard-64",
-               "cores":64,
-               "memory":240,
-               "cost":3.9168
-            },
-            "n1-standard-96":{
-               "name":"n1-standard-96",
-               "cores":96,
-               "memory":360,
-               "cost":5.8752
-            },
-            "n1-highmem-2":{
-               "name":"n1-highmem-2",
-               "cores":2,
-               "memory":13,
-               "cost":0.1523
-            },
-            "n1-highmem-4":{
-               "name":"n1-highmem-4",
-               "cores":4,
-               "memory":26,
-               "cost":0.3046
-            },
-            "n1-highmem-8":{
-               "name":"n1-highmem-8",
-               "cores":8,
-               "memory":52,
-               "cost":0.6092
-            },
-            "n1-highmem-16":{
-               "name":"n1-highmem-16",
-               "cores":16,
-               "memory":104,
-               "cost":1.2184
-            },
-            "n1-highmem-32":{
-               "name":"n1-highmem-32",
-               "cores":32,
-               "memory":208,
-               "cost":2.4368
-            },
-            "n1-highmem-64":{
-               "name":"n1-highmem-64",
-               "cores":64,
-               "memory":416,
-               "cost":4.8736
-            },
-            "n1-highcpu-2":{
-               "name":"n1-highcpu-2",
-               "cores":2,
-               "memory":1.8,
-               "cost":0.0912
-            },
-            "n1-highcpu-4":{
-               "name":"n1-highcpu-4",
-               "cores":4,
-               "memory":3.6,
-               "cost":0.1824
-            },
-            "n1-highcpu-8":{
-               "name":"n1-highcpu-8",
-               "cores":8,
-               "memory":7.2,
-               "cost":0.3648
-            },
-            "n1-highcpu-16":{
-               "name":"n1-highcpu-16",
-               "cores":16,
-               "memory":14.4,
-               "cost":0.7296
-            },
-            "n1-highcpu-32":{
-               "name":"n1-highcpu-32",
-               "cores":32,
-               "memory":28.8,
-               "cost":1.4592
-            },
-            "n1-highcpu-64":{
-               "name":"n1-highcpu-64",
-               "cores":64,
-               "memory":57.6,
-               "cost":2.9184
-            }
-         }
-      }
-   }
+  "name": "Google-europe-west1-c",
+  "region": "Public",
+  "supported_groups": [],
+  "images": {
+    "google-centos-7": {
+      "name": "gce://europe-west1-c/centos-7",
+      "architecture": "x86_64",
+      "distribution": "centos",
+      "type": "linux",
+      "version": "7"
+    },
+    "google-ubuntu-18.04": {
+      "name": "gce://europe-west1-c/ubuntu-1804-bionic",
+      "architecture": "x86_64",
+      "distribution": "ubuntu",
+      "type": "linux",
+      "version": "18.04"
+    },
+    "google-ubuntu-16.04": {
+      "name": "gce://europe-west1-c/ubuntu-1604-xenial",
+      "architecture": "x86_64",
+      "distribution": "ubuntu",
+      "type": "linux",
+      "version": "16.04"
+    },
+    "google-ubuntu-14.04": {
+      "name": "gce://europe-west1-c/ubuntu-1404-trusty",
+      "architecture": "x86_64",
+      "distribution": "ubuntu",
+      "type": "linux",
+      "version": "14.04"
+    }
+  },
+  "flavours": {
+    "n1-standard-1": {
+      "name": "n1-standard-1",
+      "cores": 1,
+      "memory": 3.75,
+      "cost": 0.0612
+    },
+    "n1-standard-2": {
+      "name": "n1-standard-2",
+      "cores": 2,
+      "memory": 7.5,
+      "cost": 0.1224
+    },
+    "n1-standard-4": {
+      "name": "n1-standard-4",
+      "cores": 4,
+      "memory": 15,
+      "cost": 0.2448
+    },
+    "n1-standard-8": {
+      "name": "n1-standard-8",
+      "cores": 8,
+      "memory": 30,
+      "cost": 0.4896
+    },
+    "n1-standard-16": {
+      "name": "n1-standard-16",
+      "cores": 16,
+      "memory": 60,
+      "cost": 0.9792
+    },
+    "n1-standard-32": {
+      "name": "n1-standard-32",
+      "cores": 32,
+      "memory": 120,
+      "cost": 1.9584
+    },
+    "n1-standard-64": {
+      "name": "n1-standard-64",
+      "cores": 64,
+      "memory": 240,
+      "cost": 3.9168
+    },
+    "n1-standard-96": {
+      "name": "n1-standard-96",
+      "cores": 96,
+      "memory": 360,
+      "cost": 5.8752
+    },
+    "n1-highmem-2": {
+      "name": "n1-highmem-2",
+      "cores": 2,
+      "memory": 13,
+      "cost": 0.1523
+    },
+    "n1-highmem-4": {
+      "name": "n1-highmem-4",
+      "cores": 4,
+      "memory": 26,
+      "cost": 0.3046
+    },
+    "n1-highmem-8": {
+      "name": "n1-highmem-8",
+      "cores": 8,
+      "memory": 52,
+      "cost": 0.6092
+    },
+    "n1-highmem-16": {
+      "name": "n1-highmem-16",
+      "cores": 16,
+      "memory": 104,
+      "cost": 1.2184
+    },
+    "n1-highmem-32": {
+      "name": "n1-highmem-32",
+      "cores": 32,
+      "memory": 208,
+      "cost": 2.4368
+    },
+    "n1-highmem-64": {
+      "name": "n1-highmem-64",
+      "cores": 64,
+      "memory": 416,
+      "cost": 4.8736
+    },
+    "n1-highcpu-2": {
+      "name": "n1-highcpu-2",
+      "cores": 2,
+      "memory": 1.8,
+      "cost": 0.0912
+    },
+    "n1-highcpu-4": {
+      "name": "n1-highcpu-4",
+      "cores": 4,
+      "memory": 3.6,
+      "cost": 0.1824
+    },
+    "n1-highcpu-8": {
+      "name": "n1-highcpu-8",
+      "cores": 8,
+      "memory": 7.2,
+      "cost": 0.3648
+    },
+    "n1-highcpu-16": {
+      "name": "n1-highcpu-16",
+      "cores": 16,
+      "memory": 14.4,
+      "cost": 0.7296
+    },
+    "n1-highcpu-32": {
+      "name": "n1-highcpu-32",
+      "cores": 32,
+      "memory": 28.8,
+      "cost": 1.4592
+    },
+    "n1-highcpu-64": {
+      "name": "n1-highcpu-64",
+      "cores": 64,
+      "memory": 57.6,
+      "cost": 2.9184
+    }
+  }
 }
