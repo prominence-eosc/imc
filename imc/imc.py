@@ -73,7 +73,12 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     cloud_quotas.set_quotas(requirements, db, opa_client, clouds_info_list)
 
     # Get list of clouds meeting the specified requirements
-    clouds = opa_client.get_clouds(userdata)
+    try:
+        clouds = opa_client.get_clouds(userdata)
+    except Exception as err:
+        logger.critical('Unable to get list of clouds due to:', err)
+        return False
+
     logger.info('Suitable clouds = [%s]', ','.join(clouds))
 
     if not clouds:
@@ -85,7 +90,12 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     shuffle(clouds)
 
     # Rank clouds as needed
-    clouds_ranked = opa_client.get_ranked_clouds(userdata, clouds)
+    try:
+        clouds_ranked = opa_client.get_ranked_clouds(userdata, clouds)
+    except Exception as err:
+        logger.critical('Unable to get list of ranked clouds due to:', err)
+        return False
+
     clouds_ranked_list = []
     for item in sorted(clouds_ranked, key=lambda k: k['weight'], reverse=True):
         clouds_ranked_list.append(item['site'])
@@ -110,9 +120,18 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     for item in sorted(clouds_ranked, key=lambda k: k['weight'], reverse=True):
         infra_id = None
         cloud = item['site']
-        image = opa_client.get_image(userdata, cloud)
-        flavour = opa_client.get_flavour(userdata, cloud)
-        logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image, flavour)
+        
+        try:
+            image = opa_client.get_image(userdata, cloud)
+        except Exception as err:
+            logger.critical('Unable to get image due to:', err)
+            return False
+
+        try:
+            flavour = opa_client.get_flavour(userdata, cloud)
+        except Exception as err:
+            logger.critical('Unable to get flavour due to:', err)
+            return False
 
         # If no flavour meets the requirements we should skip the current cloud
         if not flavour:
@@ -123,6 +142,8 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         if not image:
             logger.info('Skipping because no image could be determined')
             continue
+
+        logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image, flavour)
  
         # Stop here if necessary
         if dryrun:

@@ -98,7 +98,12 @@ def set_quotas(requirements, db, opa_client, config):
 
             # Check if the cloud hasn't been updated recently
             logger.info('Checking if we need to update cloud %s quotas', name)
-            update_time = opa_client.get_quota_update_time(name)
+            try:
+                update_time = opa_client.get_quota_update_time(name)
+            except Exception as err:
+                logger.critical('Unable to get quota update time due to:', err)
+                return False
+ 
             if time.time() - update_time > int(CONFIG.get('updates', 'quotas')):
                 logger.info('Quotas for cloud %s have not been updated recently, so getting current values', name)
                 (instances, cores, memory) = get_quotas_openstack(name, credentials, token)

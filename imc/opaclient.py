@@ -67,19 +67,17 @@ class OPAClient(object):
         except requests.exceptions.RequestException as ex:
             logger.warning('Unable to write cloud quotas to Open Policy Agent due to "%s"', ex)
 
+    @retry.retry(tries=4, delay=3, backoff=2)
     def get_clouds(self, data):
         """
         Get list of clouds meeting requirements
         """
         data = {'input':data}
 
-        try:
-            response = requests.post('%s/v1/data/imc/sites' % self._url,
-                                     json=data,
-                                     timeout=self._timeout)
-        except requests.exceptions.RequestException as ex:
-            logger.critical('Unable to get list of sites from Open Policy Agent due to "%s"', ex)
-            return []
+        response = requests.post('%s/v1/data/imc/sites' % self._url,
+                                 json=data,
+                                 timeout=self._timeout)
+        response.raise_for_status()
 
         if 'result' in response.json():
             return response.json()['result']
@@ -94,13 +92,10 @@ class OPAClient(object):
         data = {'input':data}
         data['input']['clouds'] = clouds
 
-        try:
-            response = requests.post('%s/v1/data/imc/rankedsites' % self._url,
-                                     json=data,
-                                     timeout=self._timeout)
-        except requests.exceptions.RequestException as ex:
-            logger.critical('Unable to get list of ranked sites from Open Policy Agent due to "%s"', ex)
-            return []
+        response = requests.post('%s/v1/data/imc/rankedsites' % self._url,
+                                 json=data,
+                                 timeout=self._timeout)
+        response.raise_for_status()
 
         if 'result' in response.json():
             return response.json()['result']
@@ -115,13 +110,10 @@ class OPAClient(object):
         data = {'input':data}
         data['input']['cloud'] = cloud
 
-        try:
-            response = requests.post('%s/v1/data/imc/images' % self._url,
-                                     json=data,
-                                     timeout=self._timeout)
-        except requests.exceptions.RequestException as ex:
-            logger.critical('Unable to get image from Open Policy Agent due to "%s"', ex)
-            return None
+        response = requests.post('%s/v1/data/imc/images' % self._url,
+                                 json=data,
+                                 timeout=self._timeout)
+        response.raise_for_status()
 
         if 'result' in response.json():
             if response.json()['result']:
@@ -138,13 +130,10 @@ class OPAClient(object):
         data = {'input':data}
         data['input']['cloud'] = cloud
 
-        try:
-            response = requests.post('%s/v1/data/imc/flavours' % self._url,
-                                     json=data,
-                                     timeout=self._timeout)
-        except requests.exceptions.RequestException as ex:
-            logger.critical('Unable to get flavour from Open Policy Agent due to "%s"', ex)
-            return None
+        response = requests.post('%s/v1/data/imc/flavours' % self._url,
+                                 json=data,
+                                 timeout=self._timeout)
+        response.raise_for_status()
 
         flavour = None
         if 'result' in response.json():
@@ -154,16 +143,14 @@ class OPAClient(object):
 
         return flavour
 
+    @retry.retry(tries=4, delay=3, backoff=2)
     def get_cloud(self, cloud):
         """
         Get all info associated with the specified cloud
         """
-        try:
-            response = requests.get('%s/v1/data/clouds/%s' % (self._url, cloud),
-                                    timeout=self._timeout)
-        except requests.exceptions.RequestException as ex:
-            logger.critical('Unable to get cloud info from Open Policy Agent due to "%s"', ex)
-            return None
+        response = requests.get('%s/v1/data/clouds/%s' % (self._url, cloud),
+                                timeout=self._timeout)
+        response.raise_for_status()
 
         if 'result' in response.json():
             if response.json()['result']:
@@ -175,12 +162,9 @@ class OPAClient(object):
         """
         Get all flavours associated with the specified cloud
         """
-        try:
-            response = requests.get('%s/v1/data/clouds/%s/flavours' % (self._url, cloud),
-                                    timeout=self._timeout)
-        except requests.exceptions.RequestException as ex:
-            logger.critical('Unable to get flavours from Open Policy Agent due to "%s"', ex)
-            return None        
+        response = requests.get('%s/v1/data/clouds/%s/flavours' % (self._url, cloud),
+                                timeout=self._timeout)
+        response.raise_for_status()
 
         if 'result' in response.json():
             if response.json()['result']:
@@ -192,12 +176,9 @@ class OPAClient(object):
         """
         Get all images associated with the specified cloud
         """
-        try:
-            response = requests.get('%s/v1/data/clouds/%s/images' % (self._url, cloud),
-                                    timeout=self._timeout)
-        except requests.exceptions.RequestException as ex:
-            logger.critical('Unable to get images from Open Policy Agent due to "%s"', ex)
-            return None
+        response = requests.get('%s/v1/data/clouds/%s/images' % (self._url, cloud),
+                                timeout=self._timeout)
+        response.raise_for_status()
 
         if 'result' in response.json():
             if response.json()['result']:
@@ -264,12 +245,9 @@ class OPAClient(object):
         """
         Return when the cloud was last updated
         """
-        try:
-            response = requests.get('%s/v1/data/clouds/%s/updated' % (self._url, cloud),
-                                    timeout=self._timeout)
-        except requests.exceptions.RequestException as ex:
-            logger.critical('Unable to get cloud updated time from Open Policy Agent due to "%s"', ex)
-            return 1
+        response = requests.get('%s/v1/data/clouds/%s/updated' % (self._url, cloud),
+                                timeout=self._timeout)
+        response.raise_for_status()
 
         if 'result' in response.json():
             if 'epoch' in response.json()['result']:
@@ -281,12 +259,9 @@ class OPAClient(object):
         """
         Return when the cloud quotas were last updated
         """
-        try:
-            response = requests.get('%s/v1/data/status/%s/quota' % (self._url, cloud),
-                                    timeout=self._timeout)
-        except requests.exceptions.RequestException as ex:
-            logger.critical('Unable to get cloud updated time from Open Policy Agent due to "%s"', ex)
-            return 1
+        response = requests.get('%s/v1/data/status/%s/quota' % (self._url, cloud),
+                                timeout=self._timeout)
+        response.raise_for_status()
 
         if 'result' in response.json():
             if 'epoch' in response.json()['result']:

@@ -198,7 +198,13 @@ def update_clouds(opa_client, path):
     for new_cloud in new_cloud_info:
         name = new_cloud_info[new_cloud]['name']
         logger.info('Checking cloud %s', name)
-        old_cloud = opa_client.get_cloud(name)
+
+        try:
+            old_cloud = opa_client.get_cloud(name)
+        except Exception as err:
+            logger.critical('Unable to get cloud info due to:', err)
+            return
+         
         if not compare_dicts(new_cloud_info[new_cloud], old_cloud, ['images', 'flavours', 'updated']):
             logger.info('Updating cloud %s', name)
             opa_client.set_cloud(name, new_cloud_info[new_cloud])

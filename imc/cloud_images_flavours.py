@@ -191,8 +191,17 @@ def update_cloud_details(requirements, db, opa_client, config):
                 continue
     
             # Get old images & flavours
-            images_old = opa_client.get_images(name)
-            flavours_old = opa_client.get_flavours(name)
+            try:
+                images_old = opa_client.get_images(name)
+            except Exception as err:
+                logger.critical('Unable to get images due to:', err)
+                return False
+ 
+            try:
+                flavours_old = opa_client.get_flavours(name)
+            except Exception as err:
+                logger.critical('Unable to get flavours due to:', err)
+                return False
 
             # Update cloud VM images if necessary
             if (not images_old or requires_update or not compare_dicts(images_old, new_data['images'])) and new_data['images']:

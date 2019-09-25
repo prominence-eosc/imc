@@ -229,8 +229,17 @@ def deploy_ansible_node(cloud, db):
     opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Get the image & flavour
-    image = opa_client.get_image(userdata, cloud)
-    flavour = opa_client.get_flavour(userdata, cloud)
+    try:
+        image = opa_client.get_image(userdata, cloud)
+    except Exception as err:
+        logger.critical('Unable to get image due to:', err)
+        return None
+
+    try:
+        flavour = opa_client.get_flavour(userdata, cloud)
+    except Exception as err:
+        logger.critical('Unable to get flavour due to:', err)
+        return None
 
     if not image:
         logger.critical('Unable to deploy Ansible node because no acceptable image is available')

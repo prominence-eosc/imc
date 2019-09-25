@@ -11,8 +11,9 @@ def retry(tries=4, delay=3, backoff=2):
         def f_retry(*args, **kwargs):
             mtries, mdelay = tries, delay
             while mtries > 1:
-                rv = f(*args, **kwargs)
-                if not rv:
+                try:
+                    rv = f(*args, **kwargs)
+                except:
                     time.sleep(mdelay)
                     mtries -= 1
                     mdelay *= backoff
