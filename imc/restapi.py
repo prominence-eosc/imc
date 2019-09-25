@@ -9,6 +9,7 @@ import sys
 import uuid
 import ConfigParser
 import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask, request, jsonify
 
 import consistency
@@ -30,12 +31,6 @@ def get_db():
                            CONFIG.get('db', 'password'))
     return db
 
-app = Flask(__name__)
-
-# Logging
-logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
-
 # Configuration
 CONFIG = ConfigParser.ConfigParser()
 if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
@@ -43,6 +38,19 @@ if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
 else:
     print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
     exit(1)
+
+# Setup handlers for the root logger
+handler = RotatingFileHandler(CONFIG.get('logs', 'filename'),
+                              maxBytes=int(CONFIG.get('logs', 'max_bytes')),
+                              backupCount=int(CONFIG.get('logs', 'num')))
+formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
+handler.setFormatter(formatter)
+logger = logging.getLogger()
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+# Create flask application
+app = Flask(__name__)
 
 # Setup process pool for handling deployments
 executor = ProcessPoolExecutor(int(CONFIG.get('pool', 'size')))

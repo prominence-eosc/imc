@@ -24,10 +24,6 @@ else:
     print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
     exit(1)
 
-# Logging
-logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
-
 def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
     """
     Deploy infrastructure from a specified RADL file

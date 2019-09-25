@@ -13,8 +13,6 @@ except ImportError:
     from urllib.parse import urlparse, urlunparse, urljoin
 
 # Logging
-logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 def get_token(cloud, db, config):

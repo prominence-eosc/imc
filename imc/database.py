@@ -5,8 +5,6 @@ import time
 import psycopg2
 
 # Logging
-logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 class Database(object):
