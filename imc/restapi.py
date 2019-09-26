@@ -12,7 +12,6 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, request, jsonify
 
-import consistency
 import database
 import imc
 import imclient
@@ -139,10 +138,6 @@ def get_infrastructures():
             infra = db.deployment_get_infra_in_state_cloud(request.args.get('status'), cloud)
             db.close()
             return jsonify(infra), 200
-    elif 'type' in request.args:
-        if request.args.get('type') == 'im':
-            consistency.find_unexpected_im_infras()
-            return jsonify({}), 200
         
     return jsonify({}), 400
 
