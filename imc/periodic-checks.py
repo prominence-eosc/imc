@@ -43,7 +43,7 @@ def get_db():
                            CONFIG.get('db', 'password'))
     return db
 
-def find_unexpected_im_infras():
+def find_unexpected_im_infras(db):
     """
     Find IM infrastructures which should not exist
     """
@@ -60,42 +60,57 @@ def find_unexpected_im_infras():
     (status, ids) = client.list_infra_ids(10)
 
     if ids:
-        db = get_db()
-        if db.connect():
-            for uri in ids:
-                pieces = uri.split('/')
-                im_id = pieces[len(pieces) - 1]
+        for uri in ids:
+            pieces = uri.split('/')
+            im_id = pieces[len(pieces) - 1]
 
-                # Check if we know about the infrastructure
-                (infra_id, status, cloud) = db.get_infra_from_im_infra_id(im_id)
-                if not infra_id:
-                    logger.info('Found unknown infrastructure with IM ID %s', im_id)
-                    (_, data) = client.getdata(im_id, 10)
-                    if data:
-                        for cloud_info in clouds_info_list:
-                            cloud_name = cloud_info['name']
-                            if cloud_name in data:
-                                logger.info('Found unknown IM id %s on cloud %s, deleting...', im_id, cloud_name)
-                                if delete_from_im(im_id, cloud_name):
-                                    logger.info('Successfully deleted infrastructure with IM id %s on cloud %s', im_id, cloud_name)
-                                break
-                else:
-                    logger.info('Found IM id %s on cloud %s with status %s and our id %s', im_id, cloud, status, infra_id)
-            db.close()
+            # Check if we know about the infrastructure
+            (infra_id, status, cloud) = db.get_infra_from_im_infra_id(im_id)
+            if not infra_id:
+                logger.info('Found unknown infrastructure with IM ID %s', im_id)
+                (_, data) = client.getdata(im_id, 10)
+                if data:
+                    for cloud_info in clouds_info_list:
+                        cloud_name = cloud_info['name']
+                        if cloud_name in data:
+                            logger.info('Found unknown IM id %s on cloud %s, deleting...', im_id, cloud_name)
+                            if delete_from_im(im_id, cloud_name):
+                                logger.info('Successfully deleted infrastructure with IM id %s on cloud %s', im_id, cloud_name)
+                            break
+            else:
+                logger.info('Found IM id %s on cloud %s with status %s and our id %s', im_id, cloud, status, infra_id)
 
-def retry_failed_deletions():
+def retry_failed_deletions(db):
     """
     Retry failed deletions
     """
-    db = get_db()
-    if db.connect():
-        infras = db.deployment_get_infra_in_state_cloud('deletion-failed', None) 
-        for infra in infras:
-            if time.time() - infra['updated'] > 12*60*60:
-                logger.info('Attempting to delete infra with ID %s', infra['id'])
-                if imc.delete(infra['id']) == 0:
-                    logger.info('Successfully deleted infrastructure with ID %s', infra['id'])
-        db.close()
+    infras = db.deployment_get_infra_in_state_cloud('deletion-failed', None) 
+    for infra in infras:
+        if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'retry_failed_deletes_after')):
+            logger.info('Attempting to delete infra with ID %s', infra['id'])
+            if imc.delete(infra['id']) == 0:
+                logger.info('Successfully deleted infrastructure with ID %s', infra['id'])
+
+def retry_stuck_deletions(db):
+    """
+    Retry stuck deletions
+    """
+    infras = db.deployment_get_infra_in_state_cloud('deleting', None)
+    for infra in infras:
+        if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'retry_failed_deletes_after')):
+            logger.info('Attempting to delete infra with ID %s', infra['id'])
+            if imc.delete(infra['id']) == 0:
+                logger.info('Successfully deleted infrastructure with ID %s', infra['id'])
+
+def remove_old_entries(db, state):
+    """
+    Remove old entries from the DB
+    """
+    infras = db.deployment_get_infra_in_state_cloud(state, None)
+    for infra in infras:
+        if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'remove_after')):
+            logger.info('Removing infrastructure %s from DB', infra)
+            db.deployment_remove(infra)
 
 def delete_from_im(im_infrastructure_id, cloud):
     """
@@ -112,17 +127,30 @@ def delete_from_im(im_infrastructure_id, cloud):
         if status != 0:
             logger.critical('Error reading IM auth file: %s', msg)
             return False
-        (status, _) = client.destroy(im_infrastructure_id, 30)
+        (status, _) = client.destroy(im_infrastructure_id, 60)
         if status == 0:
             return True
         return False
 
 if __name__ == "__main__":
-    # Check for unexpected IM infrastructures
-    logger.info('Checking for unexpected IM infrastructures')
-    find_unexpected_im_infras()
+    db = get_db()
+    if db.connect():
+        # Check for unexpected IM infrastructures
+        logger.info('Checking for unexpected IM infrastructures')
+        #find_unexpected_im_infras(db)
 
-    # Retry failed deletions
-    logger.info('Retrying any failed deletions')
-    retry_failed_deletions()
+        # Retry failed deletions
+        logger.info('Retrying any failed deletions')
+        retry_failed_deletions(db)
+
+        # Retry stuck deletions
+        logger.info('Retrying any stuck deletions')
+        retry_stuck_deletions(db)
+
+        # Remove old entries from the DB
+        logger.info('Removing any old entries from the DB')
+        remove_old_entries(db, 'deleted')
+        remove_old_entries(db, 'unable')
+        
+        db.close()
 
