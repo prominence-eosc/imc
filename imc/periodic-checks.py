@@ -80,22 +80,11 @@ def find_unexpected_im_infras(db):
             else:
                 logger.info('Found IM id %s on cloud %s with status %s and our id %s', im_id, cloud, status, infra_id)
 
-def retry_failed_deletions(db):
+def retry_incomplete_deletions(db, state):
     """
     Retry failed deletions
     """
-    infras = db.deployment_get_infra_in_state_cloud('deletion-failed', None) 
-    for infra in infras:
-        if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'retry_failed_deletes_after')):
-            logger.info('Attempting to delete infra with ID %s', infra['id'])
-            if imc.delete(infra['id']) == 0:
-                logger.info('Successfully deleted infrastructure with ID %s', infra['id'])
-
-def retry_stuck_deletions(db):
-    """
-    Retry stuck deletions
-    """
-    infras = db.deployment_get_infra_in_state_cloud('deleting', None)
+    infras = db.deployment_get_infra_in_state_cloud(state, None) 
     for infra in infras:
         if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'retry_failed_deletes_after')):
             logger.info('Attempting to delete infra with ID %s', infra['id'])
@@ -139,13 +128,11 @@ if __name__ == "__main__":
         logger.info('Checking for unexpected IM infrastructures')
         #find_unexpected_im_infras(db)
 
-        # Retry failed deletions
-        logger.info('Retrying any failed deletions')
-        retry_failed_deletions(db)
-
-        # Retry stuck deletions
-        logger.info('Retrying any stuck deletions')
-        retry_stuck_deletions(db)
+        # Retry incomplete deletions
+        logger.info('Retrying any incomplete deletions')
+        retry_incomplete_deletions(db, 'deletion-failed')
+        retry_incomplete_deletions(db, 'deleting')
+        retry_incomplete_deletions(db, 'deletion-requested')
 
         # Remove old entries from the DB
         logger.info('Removing any old entries from the DB')
