@@ -24,4 +24,4 @@ RUN chown uwsgi /var/log && \
 
 USER uwsgi
 
-ENTRYPOINT ["python", "/imc/consistency.py"]
+ENTRYPOINT ["python", "/imc/periodic-checks.py"]
