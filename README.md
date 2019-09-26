@@ -1,6 +1,6 @@
 # IMC
 
-![clouds](imc.png)
+![clouds](https://github.com/prominence-eosc/imc/raw/master/imc.png)
 
 ## Overview
 
