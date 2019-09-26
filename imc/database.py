@@ -201,6 +201,20 @@ class Database(object):
             return False
         return True
 
+    def deployment_remove(self, infra_id):
+        """
+        Remove an infrastructure from the DB
+        """
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("DELETE FROM deployments WHERE id='%s'" % infra_id)
+            self._connection.commit()
+            cursor.close()
+        except Exception as error:
+            logger.critical('[deployment_remove] Unable to execute DELETE query due to: %s', error)
+            return False
+        return True
+
     def deployment_update_status_with_retries(self, infra_id, status=None, cloud=None, im_infra_id=None):
         """
         Update deployment status with retries
