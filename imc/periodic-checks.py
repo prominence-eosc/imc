@@ -11,6 +11,7 @@ import time
 import database
 import imc
 import imclient
+import opaclient
 import tokens
 import utilities
 
@@ -98,8 +99,8 @@ def remove_old_entries(db, state):
     infras = db.deployment_get_infra_in_state_cloud(state, None)
     for infra in infras:
         if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'remove_after')):
-            logger.info('Removing infrastructure %s from DB', infra)
-            db.deployment_remove(infra)
+            logger.info('Removing infrastructure %s from DB', infra['id'])
+            db.deployment_remove(infra['id'])
 
 def delete_from_im(im_infrastructure_id, cloud):
     """
@@ -124,17 +125,18 @@ def delete_from_im(im_infrastructure_id, cloud):
 if __name__ == "__main__":
     db = get_db()
     if db.connect():
-        # Check for unexpected IM infrastructures
+        logger.info('Removing old failure events from Open Policy Agent')
+        opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+        opa_client.remove_old_failures()
+
         logger.info('Checking for unexpected IM infrastructures')
         #find_unexpected_im_infras(db)
 
-        # Retry incomplete deletions
         logger.info('Retrying any incomplete deletions')
         retry_incomplete_deletions(db, 'deletion-failed')
         retry_incomplete_deletions(db, 'deleting')
         retry_incomplete_deletions(db, 'deletion-requested')
 
-        # Remove old entries from the DB
         logger.info('Removing any old entries from the DB')
         remove_old_entries(db, 'deleted')
         remove_old_entries(db, 'unable')
