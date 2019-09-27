@@ -161,6 +161,8 @@ def create_clouds_for_opa(path):
                 cloud['network'] = data['network']
             if 'supported_groups' in data:
                 cloud['supported_groups'] = data['supported_groups']
+            if 'enabled' in data:
+                cloud['enabled'] = data['enabled']
             cloud['flavours'] = data['default_flavours']
             clouds[name] = cloud
             cloud_names.append(name)
