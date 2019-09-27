@@ -268,3 +268,74 @@ class OPAClient(object):
                 return response.json()['result']['epoch']
         return 0
 
+    def remove_failure_item(self, cloud, event_id):
+        """
+        Remove a failure event for the specified cloud
+        """
+        data = {}
+        data['op'] = 'remove'
+        data['path'] = ''
+
+        try:
+            response = requests.patch('%s/v1/data/status/%s/failures/%d' % (self._url, cloud, event_id),
+                                      data=json.dumps([data]),
+                                      timeout=self._timeout)
+        except requests.exceptions.RequestException:
+            return False
+
+        return True
+
+    def remove_old_failures(self):
+        """
+        Remove old failure events
+        """
+        # Get list of clouds
+        try:
+            response = requests.get('%s/v1/data/status' % self._url, timeout=self._timeout)
+        except requests.exceptions.RequestException:
+            return False
+
+        if response.status_code != 200:
+            return False
+
+        clouds = []
+        if 'result' in response.json():
+            for cloud in response.json()['result']:
+                clouds.append(cloud)
+
+        for cloud in clouds:
+            logger.info('Working on cloud %s', cloud)
+            checking = True
+            events_removed = 0
+            while checking:
+                try:
+                    response = requests.get('%s/v1/data/status/%s' % (self._url, cloud),
+                                            timeout=self._timeout)
+                except requests.exceptions.RequestException:
+                    continue
+
+                if response.status_code != 200:
+                    continue
+
+                if 'result' in response.json():
+                    if 'failures' in response.json()['result']:
+                        failures = response.json()['result']['failures']
+                        old = 0
+                        event_id = 0
+                        for failure in failures:
+                            if time.time() - failure['epoch'] > 12*60*60:
+                                old += 1
+                                self.remove_failure_item(cloud, event_id)
+                                events_removed += 1
+                                break
+                            event_id += 1
+
+                        if old == 0:
+                            checking = False
+                    else:
+                        checking = False
+                else:
+                    checking = False
+            logger.info('Removed %d failure events from cloud %s', events_removed, cloud)
+
+        return False
