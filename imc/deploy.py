@@ -137,7 +137,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
 
                 # Handle difference situation when state is configured
                 if state == 'configured':
-                    logger.info('State is configured and have: num_nodes=%d, have_nodes=%d, initial_step_complete=%d', num_nodes, have_nodes, initial_step_complete)
+                    logger.info('State is configured, NumNodesWanted=%d, NumNodesHave=%d, InitialStepComplete=%d', num_nodes, have_nodes, initial_step_complete)
 
                     # The final configured state
                     if num_nodes == 1 or (num_nodes > 1 and initial_step_complete):
