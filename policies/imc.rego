@@ -181,6 +181,7 @@ sites[site] {
     satisfies_static_quotas(cloud)
     satisfies_network(cloud)
     satisfies_groups(cloud)
+    satisfies_status(cloud)
 }
 
 # Get images for a specified cloud
@@ -313,4 +314,24 @@ recent_failures_weight(site) = output {
 recent_failures_weight(site) = output {
     not status[site]
     output = 0
+} 
+
+# Status
+satisfies_status(cloud) {
+    failures := {failure | failure := status[cloud.name]["failures"][_]; timenow_secs - failure.epoch < 800; failure.reason == "down"}
+    count(failures) <= 2
+}
+
+satisfies_status(cloud) = output {
+    failures := {failure | failure := status[cloud.name]["failures"][_]; timenow_secs - failure.epoch < 800; failure.reason == "down"}
+    count(failures) > 2
+    output = false
+}
+
+satisfies_status(cloud) {
+    not status[cloud.name]["failures"]
+}
+
+satisfies_status(cloud) {
+    not status[cloud.name]
 }
