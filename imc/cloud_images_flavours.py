@@ -67,51 +67,12 @@ def generate_images_and_flavours(config, cloud, token):
     output['images'] = None
     output['flavours'] = None
 
-    if config['credentials']['type'] == 'OpenStack':
-        details = {}
-        if config['credentials']['auth_version'] == '3.x_password':
-            details['ex_force_auth_url'] = config['credentials']['host']
-            if 'auth_version' in config['credentials']:
-                details['ex_force_auth_version'] = config['credentials']['auth_version']
-            if 'tenant' in config['credentials']:
-                details['ex_tenant_name'] = config['credentials']['tenant']
-            if 'domain' in config['credentials']:
-                details['ex_domain_name'] = config['credentials']['domain']
-            if 'service_region' in config['credentials']:
-                details['ex_force_service_region'] = config['credentials']['service_region']
-
-            provider = get_driver(Provider.OPENSTACK)
-            try:
-                conn = provider(config['credentials']['username'],
-                                config['credentials']['password'],
-                                **details)
-            except Exception as ex:
-                logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
-                return output
-        elif config['credentials']['auth_version'] == '3.x_oidc_access_token':
-            details['ex_force_auth_url'] = config['credentials']['host']
-            if 'auth_version' in config['credentials']:
-                details['ex_force_auth_version'] = config['credentials']['auth_version']
-            if 'tenant' in config['credentials']:
-                details['ex_tenant_name'] = config['credentials']['tenant']
-            if 'domain' in config['credentials']:
-                details['ex_domain_name'] = config['credentials']['domain']
-            if 'service_region' in config['credentials']:
-                details['ex_force_service_region'] = config['credentials']['service_region']
-
-            provider = get_driver(Provider.OPENSTACK)
-            try:
-                conn = provider(config['credentials']['username'],
-                                token,
-                                **details)
-            except Exception as ex:
-                logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
-                return output
-        else:
-            return output
-    else:
+    # Connect to the cloud
+    conn = utilities.connect_to_cloud(cloud, config, token)
+    if not conn:
         return output
 
+    # List images
     try:
         images = conn.list_images()
     except Exception as ex:
@@ -127,6 +88,7 @@ def generate_images_and_flavours(config, cloud, token):
 
     output['images'] = output_images
 
+    # List flavours
     try:
         flavours = conn.list_sizes()
     except Exception as ex:

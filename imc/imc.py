@@ -68,11 +68,15 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
     logger.info('Updating cloud quotas if necessary')
     cloud_quotas.set_quotas(requirements, db, opa_client, clouds_info_list)
 
+    # Check if clouds are functional
+    logger.info('Checking if clouds are functional')
+    utilities.update_clouds_status(opa_client, db, clouds_info_list)
+
     # Get list of clouds meeting the specified requirements
     try:
         clouds = opa_client.get_clouds(userdata)
     except Exception as err:
-        logger.critical('Unable to get list of clouds due to:', err)
+        logger.critical('Unable to get list of clouds due to %s:', err)
         return False
 
     logger.info('Suitable clouds = [%s]', ','.join(clouds))
@@ -340,8 +344,7 @@ def auto_deploy(inputj, unique_id):
         try:
             success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
         except Exception as error:
-            print(error)
-            logger.critical('deploy_job failed with exception', str(error))
+            logger.critical('deploy_job failed with exception: %s', error)
         if not success:
             db.deployment_update_status_with_retries(unique_id, 'unable')
     db.close()

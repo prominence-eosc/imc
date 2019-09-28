@@ -7,7 +7,11 @@ import os
 import sys
 import ConfigParser
 
+from libcloud.compute.types import Provider
+from libcloud.compute.providers import get_driver
+
 import opaclient
+import tokens
 
 # Configuration
 CONFIG = ConfigParser.ConfigParser()
@@ -202,7 +206,7 @@ def update_clouds(opa_client, path):
         try:
             old_cloud = opa_client.get_cloud(name)
         except Exception as err:
-            logger.critical('Unable to get cloud info due to:', err)
+            logger.critical('Unable to get cloud info due to %s:', err)
             return
          
         if not compare_dicts(new_cloud_info[new_cloud], old_cloud, ['images', 'flavours', 'updated']):
@@ -211,3 +215,86 @@ def update_clouds(opa_client, path):
 
     logger.info('Completed updating static cloud info')
 
+def connect_to_cloud(cloud, config, token):
+    """
+    Connect to a cloud using LibCloud
+    """
+    if config['credentials']['type'] == 'OpenStack':
+        details = {}
+        if config['credentials']['auth_version'] == '3.x_password':
+            details['ex_force_auth_url'] = config['credentials']['host']
+            if 'auth_version' in config['credentials']:
+                details['ex_force_auth_version'] = config['credentials']['auth_version']
+            if 'tenant' in config['credentials']:
+                details['ex_tenant_name'] = config['credentials']['tenant']
+            if 'domain' in config['credentials']:
+                details['ex_domain_name'] = config['credentials']['domain']
+            if 'service_region' in config['credentials']:
+                details['ex_force_service_region'] = config['credentials']['service_region']
+
+            provider = get_driver(Provider.OPENSTACK)
+            try:
+                conn = provider(config['credentials']['username'],
+                                config['credentials']['password'],
+                                **details)
+            except Exception as ex:
+                logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
+                return None
+        elif config['credentials']['auth_version'] == '3.x_oidc_access_token':
+            details['ex_force_auth_url'] = config['credentials']['host']
+            if 'auth_version' in config['credentials']:
+                details['ex_force_auth_version'] = config['credentials']['auth_version']
+            if 'tenant' in config['credentials']:
+                details['ex_tenant_name'] = config['credentials']['tenant']
+            if 'domain' in config['credentials']:
+                details['ex_domain_name'] = config['credentials']['domain']
+            if 'service_region' in config['credentials']:
+                details['ex_force_service_region'] = config['credentials']['service_region']
+
+            provider = get_driver(Provider.OPENSTACK)
+            try:
+                conn = provider(config['credentials']['username'],
+                                token,
+                                **details)
+            except Exception as ex:
+                logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
+                return None
+        else:
+            return None
+    else:
+        return None
+
+    return conn
+
+def update_clouds_status(opa_client, db, config):
+    """
+    Update status of each cloud
+    """
+    for cloud_info in config:
+        name = cloud_info['name']
+
+        # Get a token if necessary
+        token = tokens.get_token(name, db, config)
+
+        status = check_cloud(name, cloud_info, token)
+        if not status:
+            logger.info('Setting status of cloud %s to down', name)
+            opa_client.set_status(name, 'down')
+
+def check_cloud(cloud, config, token):
+    """
+    Check if a cloud is functional by listing VMs
+    """
+    # Connect to the cloud
+    conn = connect_to_cloud(cloud, config, token)
+    if not conn:
+        return False
+
+    # List VMs
+    try:
+        nodes = conn.list_nodes()
+    except Exception as ex:
+        logger.warn('Unable to list VMs on cloud %s due to %s', cloud, ex)
+        return False
+
+    return True
