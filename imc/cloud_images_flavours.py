@@ -147,20 +147,20 @@ def update_cloud_details(requirements, db, opa_client, config):
 
             # Check if need to continue with this cloud
             if not new_data['images'] and not new_data['flavours']:
-                logger.info('Not continuing with considering updating details for cloud', name)
+                logger.info('Not continuing with considering updating details for cloud %s', name)
                 continue
     
             # Get old images & flavours
             try:
                 images_old = opa_client.get_images(name)
             except Exception as err:
-                logger.critical('Unable to get images due to:', err)
+                logger.critical('Unable to get images due to :%s', err)
                 return False
  
             try:
                 flavours_old = opa_client.get_flavours(name)
             except Exception as err:
-                logger.critical('Unable to get flavours due to:', err)
+                logger.critical('Unable to get flavours due to %s:', err)
                 return False
 
             # Update cloud VM images if necessary
