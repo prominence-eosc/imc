@@ -81,24 +81,24 @@ def requires_auth(function):
         return function(*args, **kwargs)
     return wrapper
 
-def infrastructure_deploy(input_json, unique_id):
+def infrastructure_deploy(input_json, unique_id, username):
     """
     Deploy infrastructure given a JSON specification and id
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
     try:
-        imc.auto_deploy(input_json, unique_id)
+        imc.auto_deploy(input_json, unique_id, username)
     except Exception as error:
         logger.critical('Exception deploying infrastructure: "%s"', error)
     return
 
-def infrastructure_delete(unique_id):
+def infrastructure_delete(unique_id, username):
     """
     Delete the infrastructure with the specified id
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
     try:
-        imc.delete(unique_id)
+        imc.delete(unique_id, username)
     except Exception as error:
         logger.critical('Exception deleting infrastructure: "%s"', error)
     return
@@ -112,12 +112,16 @@ def create_infrastructure():
     uid = str(uuid.uuid4())
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': uid})
 
+    username = None
+    if 'username' in request.args:
+        username = request.args.get('username')
+
     db = get_db()
     if db.connect():
         success = db.deployment_create_with_retries(uid)
         if success:
             db.close()
-            executor.submit(infrastructure_deploy, request.get_json(), uid)
+            executor.submit(infrastructure_deploy, request.get_json(), uid, username)
             logger.info('Infrastructure creation request successfully initiated')
             return jsonify({'id':uid}), 201
     logger.critical('Infrastructure creation request failed, possibly a database issue')
@@ -173,13 +177,17 @@ def delete_infrastructure(infra_id):
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': infra_id})
 
+    username = None
+    if 'username' in request.args:
+        username = request.args.get('username')
+
     if 'type' not in request.args:
         db = get_db()
         if db.connect():
             success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
             if success:
                 db.close()
-                executor.submit(infrastructure_delete, infra_id)
+                executor.submit(infrastructure_delete, infra_id, username)
                 logger.info('Infrastructure deletion request successfully initiated')
                 return jsonify({}), 200
         logger.critical('Infrastructure deletion request failed, possibly a database issue')

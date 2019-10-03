@@ -29,7 +29,7 @@ else:
     print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
     exit(1)
 
-def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
+def deploy_job(db, radl_contents, requirements, preferences, unique_id, username, dryrun):
     """
     Find an appropriate cloud to deploy infrastructure
     """
@@ -234,11 +234,13 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun):
         db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
     return success
 
-def delete(unique_id):
+def delete(unique_id, username):
     """
     Delete the infrastructure with the specified id
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
+
+    logger.info('Deleting infrastructure')
 
     db = database.Database(CONFIG.get('db', 'host'),
                            CONFIG.get('db', 'port'),
@@ -246,7 +248,6 @@ def delete(unique_id):
                            CONFIG.get('db', 'username'),
                            CONFIG.get('db', 'password'))
     db.connect()
-    logger.info('Deleting infrastructure')
 
     (im_infra_id, infra_status, cloud, _, _) = db.deployment_get_im_infra_id(unique_id)
     logger.info('Obtained IM id %s and cloud %s and status %s', im_infra_id, cloud, infra_status)
@@ -287,7 +288,7 @@ def delete(unique_id):
     db.close()
     return 0
 
-def auto_deploy(inputj, unique_id):
+def auto_deploy(inputj, unique_id, username):
     """
     Deploy infrastructure given a JSON specification and id
     """
@@ -342,7 +343,7 @@ def auto_deploy(inputj, unique_id):
     if db.connect():
         logger.info('Connected to DB, about to deploy infrastructure for job')
         try:
-            success = deploy_job(db, radl_contents, requirements, preferences, unique_id, dryrun)
+            success = deploy_job(db, radl_contents, requirements, preferences, unique_id, username, dryrun)
         except Exception as error:
             logger.critical('deploy_job failed with exception: %s', error)
         if not success:
