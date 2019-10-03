@@ -81,13 +81,13 @@ def requires_auth(function):
         return function(*args, **kwargs)
     return wrapper
 
-def infrastructure_deploy(input_json, unique_id, username):
+def infrastructure_deploy(input_json, unique_id, identity):
     """
     Deploy infrastructure given a JSON specification and id
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
     try:
-        imc.auto_deploy(input_json, unique_id, username)
+        imc.auto_deploy(input_json, unique_id, identity)
     except Exception as error:
         logger.critical('Exception deploying infrastructure: "%s"', error)
     return
@@ -112,16 +112,16 @@ def create_infrastructure():
     uid = str(uuid.uuid4())
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': uid})
 
-    username = None
-    if 'username' in request.args:
-        username = request.args.get('username')
+    identity = None
+    if 'identity' in request.get_json():
+        identity = request.get_json()['identity']
 
     db = get_db()
     if db.connect():
-        success = db.deployment_create_with_retries(uid, username)
+        success = db.deployment_create_with_retries(uid, identity)
         if success:
             db.close()
-            executor.submit(infrastructure_deploy, request.get_json(), uid, username)
+            executor.submit(infrastructure_deploy, request.get_json(), uid, identity)
             logger.info('Infrastructure creation request successfully initiated')
             return jsonify({'id':uid}), 201
     logger.critical('Infrastructure creation request failed, possibly a database issue')

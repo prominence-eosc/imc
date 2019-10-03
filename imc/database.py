@@ -64,7 +64,7 @@ class Database(object):
                                           status_reason TEXT,
                                           im_infra_id TEXT,
                                           cloud TEXT,
-                                          username TEXT,
+                                          identity TEXT,
                                           creation INT NOT NULL,
                                           updated INT NOT NULL
                                           )''')
@@ -136,21 +136,21 @@ class Database(object):
             logger.critical('[deployment_get_status_reason] Unable to execute query due to: %s', error)
         return status_reason
 
-    def deployment_get_username(self, infra_id):
+    def deployment_get_identity(self, infra_id):
         """
-        Return the username associated with the infrastructure
+        Return the identity associated with the infrastructure
         """
-        username = None
+        identity = None
 
         try:
             cursor = self._connection.cursor()
-            cursor.execute("SELECT username FROM deployments WHERE id='%s'" % infra_id)
+            cursor.execute("SELECT identity FROM deployments WHERE id='%s'" % infra_id)
             for row in cursor:
                 username = row[0]
             cursor.close()
         except Exception as error:
-            logger.critical('[deployment_get_username] Unable to execute query due to: %s', error)
-        return username
+            logger.critical('[deployment_get_identity] Unable to execute query due to: %s', error)
+        return identity
 
     def get_infra_from_im_infra_id(self, im_infra_id):
         """
@@ -196,7 +196,7 @@ class Database(object):
             logger.critical('[deployment_get_im_infra_id] Unable to execute query due to: %s', error)
         return (im_infra_id, status, cloud, created, updated)
 
-    def deployment_create_with_retries(self, infra_id, username):
+    def deployment_create_with_retries(self, infra_id, identity):
         """
         Create deployment with retries & backoff
         """
@@ -204,7 +204,7 @@ class Database(object):
         count = 0
         success = False
         while count < max_retries and not success:
-            success = self.deployment_create(infra_id, username)
+            success = self.deployment_create(infra_id, identity)
             if not success:
                 count += 1
                 self.close()
@@ -212,13 +212,13 @@ class Database(object):
                 self.connect()
         return success
 
-    def deployment_create(self, infra_id, username):
+    def deployment_create(self, infra_id, identity):
         """
         Create deployment
         """
         try:
             cursor = self._connection.cursor()
-            cursor.execute("INSERT INTO deployments (id,status,username,creation,updated) VALUES (%s,'accepted',%s,%s,%s)", (infra_id, username, time.time(), time.time()))
+            cursor.execute("INSERT INTO deployments (id,status,identity,creation,updated) VALUES (%s,'accepted',%s,%s,%s)", (infra_id, identity, time.time(), time.time()))
             self._connection.commit()
             cursor.close()
         except Exception as error:

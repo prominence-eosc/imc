@@ -288,7 +288,7 @@ def delete(unique_id):
     db.close()
     return 0
 
-def auto_deploy(inputj, unique_id, username):
+def auto_deploy(inputj, unique_id, identity):
     """
     Deploy infrastructure given a JSON specification and id
     """
@@ -343,7 +343,7 @@ def auto_deploy(inputj, unique_id, username):
     if db.connect():
         logger.info('Connected to DB, about to deploy infrastructure for job')
         try:
-            success = deploy_job(db, radl_contents, requirements, preferences, unique_id, username, dryrun)
+            success = deploy_job(db, radl_contents, requirements, preferences, unique_id, identity, dryrun)
         except Exception as error:
             logger.critical('deploy_job failed with exception: %s', error)
         if not success:
