@@ -92,13 +92,13 @@ def infrastructure_deploy(input_json, unique_id, username):
         logger.critical('Exception deploying infrastructure: "%s"', error)
     return
 
-def infrastructure_delete(unique_id, username):
+def infrastructure_delete(unique_id):
     """
     Delete the infrastructure with the specified id
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
     try:
-        imc.delete(unique_id, username)
+        imc.delete(unique_id)
     except Exception as error:
         logger.critical('Exception deleting infrastructure: "%s"', error)
     return
@@ -177,17 +177,13 @@ def delete_infrastructure(infra_id):
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': infra_id})
 
-    username = None
-    if 'username' in request.args:
-        username = request.args.get('username')
-
     if 'type' not in request.args:
         db = get_db()
         if db.connect():
             success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
             if success:
                 db.close()
-                executor.submit(infrastructure_delete, infra_id, username)
+                executor.submit(infrastructure_delete, infra_id)
                 logger.info('Infrastructure deletion request successfully initiated')
                 return jsonify({}), 200
         logger.critical('Infrastructure deletion request failed, possibly a database issue')

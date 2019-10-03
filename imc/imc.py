@@ -234,7 +234,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, username
         db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
     return success
 
-def delete(unique_id, username):
+def delete(unique_id):
     """
     Delete the infrastructure with the specified id
     """
