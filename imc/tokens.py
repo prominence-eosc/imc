@@ -32,8 +32,8 @@ def get_token(cloud, db, config):
         return None
 
     # Get details required for generating a new token
-    (username, password, client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, data)
-    if not username or not password or not client_id or not client_secret or not refresh_token or not scope or not url:
+    (client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, data)
+    if not client_id or not client_secret or not refresh_token or not scope or not url:
         logger.info('A token is not required for cloud %s', cloud)
         return None
 
@@ -57,7 +57,7 @@ def get_token(cloud, db, config):
     if not token or expiry - time.time() < 600 or (check_rt != 0 and time.time() - creation > 600):
         logger.info('Getting a new token for cloud %s', cloud)
         # Get new token
-        (token, expiry, creation, msg) = get_new_token(username, password, client_id, client_secret, refresh_token, scope, url)
+        (token, expiry, creation, msg) = get_new_token(client_id, client_secret, refresh_token, scope, url)
 
         # Delete existing token from DB
         db.delete_token(cloud)
@@ -69,7 +69,7 @@ def get_token(cloud, db, config):
 
     return token
 
-def get_new_token(username, password, client_id, client_secret, refresh_token, scope, url):
+def get_new_token(client_id, client_secret, refresh_token, scope, url):
     """
     Get a new access token using a refresh token
     """
@@ -80,7 +80,7 @@ def get_new_token(username, password, client_id, client_secret, refresh_token, s
             'refresh_token':refresh_token,
             'scope':scope}
     try:
-        response = requests.post(url + '/token', auth=(username, password), timeout=10, data=data)
+        response = requests.post(url + '/token', auth=(client_id, client_secret), timeout=10, data=data)
     except requests.exceptions.Timeout:
         return (None, 0, 0, 'timed out')
     except requests.exceptions.RequestException as ex:
@@ -115,12 +115,6 @@ def check_if_token_required(cloud, data):
     """
     if 'credentials' in data:
         if 'token' in data['credentials']:
-            if 'username' not in data['credentials']['token']:
-                logger.error('username not defined in token section of credentials for cloud %s', cloud)
-                return None
-            if 'password' not in data['credentials']['token']:
-                logger.error('password not defined in token section of credentials for cloud %s', cloud)
-                return None
             if 'client_id' not in data['credentials']['token']:
                 logger.error('client_id not defined in token section of credentials for cloud %s', cloud)
                 return None
@@ -137,15 +131,13 @@ def check_if_token_required(cloud, data):
                 logger.error('url not defined in token section of credentials for cloud %s', cloud)
                 return None
 
-            return (data['credentials']['token']['username'],
-                    data['credentials']['token']['password'],
-                    data['credentials']['token']['client_id'],
+            return (data['credentials']['token']['client_id'],
                     data['credentials']['token']['client_secret'],
                     data['credentials']['token']['refresh_token'],
                     data['credentials']['token']['scope'],
                     data['credentials']['token']['url'])
 
-    return (None, None, None, None, None, None, None)
+    return (None, None, None, None, None)
 
 def get_keystone_url(os_auth_url, path):
     """
