@@ -41,6 +41,14 @@ class Database(object):
                                             last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                                             )''')
 
+            # Create user credentials table
+            cursor.execute('''CREATE TABLE IF NOT EXISTS
+                              user_credentials(username TEXT NOT NULL PRIMARY KEY,
+                                               refresh_token TEXT NOT NULL,
+                                               access_token TEXT NOT NULL,
+                                               access_token_creation INT NOT NULL,
+                                               access_token_expiry INT NOT NULL)''')
+
             # Create credentials table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
                               credentials(cloud TEXT NOT NULL PRIMARY KEY,
@@ -331,6 +339,43 @@ class Database(object):
         except Exception as error:
             logger.critical('[get_ansible_node] Unable to execute SELECT query due to: %s', error)
         return (infrastructure_id, public_ip, username, timestamp)
+
+    def set_user_credentials(self, username, refresh_token):
+        """
+        Insert or update user credentials
+        """
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("INSERT INTO user_credentials (username, access_token, refresh_token, access_token_creation, access_token_expiry) VALUES (%s, %s, %s, %s, %s)", (username, '', refresh_token, -1, -1))
+            self._connection.commit()
+            cursor.close()
+        except Exception as error:
+            logger.critical('[set_user_credentials] Unable to execute INSERT query due to: %s', error)
+            return False
+        return True
+
+    def get_user_credentials(self, username):
+        """
+        Get user credentials
+        """
+        refresh_token = None
+        access_token = None
+        access_token_creation = -1
+        access_token_expiry = -1
+
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("SELECT refresh_token, access_token, access_token_creation, access_token_expiry FROM user_credentials WHERE username='%s'" % username)
+            for row in cursor:
+                refresh_token = row[0]
+                access_token = row[1]
+                access_token_creation = row[2]
+                access_token_expiry = row[3]
+            cursor.close()
+        except Exception as error:
+            logger.critical('[get_user_credentials] Unable to execute SELECT query due to: %s', error)
+            return (refresh_token, access_token, access_token_creation, access_token_expiry)
+        return (refresh_token, access_token, access_token_creation, access_token_expiry)
 
     def get_token(self, cloud):
         """
