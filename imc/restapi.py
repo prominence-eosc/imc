@@ -118,7 +118,7 @@ def create_infrastructure():
 
     db = get_db()
     if db.connect():
-        success = db.deployment_create_with_retries(uid)
+        success = db.deployment_create_with_retries(uid, username)
         if success:
             db.close()
             executor.submit(infrastructure_deploy, request.get_json(), uid, username)
