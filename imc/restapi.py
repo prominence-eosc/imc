@@ -201,5 +201,32 @@ def delete_infrastructure(infra_id):
             return jsonify({}), 200
     return jsonify({}), 400
 
+@app.route('/credentials', methods=['POST'])
+@requires_auth
+def create_user_credentials():
+    """
+    Insert or update user credentials
+    """
+    username = None
+    refresh_token = None
+
+    data = request.get_json()
+    if 'username' in data:
+        username = data['username']
+    if 'refresh_token' in data:
+        refresh_token = data['refresh_token']
+
+    if not username or not refresh_token:
+        return jsonify({'error':'json data not valid'}), 400
+
+    db = get_db()
+    if db.connect():
+        status = db.set_user_credentials(username, refresh_token)
+        db.close()
+        if status:
+            return jsonify({}), 201
+    return jsonify({}), 400
+
 if __name__ == "__main__":
     app.run()
+
