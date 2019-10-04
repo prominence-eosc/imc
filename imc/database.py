@@ -43,7 +43,7 @@ class Database(object):
 
             # Create user credentials table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              user_credentials(username TEXT NOT NULL PRIMARY KEY,
+                              user_credentials(identity TEXT NOT NULL PRIMARY KEY,
                                                refresh_token TEXT NOT NULL,
                                                access_token TEXT NOT NULL,
                                                access_token_creation INT NOT NULL,
@@ -146,7 +146,7 @@ class Database(object):
             cursor = self._connection.cursor()
             cursor.execute("SELECT identity FROM deployments WHERE id='%s'" % infra_id)
             for row in cursor:
-                username = row[0]
+                identity = row[0]
             cursor.close()
         except Exception as error:
             logger.critical('[deployment_get_identity] Unable to execute query due to: %s', error)
@@ -357,21 +357,36 @@ class Database(object):
             logger.critical('[get_ansible_node] Unable to execute SELECT query due to: %s', error)
         return (infrastructure_id, public_ip, username, timestamp)
 
-    def set_user_credentials(self, username, refresh_token):
+    def set_user_credentials(self, identity, refresh_token):
         """
         Insert or update user credentials
         """
         try:
             cursor = self._connection.cursor()
-            cursor.execute("INSERT INTO user_credentials (username, access_token, refresh_token, access_token_creation, access_token_expiry) VALUES (%s, %s, %s, %s, %s)", (username, '', refresh_token, -1, -1))
+            cursor.execute("UPDATE user_credentials SET refresh_token='%s' WHERE identity='%s';" % (refresh_token, identity))
+            cursor.execute("INSERT INTO user_credentials (identity, access_token, refresh_token, access_token_creation, access_token_expiry) SELECT '%s', '%s', '%s', %d, %d WHERE NOT EXISTS (SELECT 1 FROM user_credentials WHERE identity='%s');" % (identity, '', refresh_token, -1, -1, identity))
             self._connection.commit()
             cursor.close()
         except Exception as error:
-            logger.critical('[set_user_credentials] Unable to execute INSERT query due to: %s', error)
+            logger.critical('[set_user_credentials] Unable to execute UPDATE or INSERT query due to: %s', error)
             return False
         return True
 
-    def get_user_credentials(self, username):
+    def update_user_access_token(self, identity, access_token, expiry, creation):
+        """
+        Update user access token
+        """
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("UPDATE user_credentials SET access_token='%s',access_token_creation=%d,access_token_expiry=%d WHERE identity='%s'" % (access_token, creation, expiry, identity))
+            self._connection.commit()
+            cursor.close()
+        except Exception as error:
+            logger.critical('[update_user_access_token] Unable to execute UPDATE query due to: %s', error)
+            return False
+        return True
+
+    def get_user_credentials(self, identity):
         """
         Get user credentials
         """
@@ -382,7 +397,7 @@ class Database(object):
 
         try:
             cursor = self._connection.cursor()
-            cursor.execute("SELECT refresh_token, access_token, access_token_creation, access_token_expiry FROM user_credentials WHERE username='%s'" % username)
+            cursor.execute("SELECT refresh_token, access_token, access_token_creation, access_token_expiry FROM user_credentials WHERE identity='%s'" % identity)
             for row in cursor:
                 refresh_token = row[0]
                 access_token = row[1]

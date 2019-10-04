@@ -114,7 +114,7 @@ def generate_images_and_flavours(config, cloud, token):
 
     return output
 
-def update_cloud_details(requirements, db, opa_client, config):
+def update_cloud_details(requirements, db, identity, opa_client, config):
     """
     Update cloud images & flavours if necessary
     """
@@ -139,7 +139,7 @@ def update_cloud_details(requirements, db, opa_client, config):
 
             # Get a token if necessary
             logger.info('Getting a new token if necessary')
-            token = tokens.get_token(name, db, config)
+            token = tokens.get_token(name, identity, db, config)
 
             # Get new images & flavours
             logger.info('Getting list of new images and flavours')

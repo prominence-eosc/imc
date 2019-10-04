@@ -53,7 +53,7 @@ def check_ansible_node(ip_addr, username):
         logger.info('Unable to execute command on Ansible node with ip %s', ip_addr)
     return success
 
-def delete_ansible_node(cloud, db):
+def delete_ansible_node(cloud, identity, db):
     """
     Delete an Ansible node for the specified cloud
     """
@@ -70,7 +70,7 @@ def delete_ansible_node(cloud, db):
     clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
 
     #  Get a token if necessary
-    token = tokens.get_token(cloud, db, clouds_info_list)
+    token = tokens.get_token(cloud, identity, db, clouds_info_list)
 
     # Destroy infrastructure
     im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
@@ -88,7 +88,7 @@ def delete_ansible_node(cloud, db):
 
     return True
 
-def setup_ansible_node(cloud, db):
+def setup_ansible_node(cloud, identity, db):
     """
     Find or create an Ansible node inside the specified cloud
     """
@@ -122,7 +122,7 @@ def setup_ansible_node(cloud, db):
             return (ip_addr, username)
         else:
             logger.info('Ansible node with ip %s on cloud %s not accessible, so deleting', ip_addr, cloud)
-            delete_ansible_node(cloud, db)
+            delete_ansible_node(cloud, identity, db)
     logger.info('No functional dynamic Ansible node found for cloud %s', cloud)
 
     # Try to create a dynamic Ansible node

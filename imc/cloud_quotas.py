@@ -65,7 +65,7 @@ def get_quotas_openstack(cloud, credentials, token):
     instances_available = quotas_dict['instances']['limit'] - quotas_dict['instances']['in_use'] - quotas_dict['instances']['reserved']
     return (instances_available, cores_available, int(memory_available/1024))
 
-def set_quotas(requirements, db, opa_client, config):
+def set_quotas(requirements, db, identity, opa_client, config):
     """
     Determine the available remaining quotas and set in Open Policy Agent
     """
@@ -82,7 +82,7 @@ def set_quotas(requirements, db, opa_client, config):
                 continue
 
         # Get a token if necessary
-        token = tokens.get_token(name, db, config)
+        token = tokens.get_token(name, identity, db, config)
 
         if credentials['type'] == 'OpenStack':
             # Get a scoped token if necessary from Keystone

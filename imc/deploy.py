@@ -24,7 +24,7 @@ else:
     print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
     exit(1)
 
-def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
+def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     """
     Deploy infrastructure from a specified RADL file
     """
@@ -34,7 +34,7 @@ def deploy(radl, cloud, time_begin, unique_id, db, num_nodes=1):
     clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
 
     # Check & get auth token if necessary
-    token = tokens.get_token(cloud, db, clouds_info_list)
+    token = tokens.get_token(cloud, identity, db, clouds_info_list)
 
     # Setup Open Policy Agent client
     opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'),

@@ -29,7 +29,7 @@ else:
     print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
     exit(1)
 
-def deploy_job(db, radl_contents, requirements, preferences, unique_id, username, dryrun):
+def deploy_job(db, radl_contents, requirements, preferences, unique_id, identity, dryrun):
     """
     Find an appropriate cloud to deploy infrastructure
     """
@@ -62,15 +62,15 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, username
 
     # Update cloud images & flavours if necessary
     logger.info('Updating cloud images and flavours if necessary')
-    cloud_images_flavours.update_cloud_details(requirements, db, opa_client, clouds_info_list)
+    cloud_images_flavours.update_cloud_details(requirements, db, identity, opa_client, clouds_info_list)
 
     # Update quotas if necessary
     logger.info('Updating cloud quotas if necessary')
-    cloud_quotas.set_quotas(requirements, db, opa_client, clouds_info_list)
+    cloud_quotas.set_quotas(requirements, db, identity, opa_client, clouds_info_list)
 
     # Check if clouds are functional
     logger.info('Checking if clouds are functional')
-    utilities.update_clouds_status(opa_client, db, clouds_info_list)
+    utilities.update_clouds_status(opa_client, db, identity, clouds_info_list)
 
     # Get list of clouds meeting the specified requirements
     try:
@@ -151,7 +151,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, username
 
         # Setup Ansible node if necessary
         if requirements['resources']['instances'] > 1:
-            (ip_addr, username) = ansible.setup_ansible_node(cloud, db)
+            (ip_addr, username) = ansible.setup_ansible_node(cloud, identity, db)
             if not ip_addr or not username:
                 logger.critical('Unable to find existing or create an Ansible node in cloud %s because ip=%s,username=%s', cloud, ip_addr, username)
                 continue
@@ -191,7 +191,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, username
 
         # Deploy infrastructure
         try:
-            infra_id = deploy.deploy(radl, cloud, time_begin, unique_id, db, int(requirements['resources']['instances']))
+            infra_id = deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
         except Exception as error:
             logger.critical('Deployment error, this is a bug: %s', error)
             print(error)
@@ -206,7 +206,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, username
                 elif infra_status_new == 'deletion-requested':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
 
-                    token = tokens.get_token(cloud, db, clouds_info_list)
+                    token = tokens.get_token(cloud, identity, db, clouds_info_list)
 
                     im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
                     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
@@ -259,8 +259,12 @@ def delete(unique_id):
         match_obj_name = re.match(r'\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b', im_infra_id)
         if match_obj_name:
             logger.info('Deleting infrastructure with IM id %s', im_infra_id)
+
+            # Get the identity of the user who created the infrastructure
+            identity = db.deployment_get_identity(unique_id)
+     
             # Check & get auth token if necessary
-            token = tokens.get_token(cloud, db, clouds_info_list)
+            token = tokens.get_token(cloud, identity, db, clouds_info_list)
 
             # Setup Infrastructure Manager client
             im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)

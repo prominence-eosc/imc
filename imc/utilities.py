@@ -266,7 +266,7 @@ def connect_to_cloud(cloud, config, token):
 
     return conn
 
-def update_clouds_status(opa_client, db, config):
+def update_clouds_status(opa_client, db, identity, config):
     """
     Update status of each cloud
     """
@@ -274,7 +274,7 @@ def update_clouds_status(opa_client, db, config):
         name = cloud_info['name']
 
         # Get a token if necessary
-        token = tokens.get_token(name, db, config)
+        token = tokens.get_token(name, identity, db, config)
 
         status = check_cloud(name, cloud_info, token)
         if not status:

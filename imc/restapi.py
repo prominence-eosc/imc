@@ -193,7 +193,7 @@ def delete_infrastructure(infra_id):
         db = get_db()
         if db.connect():
             clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
-            token = tokens.get_token(cloud, db, clouds_info_list)
+            token = tokens.get_token(cloud, None, db, clouds_info_list)
             db.close()
             im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
             client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)

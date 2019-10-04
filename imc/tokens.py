@@ -3,19 +3,18 @@
 import json
 import logging
 import os
-import sys
 import time
 import requests
 
 try:
-    from urlparse import urlparse, urlunparse, urljoin
+    from urlparse import urlparse, urlunparse
 except ImportError:
-    from urllib.parse import urlparse, urlunparse, urljoin
+    from urllib.parse import urlparse, urlunparse
 
 # Logging
 logger = logging.getLogger(__name__)
 
-def get_token(cloud, db, config):
+def get_token(cloud, identity, db, config):
     """
     Get a token for a cloud
     """
@@ -26,20 +25,26 @@ def get_token(cloud, db, config):
     for cloud_info in config:
         if cloud_info['name'] == cloud:
             data = cloud_info
-    
+
     if not data:
         logger.critical('Unable to find info for cloud %s in JSON config', cloud)
         return None
 
     # Get details required for generating a new token
-    (client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, data)
-    if not client_id or not client_secret or not refresh_token or not scope or not url:
+    (user_token, client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, data)
+    if not client_id or not client_secret or not scope or not url:
         logger.info('A token is not required for cloud %s', cloud)
         return None
 
+    if user_token:
+        logger.info('Cloud %s requires user tokens', cloud)
+
     # Try to obtain an existing token from the DB
     logger.info('Try to get an existing token from the DB')
-    (token, expiry, creation) = db.get_token(cloud)
+    if not user_token:
+        (token, expiry, creation) = db.get_token(cloud)
+    else:
+        (refresh_token, token, creation, expiry) = db.get_user_credentials(identity)
 
     # Check token
     if token:
@@ -57,13 +62,15 @@ def get_token(cloud, db, config):
     if not token or expiry - time.time() < 600 or (check_rt != 0 and time.time() - creation > 600):
         logger.info('Getting a new token for cloud %s', cloud)
         # Get new token
-        (token, expiry, creation, msg) = get_new_token(client_id, client_secret, refresh_token, scope, url)
+        (token, expiry, creation, _) = get_new_token(client_id, client_secret, refresh_token, scope, url)
 
-        # Delete existing token from DB
-        db.delete_token(cloud)
+        # Update token in DB
+        if user_token:
+            db.update_user_access_token(identity, token, expiry, creation)
+        else:
+            db.delete_token(cloud)
+            db.set_token(cloud, token, expiry, creation)
 
-        # Save token to DB
-        db.set_token(cloud, token, expiry, creation)
     else:
         logger.info('Using token from DB for cloud %s', cloud)
 
@@ -115,15 +122,19 @@ def check_if_token_required(cloud, data):
     """
     if 'credentials' in data:
         if 'token' in data['credentials']:
+            user_token = False
+            refresh_token = None
+            if 'provider' in data['credentials']['token']:
+                if data['credentials']['token']['provider'] == 'user':
+                    user_token = True
             if 'client_id' not in data['credentials']['token']:
                 logger.error('client_id not defined in token section of credentials for cloud %s', cloud)
                 return None
             if 'client_secret' not in data['credentials']['token']:
                 logger.error('client_secret not defined in token section of credentials for cloud %s', cloud)
                 return None
-            if 'refresh_token' not in data['credentials']['token']:
-                logger.error('refresh_token not defined in token section of credentials for cloud %s', cloud)
-                return None
+            if 'refresh_token' in data['credentials']['token']:
+                refresh_token = data['credentials']['token']['refresh_token']
             if 'scope' not in data['credentials']['token']:
                 logger.error('scope not defined in token section of credentials for cloud %s', cloud)
                 return None
@@ -131,13 +142,14 @@ def check_if_token_required(cloud, data):
                 logger.error('url not defined in token section of credentials for cloud %s', cloud)
                 return None
 
-            return (data['credentials']['token']['client_id'],
+            return (user_token,
+                    data['credentials']['token']['client_id'],
                     data['credentials']['token']['client_secret'],
-                    data['credentials']['token']['refresh_token'],
+                    refresh_token,
                     data['credentials']['token']['scope'],
                     data['credentials']['token']['url'])
 
-    return (None, None, None, None, None)
+    return (None, None, None, None, None, None)
 
 def get_keystone_url(os_auth_url, path):
     """
@@ -156,11 +168,11 @@ def get_unscoped_token(os_auth_url, access_token, username, tenant_name):
     """
     url = get_keystone_url(os_auth_url,
                            '/v3/OS-FEDERATION/identity_providers/%s/protocols/%s/auth' % (username, tenant_name))
-    r = requests.post(url,
-                      headers={'Authorization': 'Bearer %s' % access_token})
+    response = requests.post(url,
+                             headers={'Authorization': 'Bearer %s' % access_token})
 
-    if 'X-Subject-Token' in r.headers:
-        return r.headers['X-Subject-Token']
+    if 'X-Subject-Token' in response.headers:
+        return response.headers['X-Subject-Token']
     return None
 
 def get_scoped_token(os_auth_url, os_project_id, unscoped_token):
@@ -177,10 +189,9 @@ def get_scoped_token(os_auth_url, os_project_id, unscoped_token):
             "scope": {"project": {"id": os_project_id}}
         }
     }
-    r = requests.post(url, headers={'content-type': 'application/json'},
-                      data=json.dumps(token_body))
+    response = requests.post(url, headers={'content-type': 'application/json'},
+                             data=json.dumps(token_body))
 
-    if 'X-Subject-Token' in r.headers:
-        return r.headers['X-Subject-Token']
+    if 'X-Subject-Token' in response.headers:
+        return response.headers['X-Subject-Token']
     return None
-
