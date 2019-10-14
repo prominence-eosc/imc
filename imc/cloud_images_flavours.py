@@ -125,60 +125,59 @@ def update_cloud_details(requirements, db, identity, opa_client, config):
             if name not in requirements['sites']:
                 continue
 
-        if cloud['credentials']['type'] != "InfrastructureManager":
-            logger.info('Checking if we need to update cloud %s details', name)
+        logger.info('Checking if we need to update cloud %s details', name)
 
-            # Check if the cloud hasn't been updated recently
-            update_time = opa_client.get_cloud_update_time(name)
-            requires_update = False
-            if time.time() - update_time > int(CONFIG.get('updates', 'vms')):
-                logger.info('Images and flavours for cloud %s have not been updated recently', name)
-                requires_update = True
-            else:
-                continue
+        # Check if the cloud hasn't been updated recently
+        update_time = opa_client.get_cloud_update_time(name)
+        requires_update = False
+        if time.time() - update_time > int(CONFIG.get('updates', 'vms')):
+            logger.info('Images and flavours for cloud %s have not been updated recently', name)
+            requires_update = True
+        else:
+            continue
 
-            # Get a token if necessary
-            logger.info('Getting a new token if necessary')
-            token = tokens.get_token(name, identity, db, config)
+        # Get a token if necessary
+        logger.info('Getting a new token if necessary')
+        token = tokens.get_token(name, identity, db, config)
 
-            # Get new images & flavours
-            logger.info('Getting list of new images and flavours')
-            new_data = generate_images_and_flavours(cloud, name, token)
+        # Get new images & flavours
+        logger.info('Getting list of new images and flavours')
+        new_data = generate_images_and_flavours(cloud, name, token)
 
-            # Check if need to continue with this cloud
-            if not new_data['images'] and not new_data['flavours']:
-                logger.info('Not continuing with considering updating details for cloud %s', name)
-                continue
+        # Check if need to continue with this cloud
+        if not new_data['images'] and not new_data['flavours']:
+            logger.info('Not continuing with considering updating details for cloud %s', name)
+            continue
     
-            # Get old images & flavours
-            try:
-                images_old = opa_client.get_images(name)
-            except Exception as err:
-                logger.critical('Unable to get images due to :%s', err)
-                return False
- 
-            try:
-                flavours_old = opa_client.get_flavours(name)
-            except Exception as err:
-                logger.critical('Unable to get flavours due to %s:', err)
-                return False
+        # Get old images & flavours
+        try:
+            images_old = opa_client.get_images(name)
+        except Exception as err:
+            logger.critical('Unable to get images due to :%s', err)
+            return False
 
-            # Update cloud VM images if necessary
-            if (not images_old or requires_update or not compare_dicts(images_old, new_data['images'])) and new_data['images']:
-                if not compare_dicts(images_old, new_data['images']):
-                    logger.info('Updating images for cloud %s', name)
-                    opa_client.set_images(name, new_data['images'])
-                else:
-                    logger.info('Images for cloud %s have not changed, not updating', name)
-                opa_client.set_update_time(name)
+        try:
+            flavours_old = opa_client.get_flavours(name)
+        except Exception as err:
+            logger.critical('Unable to get flavours due to %s:', err)
+            return False
+
+        # Update cloud VM images if necessary
+        if (not images_old or requires_update or not compare_dicts(images_old, new_data['images'])) and new_data['images']:
+            if not compare_dicts(images_old, new_data['images']):
+                logger.info('Updating images for cloud %s', name)
+                opa_client.set_images(name, new_data['images'])
+            else:
+                logger.info('Images for cloud %s have not changed, not updating', name)
+            opa_client.set_update_time(name)
  
-            # Update cloud VM flavours if necessary
-            if (not flavours_old or requires_update or not compare_dicts(flavours_old, new_data['flavours'])) and new_data['flavours']:
-                if not compare_dicts(flavours_old, new_data['flavours']):
-                    logger.info('Updating flavours for cloud %s', name)
-                    opa_client.set_flavours(name, new_data['flavours'])
-                else:
-                    logger.info('Flavours for cloud %s have not changed, not updating', name)
-                opa_client.set_update_time(name)
+        # Update cloud VM flavours if necessary
+        if (not flavours_old or requires_update or not compare_dicts(flavours_old, new_data['flavours'])) and new_data['flavours']:
+            if not compare_dicts(flavours_old, new_data['flavours']):
+                logger.info('Updating flavours for cloud %s', name)
+                opa_client.set_flavours(name, new_data['flavours'])
+            else:
+                logger.info('Flavours for cloud %s have not changed, not updating', name)
+            opa_client.set_update_time(name)
 
     return True
