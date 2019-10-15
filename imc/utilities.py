@@ -4,7 +4,6 @@ import glob
 import json
 import logging
 import os
-import sys
 import ConfigParser
 
 from libcloud.compute.types import Provider
@@ -199,8 +198,11 @@ def update_clouds(opa_client, path):
         logger.info('No cloud info')
         return
 
+    # Update existing clouds or add new clouds
+    new_cloud_names = []
     for new_cloud in new_cloud_info:
         name = new_cloud_info[new_cloud]['name']
+        new_cloud_names.append(name)
         logger.info('Checking cloud %s', name)
 
         try:
@@ -208,10 +210,17 @@ def update_clouds(opa_client, path):
         except Exception as err:
             logger.critical('Unable to get cloud info due to %s:', err)
             return
-         
+
         if not compare_dicts(new_cloud_info[new_cloud], old_cloud, ['images', 'flavours', 'updated']):
             logger.info('Updating cloud %s', name)
             opa_client.set_cloud(name, new_cloud_info[new_cloud])
+
+    # Remove clouds if necessary
+    existing_clouds = opa_client.get_all_clouds()
+    for cloud in existing_clouds:
+        if cloud not in new_cloud_names:
+            logger.info('Removing cloud %s from Open Policy Agent', cloud)
+            opa_client.delete_cloud(cloud)
 
     logger.info('Completed updating static cloud info')
 
