@@ -143,12 +143,36 @@ class OPAClient(object):
 
         return flavour
 
+    def delete_cloud(self, cloud):
+        """
+        Delete a cloud
+        """
+        try:
+            response = requests.delete('%s/v1/data/clouds/%s' % (self._url, cloud),
+                                       timeout=self._timeout)
+        except requests.exceptions.RequestException:
+            pass
+
     @retry.retry(tries=4, delay=3, backoff=2)
     def get_cloud(self, cloud):
         """
         Get all info associated with the specified cloud
         """
         response = requests.get('%s/v1/data/clouds/%s' % (self._url, cloud),
+                                timeout=self._timeout)
+        response.raise_for_status()
+
+        if 'result' in response.json():
+            if response.json()['result']:
+                return response.json()['result']
+        return None
+
+    @retry.retry(tries=4, delay=3, backoff=2)
+    def get_all_clouds(self):
+        """
+        Get all clouds
+        """
+        response = requests.get('%s/v1/data/clouds' % self._url,
                                 timeout=self._timeout)
         response.raise_for_status()
 
