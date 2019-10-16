@@ -55,6 +55,15 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     else:
         radl_base = radl
 
+    # Set availability zone in RADL if necessary
+    cloud_info = opa_client.get_cloud(cloud)
+    if 'availability_zones' in cloud_info:
+        availability_zones = cloud_info['availability_zones']
+        if availability_zones:
+            shuffle(availability_zones)
+            logger.info('Using availability zone %s', availability_zones[0])
+            radl_base = utilities.set_availability_zone(radl_base, availability_zones[0])
+
     retries_per_cloud = int(CONFIG.get('deployment', 'retries'))
     retry = 0
     success = False
