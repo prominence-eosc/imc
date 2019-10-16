@@ -64,6 +64,9 @@ def get_token(cloud, identity, db, config):
         # Get new token
         (token, expiry, creation, _) = get_new_token(client_id, client_secret, refresh_token, scope, url)
 
+        if not token:
+            logger.critical('Unable to get a new access token')
+
         # Update token in DB
         if user_token:
             db.update_user_access_token(identity, token, expiry, creation)
