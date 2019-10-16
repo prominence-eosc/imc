@@ -23,6 +23,19 @@ else:
 # Logging
 logger = logging.getLogger(__name__)
 
+def set_availability_zone(radl, zone):
+    """
+    Modify RADL to set availability zone
+    """
+    radl_new = ''
+
+    for line in radl.split('\n'):
+        if line.startswith('system'):
+            line = line + "\navailability_zone = '%s' and" % zone
+        radl_new = radl_new + line + '\n'
+
+    return radl_new
+
 def create_basic_radl(radl):
     """
     Generates new RADL with all configure and contextualize blocks removed.
