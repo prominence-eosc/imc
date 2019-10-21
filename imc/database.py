@@ -196,7 +196,7 @@ class Database(object):
             logger.critical('[deployment_get_im_infra_id] Unable to execute query due to: %s', error)
         return (im_infra_id, status, cloud, created, updated)
 
-    def deployment_create_with_retries(self, infra_id, identity):
+    def deployment_create_with_retries(self, infra_id, identity, identifier):
         """
         Create deployment with retries & backoff
         """
@@ -204,7 +204,7 @@ class Database(object):
         count = 0
         success = False
         while count < max_retries and not success:
-            success = self.deployment_create(infra_id, identity)
+            success = self.deployment_create(infra_id, identity, identifier)
             if not success:
                 count += 1
                 self.close()
@@ -212,13 +212,13 @@ class Database(object):
                 self.connect()
         return success
 
-    def deployment_create(self, infra_id, identity):
+    def deployment_create(self, infra_id, identity, identifier):
         """
         Create deployment
         """
         try:
             cursor = self._connection.cursor()
-            cursor.execute("INSERT INTO deployments (id,status,identity,creation,updated) VALUES (%s,'accepted',%s,%s,%s)", (infra_id, identity, time.time(), time.time()))
+            cursor.execute("INSERT INTO deployments (id,status,identity,identifier,creation,updated) VALUES (%s,'accepted',%s,%s,%s,%s)", (infra_id, identity, identifier, time.time(), time.time()))
             self._connection.commit()
             cursor.close()
         except Exception as error:
