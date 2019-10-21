@@ -116,9 +116,13 @@ def create_infrastructure():
     if 'identity' in request.get_json():
         identity = request.get_json()['identity']
 
+    identifier = None
+    if 'identifier' in request.get_json():
+        identifier = request.get_json()['identifier']
+
     db = get_db()
     if db.connect():
-        success = db.deployment_create_with_retries(uid, identity)
+        success = db.deployment_create_with_retries(uid, identity, identifier)
         if success:
             db.close()
             executor.submit(infrastructure_deploy, request.get_json(), uid, identity)
@@ -133,7 +137,7 @@ def get_infrastructures():
     """
     Get list of infrastructures in the specified state or type
     """
-    if 'status' in request.args:
+    if 'status' in request.args and 'type' not in request.args:
         cloud = None
         if 'cloud' in request.args:
             cloud = request.args.get('cloud')
@@ -142,6 +146,28 @@ def get_infrastructures():
             infra = db.deployment_get_infra_in_state_cloud(request.args.get('status'), cloud)
             db.close()
             return jsonify(infra), 200
+    elif 'type' in request.args and 'cloud' in request.args:
+        if request.args.get('type') == 'im':
+            cloud = request.args.get('cloud')
+            db = get_db()
+            if db.connect():
+                clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+                token = tokens.get_token(cloud, None, db, clouds_info_list)
+                db.close()
+                im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
+                client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
+                (status, msg) = client.getauth()
+                if status != 0:
+                    logger.critical('Error reading IM auth file: %s', msg)
+                    return jsonify({}), 400
+                (status, ids) = client.list_infra_ids(10)
+                im_list = []
+                if ids:
+                    for uri in ids:
+                        pieces = uri.split('/')
+                        im_id = pieces[len(pieces) - 1]
+                        im_list.append(im_id)
+                    return jsonify(im_list), 200
         
     return jsonify({}), 400
 
