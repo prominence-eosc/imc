@@ -65,6 +65,7 @@ class Database(object):
                                           im_infra_id TEXT,
                                           cloud TEXT,
                                           identity TEXT,
+                                          identifier TEXT,
                                           creation INT NOT NULL,
                                           updated INT NOT NULL
                                           )''')
