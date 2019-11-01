@@ -53,7 +53,7 @@ def get_quotas_openstack(cloud, credentials, token):
         auth['password'] = credentials['password']
 
     try:
-        nova = client.Client(2, credentials['username'], timeout=30, **auth)
+        nova = client.Client(2, credentials['username'], timeout=10, **auth)
         quotas = nova.quotas.get(credentials['tenant_id'], detail=True)
     except Exception as ex:
         logger.critical('Unable to get quotas from cloud %s due to "%s"', cloud, ex)
