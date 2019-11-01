@@ -296,6 +296,7 @@ def update_clouds_status(opa_client, db, identity, config):
     """
     for cloud_info in config:
         name = cloud_info['name']
+        logger.info('Checking cloud %s', name)
 
         # Get a token if necessary
         token = tokens.get_token(name, identity, db, config)
