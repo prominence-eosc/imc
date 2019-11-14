@@ -86,6 +86,7 @@ def retry_incomplete_deletions(db, state):
     Retry failed deletions
     """
     infras = db.deployment_get_infra_in_state_cloud(state, None) 
+    logger.info('Found %d infrastructures in state %s', len(infras), state)
     for infra in infras:
         if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'retry_failed_deletes_after')):
             logger.info('Attempting to delete infra with ID %s', infra['id'])
@@ -97,6 +98,7 @@ def remove_old_entries(db, state):
     Remove old entries from the DB
     """
     infras = db.deployment_get_infra_in_state_cloud(state, None)
+    logger.info('Found %d infrastructures in state %s', len(infras), state)
     for infra in infras:
         if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'remove_after')):
             logger.info('Removing infrastructure %s from DB', infra['id'])
