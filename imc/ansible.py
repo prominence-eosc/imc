@@ -155,17 +155,10 @@ def get_static_ansible_node(cloud):
     """
     Check if the given cloud has a static Ansible node and return it's details if it does
     """
-    try:
-        with open('%s/imc.json' % os.environ['PROMINENCE_IMC_CONFIG_DIR']) as file:
-            data = json.load(file)
-    except Exception as ex:
-        logger.critical('Unable to open file containing static Ansible nodes due to: %s', ex)
-        return (None, None)
-
-
-    if 'ansible' in data:
-        if cloud in data['ansible']:
-            return (data['ansible'][cloud]['public_ip'], data['ansible'][cloud]['username'])
+    for cloud_info in utilities.create_clouds_list(CONFIG.get('clouds', 'path')):
+        if cloud_info['name'] == cloud:
+            if 'ansible' in cloud_info:
+                return (cloud_info['ansible']['public_ip'], cloud_info['ansible']['username'])
 
     return (None, None)
 
