@@ -1,5 +1,6 @@
 """ Consistency checks """
 
+from __future__ import print_function
 import ConfigParser
 import logging
 from logging.handlers import RotatingFileHandler
@@ -71,13 +72,14 @@ def find_unexpected_im_infras(db):
                 logger.info('Found unknown infrastructure with IM ID %s', im_id)
                 (_, data) = client.getdata(im_id, 10)
                 if data:
+                    #print('IM data=', data)
                     for cloud_info in clouds_info_list:
                         cloud_name = cloud_info['name']
                         if cloud_name in data:
                             logger.info('Found unknown IM id %s on cloud %s, deleting...', im_id, cloud_name)
-                            if delete_from_im(im_id, cloud_name):
-                                logger.info('Successfully deleted infrastructure with IM id %s on cloud %s', im_id, cloud_name)
-                            break
+                            #if delete_from_im(im_id, cloud_name):
+                            #    logger.info('Successfully deleted infrastructure with IM id %s on cloud %s', im_id, cloud_name)
+                            #break
             else:
                 logger.info('Found IM id %s on cloud %s with status %s and our id %s', im_id, cloud, status, infra_id)
 
@@ -132,7 +134,7 @@ if __name__ == "__main__":
         opa_client.remove_old_failures()
 
         logger.info('Checking for unexpected IM infrastructures')
-        #find_unexpected_im_infras(db)
+        find_unexpected_im_infras(db)
 
         logger.info('Retrying any incomplete deletions')
         retry_incomplete_deletions(db, 'deletion-failed')
@@ -142,6 +144,8 @@ if __name__ == "__main__":
         logger.info('Removing any old entries from the DB')
         remove_old_entries(db, 'deleted')
         remove_old_entries(db, 'unable')
+
+        logger.info('Checking for infrastructure stuck in the accepted and creating states')
         
         db.close()
 
