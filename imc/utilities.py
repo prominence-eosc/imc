@@ -3,6 +3,7 @@
 import glob
 import json
 import logging
+import re
 import os
 import ConfigParser
 
@@ -323,3 +324,11 @@ def check_cloud(cloud, config, token):
         return False
 
     return True
+
+def valid_uuid(uuid):
+    """
+    Check if the given string is a valid uuid
+    """
+    regex = re.compile('^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z', re.I)
+    match = regex.match(uuid)
+    return bool(match)
