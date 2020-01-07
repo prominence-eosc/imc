@@ -121,6 +121,26 @@ class Database(object):
             logger.critical('[deployment_get_infra_in_state_cloud] Unable to execute query due to: %s', error)
         return infra
 
+    def deployment_check_infra_id(self, infra_id):
+        """
+        Ceck if the given infrastructure ID exists
+        """
+        number = 0
+
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("SELECT count(*) FROM deployments WHERE id='%s'" % infra_id)
+            for row in cursor:
+                number = row[0]
+            cursor.close()
+        except Exception as error:
+            logger.critical('[deployment_check_infra_id] Unable to execute query due to: %s', error)
+            return 2
+
+        if number > 0:
+            return 0
+        return 1
+
     def deployment_get_status_reason(self, infra_id):
         """
         Return reason for the current status
