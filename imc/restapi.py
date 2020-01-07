@@ -139,7 +139,7 @@ def create_infrastructure():
         elif check == 0:
             db.close()
             logger.info('Duplicate Idempotency-Key used')
-            return jsonify({'id':uid}), 409
+            return jsonify({'id':uid}), 200
         else:
             db.close()
             logger.critical('Unable to check if infrastructure ID was already used')
