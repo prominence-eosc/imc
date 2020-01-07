@@ -114,6 +114,7 @@ def create_infrastructure():
         if not utilities.valid_uuid(uid):
             logger.info('The provided Idempotency-Key is not a valid uuid, ignoring')
             uid = str(uuid.uuid4())
+        logger.info('Using the provided Idempotency-Key %s as the infra id', uid)
     else:
         uid = str(uuid.uuid4())
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': uid})
