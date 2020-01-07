@@ -109,7 +109,10 @@ def create_infrastructure():
     """
     Create infrastructure
     """
-    uid = str(uuid.uuid4())
+    if request.headers.get('Idempotency-Key'):
+        uid = request.headers.get('Idempotency-Key')
+    else:
+        uid = str(uuid.uuid4())
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': uid})
 
     identity = None
@@ -122,12 +125,21 @@ def create_infrastructure():
 
     db = get_db()
     if db.connect():
-        success = db.deployment_create_with_retries(uid, identity, identifier)
-        if success:
+        check = db.deployment_check_infra_id(uid)
+        if check == 0:
+            success = db.deployment_create_with_retries(uid, identity, identifier)
             db.close()
-            executor.submit(infrastructure_deploy, request.get_json(), uid, identity)
-            logger.info('Infrastructure creation request successfully initiated')
-            return jsonify({'id':uid}), 201
+            if success:
+                executor.submit(infrastructure_deploy, request.get_json(), uid, identity)
+                logger.info('Infrastructure creation request successfully initiated')
+                return jsonify({'id':uid}), 201
+        elif check == 1:
+            db.close()
+            logger.info('Duplicate Idempotency-Key used')
+            return jsonify({'id':uid}), 409
+        else:
+            db.close()
+            logger.critical('Unable to check if infrastructure ID was already used')
     logger.critical('Infrastructure creation request failed, possibly a database issue')
     return jsonify({'id':uid}), 400
 
