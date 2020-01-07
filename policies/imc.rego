@@ -101,11 +101,13 @@ satisfies_flavour(flavour) {
 satisfies_flavour_resources(flavour) {
     flavour.cores >= input.requirements.resources.cores
     flavour.memory >= input.requirements.resources.memory
+    flavour.disk >= input.requirements.resources.disk
 }
 
 satisfies_flavour_resources(flavour) {
     not input.requirements.resources.cores
     not input.requirements.resources.memory
+    not input.requirements.resources.disk
 }
 
 satisfies_flavour_tags(flavour) {
