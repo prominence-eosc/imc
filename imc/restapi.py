@@ -126,14 +126,14 @@ def create_infrastructure():
     db = get_db()
     if db.connect():
         check = db.deployment_check_infra_id(uid)
-        if check == 0:
+        if check == 1:
             success = db.deployment_create_with_retries(uid, identity, identifier)
             db.close()
             if success:
                 executor.submit(infrastructure_deploy, request.get_json(), uid, identity)
                 logger.info('Infrastructure creation request successfully initiated')
                 return jsonify({'id':uid}), 201
-        elif check == 1:
+        elif check == 0:
             db.close()
             logger.info('Duplicate Idempotency-Key used')
             return jsonify({'id':uid}), 409
