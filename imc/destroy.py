@@ -37,6 +37,6 @@ def destroy(client, infrastructure_id):
     if destroyed:
         logger.info('Destroyed infrastructure with IM id %s', infrastructure_id)
     else:
-        logger.critical('Unable to destroy infrastructure with IM id %s', infrastructure_id)
+        logger.critical('Unable to destroy infrastructure with IM id %s due to: "%s"', infrastructure_id, msg)
 
     return destroyed
