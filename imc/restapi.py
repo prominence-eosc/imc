@@ -234,6 +234,10 @@ def delete_infrastructure(infra_id):
                 db.close()
                 logger.info('Infrastructure has already been deleted')
                 return jsonify({}), 200
+            elif status == 'deletion-requested':
+                db.close()
+                logger.info('Infrastructure deletion has already been requested')
+                return jsonify({}), 200
 
             success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
             if success:
