@@ -109,15 +109,19 @@ def create_infrastructure():
     """
     Create infrastructure
     """
+    using_idempotency_key = False
+
     if request.headers.get('Idempotency-Key'):
         uid = request.headers.get('Idempotency-Key')
+        using_idempotency_key = True
         if not utilities.valid_uuid(uid):
-            logger.info('The provided Idempotency-Key is not a valid uuid, ignoring')
             uid = str(uuid.uuid4())
-        logger.info('Using the provided Idempotency-Key %s as the infra id', uid)
     else:
         uid = str(uuid.uuid4())
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': uid})
+
+    if using_idempotency_key:
+        logger.info('Using Idempotency-Key as infra id')
 
     identity = None
     if 'identity' in request.get_json():
@@ -222,6 +226,15 @@ def delete_infrastructure(infra_id):
     if 'type' not in request.args:
         db = get_db()
         if db.connect():
+            # Get current status of infrastructure
+            (_, status, _, _, _) = db.deployment_get_im_infra_id(infra_id)
+
+            # If it has already been deleted, don't do anything but return success
+            if status == 'deleted':
+                db.close()
+                logger.info('Infrastructure has already been deleted')
+                return jsonify({}), 200
+
             success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
             if success:
                 db.close()
