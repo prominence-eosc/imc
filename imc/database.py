@@ -174,6 +174,24 @@ class Database(object):
             logger.critical('[deployment_get_identity] Unable to execute query due to: %s', error)
         return identity
 
+    def deployment_get_json(self, infra_id):
+        """
+        Return the json description associated with the infrastructure
+        """
+        description = None
+
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("SELECT description FROM deployments WHERE id='%s'" % infra_id)
+            for row in cursor:
+                description = row[0]
+            cursor.close()
+        except Exception as error:
+            logger.critical('[deployment_get_json] Unable to execute query due to: %s', error)
+            return None
+
+        return description
+
     def get_infra_from_im_infra_id(self, im_infra_id):
         """
         Check if the provided IM infra ID corresponds to known infrastructure
