@@ -51,9 +51,6 @@ logger.setLevel(logging.INFO)
 # Create flask application
 app = Flask(__name__)
 
-# Setup process pool for handling deployments
-executor = ProcessPoolExecutor(int(CONFIG.get('pool', 'size')))
-
 # Initialize DB if necessary
 dbi = get_db()
 dbi.init()
@@ -138,7 +135,6 @@ def create_infrastructure():
             success = db.deployment_create_with_retries(uid, request.get_json(), identity, identifier)
             db.close()
             if success:
-                executor.submit(infrastructure_deploy, request.get_json(), uid, identity)
                 logger.info('Infrastructure creation request successfully initiated')
                 return jsonify({'id':uid}), 201
         elif check == 0:
@@ -242,7 +238,6 @@ def delete_infrastructure(infra_id):
             success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
             if success:
                 db.close()
-                executor.submit(infrastructure_delete, infra_id)
                 logger.info('Infrastructure deletion request successfully initiated')
                 return jsonify({}), 200
         logger.critical('Infrastructure deletion request failed, possibly a database issue')
