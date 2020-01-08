@@ -78,28 +78,6 @@ def requires_auth(function):
         return function(*args, **kwargs)
     return wrapper
 
-def infrastructure_deploy(input_json, unique_id, identity):
-    """
-    Deploy infrastructure given a JSON specification and id
-    """
-    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
-    try:
-        imc.auto_deploy(input_json, unique_id, identity)
-    except Exception as error:
-        logger.critical('Exception deploying infrastructure: "%s"', error)
-    return
-
-def infrastructure_delete(unique_id):
-    """
-    Delete the infrastructure with the specified id
-    """
-    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
-    try:
-        imc.delete(unique_id)
-    except Exception as error:
-        logger.critical('Exception deleting infrastructure: "%s"', error)
-    return
-
 @app.route('/infrastructures', methods=['POST'])
 @requires_auth
 def create_infrastructure():
