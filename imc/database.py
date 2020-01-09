@@ -3,9 +3,21 @@ import logging
 import sys
 import time
 import psycopg2
+from psycopg2.extras import Json
 
 # Logging
 logger = logging.getLogger(__name__)
+
+def get_db():
+    """
+    Prepare DB
+    """
+    db = database.Database(CONFIG.get('db', 'host'),
+                           CONFIG.get('db', 'port'),
+                           CONFIG.get('db', 'db'),
+                           CONFIG.get('db', 'username'),
+                           CONFIG.get('db', 'password'))
+    return db
 
 class Database(object):
     """
@@ -174,7 +186,7 @@ class Database(object):
             logger.critical('[deployment_get_identity] Unable to execute query due to: %s', error)
         return identity
 
-    def deployment_get_json(self, infra_id, identity):
+    def deployment_get_json(self, infra_id):
         """
         Return the json description associated with the infrastructure
         """
@@ -260,7 +272,7 @@ class Database(object):
         """
         try:
             cursor = self._connection.cursor()
-            cursor.execute("INSERT INTO deployments (id,description,status,identity,identifier,creation,updated) VALUES (%s,%s,'accepted',%s,%s,%s,%s)", (infra_id, description, identity, identifier, time.time(), time.time()))
+            cursor.execute("INSERT INTO deployments (id,description,status,identity,identifier,creation,updated) VALUES (%s,%s,'accepted',%s,%s,%s,%s)", (infra_id, Json(description), identity, identifier, time.time(), time.time()))
             self._connection.commit()
             cursor.close()
         except Exception as error:
