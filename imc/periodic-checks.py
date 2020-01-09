@@ -34,17 +34,6 @@ logger = logging.getLogger('checks')
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-def get_db():
-    """
-    Prepare DB
-    """
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
-    return db
-
 def find_unexpected_im_infras(db):
     """
     Find IM infrastructures which should not exist
@@ -110,7 +99,7 @@ def delete_from_im(im_infrastructure_id, cloud):
     """
     Delete infrastructure from IM
     """
-    db = get_db()
+    db = database.get_db()
     if db.connect():
         clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
         token = tokens.get_token(cloud, db, clouds_info_list)
@@ -127,7 +116,7 @@ def delete_from_im(im_infrastructure_id, cloud):
         return False
 
 if __name__ == "__main__":
-    db = get_db()
+    db = database.get_db()
     if db.connect():
         logger.info('Removing old failure events from Open Policy Agent')
         opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
