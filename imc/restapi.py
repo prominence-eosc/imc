@@ -1,7 +1,6 @@
 """REST API"""
 
 from __future__ import print_function
-from concurrent.futures import ProcessPoolExecutor
 from functools import wraps
 import os
 import re
@@ -18,17 +17,6 @@ import imclient
 import logger as custom_logger
 import tokens
 import utilities
-
-def get_db():
-    """
-    Prepare DB
-    """
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
-    return db
 
 # Configuration
 CONFIG = ConfigParser.ConfigParser()
@@ -52,7 +40,7 @@ logger.setLevel(logging.INFO)
 app = Flask(__name__)
 
 # Initialize DB if necessary
-dbi = get_db()
+dbi = database.get_db()
 dbi.init()
 
 def authenticate():
@@ -106,7 +94,7 @@ def create_infrastructure():
     if 'identifier' in request.get_json():
         identifier = request.get_json()['identifier']
 
-    db = get_db()
+    db = database.get_db()
     if db.connect():
         check = db.deployment_check_infra_id(uid)
         if check == 1:
@@ -135,7 +123,7 @@ def get_infrastructures():
         cloud = None
         if 'cloud' in request.args:
             cloud = request.args.get('cloud')
-        db = get_db()
+        db = database.get_db()
         if db.connect():
             infra = db.deployment_get_infra_in_state_cloud(request.args.get('status'), cloud)
             db.close()
@@ -143,7 +131,7 @@ def get_infrastructures():
     elif 'type' in request.args and 'cloud' in request.args:
         if request.args.get('type') == 'im':
             cloud = request.args.get('cloud')
-            db = get_db()
+            db = database.get_db()
             if db.connect():
                 clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
                 token = tokens.get_token(cloud, None, db, clouds_info_list)
@@ -179,7 +167,7 @@ def get_infrastructure(infra_id):
     status_reason = None
     cloud = None
 
-    db = get_db()
+    db = database.get_db()
     if db.connect():
         (im_infra_id, status, cloud, _, _) = db.deployment_get_im_infra_id(infra_id)
         if status in ('unable', 'failed'):
@@ -198,7 +186,7 @@ def delete_infrastructure(infra_id):
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': infra_id})
 
     if 'type' not in request.args:
-        db = get_db()
+        db = database.get_db()
         if db.connect():
             # Get current status of infrastructure
             (_, status, _, _, _) = db.deployment_get_im_infra_id(infra_id)
@@ -222,7 +210,7 @@ def delete_infrastructure(infra_id):
         return jsonify({}), 400
     elif request.args.get('type') == 'im':
         cloud = request.args.get('cloud')
-        db = get_db()
+        db = database.get_db()
         if db.connect():
             clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
             token = tokens.get_token(cloud, None, db, clouds_info_list)
@@ -255,7 +243,7 @@ def create_user_credentials():
     if not username or not refresh_token:
         return jsonify({'error':'json data not valid'}), 400
 
-    db = get_db()
+    db = database.get_db()
     if db.connect():
         status = db.set_user_credentials(username, refresh_token)
         db.close()
