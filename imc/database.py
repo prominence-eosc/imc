@@ -1,9 +1,19 @@
 from __future__ import print_function
+import ConfigParser
 import logging
+import os
 import sys
 import time
 import psycopg2
 from psycopg2.extras import Json
+
+# Configuration
+CONFIG = ConfigParser.ConfigParser()
+if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
+    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+else:
+    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
+    exit(1)
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -12,11 +22,11 @@ def get_db():
     """
     Prepare DB
     """
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
+    db = Database(CONFIG.get('db', 'host'),
+                  CONFIG.get('db', 'port'),
+                  CONFIG.get('db', 'db'),
+                  CONFIG.get('db', 'username'),
+                  CONFIG.get('db', 'password'))
     return db
 
 class Database(object):
