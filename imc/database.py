@@ -1,5 +1,5 @@
 from __future__ import print_function
-import ConfigParser
+import configparser
 import logging
 import os
 import sys
@@ -8,7 +8,7 @@ import psycopg2
 from psycopg2.extras import Json
 
 # Configuration
-CONFIG = ConfigParser.ConfigParser()
+CONFIG = configparser.ConfigParser()
 if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
     CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 else:

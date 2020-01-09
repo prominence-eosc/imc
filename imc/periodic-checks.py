@@ -1,7 +1,7 @@
 """ Consistency checks """
 
 from __future__ import print_function
-import ConfigParser
+import configparser
 import logging
 from logging.handlers import RotatingFileHandler
 import re
@@ -17,7 +17,7 @@ import tokens
 import utilities
 
 # Configuration
-CONFIG = ConfigParser.ConfigParser()
+CONFIG = configparser.ConfigParser()
 if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
     CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 else:

@@ -4,16 +4,16 @@ RUN apk add --no-cache gcc \
                        linux-headers \
                        uwsgi-python \
                        uwsgi-http \
-                       python \
-                       python-dev \
-                       py-requests \ 
-                       py-flask \
-                       py-futures \
-                       py-paramiko \
-                       py-psycopg2 \
-                       py-pip && \
-    pip install apache-libcloud && \
-    pip install python-openstackclient
+                       python3 \
+                       python3-dev \
+                       py3-requests \ 
+                       py3-flask \
+                       py3-future \
+                       py3-paramiko \
+                       py3-psycopg2 \
+                       py3-pip && \
+    pip3 install apache-libcloud && \
+    pip3 install python-openstackclient
 
 
 COPY imc /imc

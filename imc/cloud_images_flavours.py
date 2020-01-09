@@ -4,7 +4,7 @@ import os
 import re
 import sys
 import time
-import ConfigParser
+import configparser
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
@@ -14,7 +14,7 @@ import tokens
 import utilities
 
 # Configuration
-CONFIG = ConfigParser.ConfigParser()
+CONFIG = configparser.ConfigParser()
 if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
     CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
 else:
