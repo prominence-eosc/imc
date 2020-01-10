@@ -292,50 +292,14 @@ def delete(unique_id):
     db.close()
     return 0
 
-def auto_deploy(inputj, unique_id, identity):
+def auto_deploy(unique_id):
     """
     Deploy infrastructure given a JSON specification and id
     """
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
 
     dryrun = False
-    logger.info('Deploying infrastructure')
-
-    if not inputj:
-        logger.warning('No input JSON provided')
-        return 1        
-
-    # Generate requirements & preferences
-    if 'preferences' in inputj:
-        preferences_new = {}
-        # Generate list of weighted regions if necessary
-        if 'regions' in inputj['preferences']:
-            preferences_new['regions'] = {}
-            for i in range(0, len(inputj['preferences']['regions'])):
-                preferences_new['regions'][inputj['preferences']['regions'][i]] = len(inputj['preferences']['regions']) - i
-        # Generate list of weighted sites if necessary
-        if 'sites' in inputj['preferences']:
-            preferences_new['sites'] = {}
-            for i in range(0, len(inputj['preferences']['sites'])):
-                preferences_new['sites'][inputj['preferences']['sites'][i]] = len(inputj['preferences']['sites']) - i
-        inputj['preferences'] = preferences_new
-
-    if 'requirements' in inputj:
-        requirements = inputj['requirements']
-        preferences = inputj['preferences']
-
-    if 'radl' in inputj:
-        try:
-            radl_contents = base64.b64decode(inputj['radl'])
-        except Exception as err:
-            logger.warning('Invalid RADL provided: cannot be decoded')
-            return 1
-
-    if 'requirements' not in inputj or 'radl' not in inputj:
-        logger.warning('Invalid JSON provided: both requirements and radl must exist')
-        return 1
-
-    logger.info('Have job requirements, preferences and RADL, about to connect to the DB')
+    logger.info('Deploying infrastructure [auto_deploy]')
 
     db = database.Database(CONFIG.get('db', 'host'),
                            CONFIG.get('db', 'port'),
@@ -346,6 +310,19 @@ def auto_deploy(inputj, unique_id, identity):
     success = False
     if db.connect():
         logger.info('Connected to DB, about to deploy infrastructure for job')
+
+        # Get JSON description & identity from the DB
+        (description, identity) = db.deployment_get_json(unique_id)
+
+         # Get RADL
+        radl_contents = utilities.get_radl(description)
+        if not radl_contents:
+            logger.critical('RADL must be provided')
+            return 1
+
+        # Get requirements & preferences
+        (requirements, preferences) = utilities.get_reqs_and_prefs(description)
+
         try:
             success = deploy_job(db, radl_contents, requirements, preferences, unique_id, identity, dryrun)
         except Exception as error:
@@ -359,3 +336,4 @@ def auto_deploy(inputj, unique_id, identity):
         return 1
 
     return 0
+
