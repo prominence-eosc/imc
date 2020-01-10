@@ -40,8 +40,8 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, identity
 
     # Count number of instances
     instances = 0
-    for line in radl_contents.split('\n'):
-        m = re.search(r'deploy.*\s(\d+)', line)
+    for line in radl_contents.split(b'\n'):
+        m = re.search(r'deploy.*\s(\d+)', str(line))
         if m:
             instances += int(m.group(1))
     logger.info('Found %d instances to deploy', instances)
