@@ -340,7 +340,7 @@ def get_radl(description):
     """
     if 'radl' in description:
         try:
-            radl = base64.b64decode(description['radl'])
+            radl = base64.b64decode(description['radl']).decode('utf8')
         except Exception as err:
             logger.warning('Invalid RADL provided: cannot be decoded')
             return None
