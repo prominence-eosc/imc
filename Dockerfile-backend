@@ -11,6 +11,7 @@ RUN apk add --no-cache gcc \
                        py3-future \
                        py3-paramiko \
                        py3-psycopg2 \
+                       py3-psutil \
                        py3-pip && \
     pip3 install apache-libcloud && \
     pip3 install python-openstackclient
