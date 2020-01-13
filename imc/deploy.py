@@ -161,8 +161,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                         initial_step_complete = True
 
                         radl_final = ''
-                        for line in radl.split(b'\n'):
-                            line = str(line)
+                        for line in radl.split('\n'):
                             if line.startswith('deploy'):
                                 line = ''
                             radl_final += '%s\n' % line
@@ -175,8 +174,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                         if fnodes_to_be_replaced > 0:
                             logger.info('Creating %d fnodes', fnodes_to_be_replaced)
                             radl_new = ''
-                            for line in radl_base.split(b'\n'):
-                                line = str(line)
+                            for line in radl_base.split('\n'):
                                 if line.startswith('deploy wnode'):
                                     line = ''
                                 if line.startswith('deploy fnode'):
@@ -188,8 +186,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                         if wnodes_to_be_replaced > 0:
                             logger.info('Creating %d wnodes', wnodes_to_be_replaced)
                             radl_new = ''
-                            for line in radl_base.split(b'\n'):
-                                line = str(line)
+                            for line in radl_base.split('\n'):
                                 if line.startswith('deploy fnode'):
                                     line = ''
                                 if line.startswith('deploy wnode'):

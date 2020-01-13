@@ -24,4 +24,4 @@ RUN chown uwsgi /var/log && \
 
 USER uwsgi
 
-ENTRYPOINT ["python3", "/imc/periodic-checks.py"]
+ENTRYPOINT ["python3", "/imc/cleaner.py"]

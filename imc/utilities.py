@@ -376,3 +376,14 @@ def get_reqs_and_prefs(description):
     
     return (requirements, preferences)
 
+def get_num_instances(radl):
+    """
+    Count the number of VM instances required
+    """
+    instances = 0
+    for line in radl.split('\n'):
+        m = re.search(r'deploy.*\s(\d+)', line)
+        if m:
+            instances += int(m.group(1))
+    return instances
+

@@ -34,8 +34,31 @@ if __name__ == "__main__":
 
     db = database.get_db()
     if db.connect():
-        imc.auto_deploy(infra_id)
-    db.close()
+        logging.info('Connected to DB, about to deploy infrastructure for job')
+
+        # Get JSON description & identity from the DB
+        (description, identity) = db.deployment_get_json(infra_id)
+
+         # Get RADL
+        radl_contents = utilities.get_radl(description)
+        if not radl_contents:
+            logging.critical('RADL must be provided')
+            db.deployment_update_status_with_retries(infra_id, 'unable')
+            db.close()
+            exit(1)
+
+        # Get requirements & preferences
+        (requirements, preferences) = utilities.get_reqs_and_prefs(description)
+
+        # Deploy infrastructure
+        success = imc.deploy_job(db, radl_contents, requirements, preferences, infra_id, identity, False)
+
+        if not success:
+            db.deployment_update_status_with_retries(infra_id, 'unable')
+        db.close()
+
+    if not success:
+        logging.critical('Unable to deploy infrastructure on any cloud')
 
     logging.info('Completed deploying infrastructure')
 

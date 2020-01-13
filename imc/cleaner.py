@@ -25,7 +25,7 @@ else:
     exit(1)
 
 # Logging
-handler = RotatingFileHandler(CONFIG.get('logs', 'filename'),
+handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-cleaner.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
@@ -81,7 +81,7 @@ def retry_incomplete_deletions(db, state):
     for infra in infras:
         if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'retry_failed_deletes_after')):
             logger.info('Attempting to delete infra with ID %s', infra['id'])
-            if imc.delete(infra['id']) == 0:
+            if imc.delete(infra['id']):
                 logger.info('Successfully deleted infrastructure with ID %s', infra['id'])
 
 def remove_old_entries(db, state):
@@ -116,25 +116,27 @@ def delete_from_im(im_infrastructure_id, cloud):
         return False
 
 if __name__ == "__main__":
-    db = database.get_db()
-    if db.connect():
-        logger.info('Removing old failure events from Open Policy Agent')
-        opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
-        opa_client.remove_old_failures()
+    while True:
+        db = database.get_db()
+        if db.connect():
+            logger.info('Removing old failure events from Open Policy Agent')
+            opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+            opa_client.remove_old_failures()
 
-        logger.info('Checking for unexpected IM infrastructures')
-        find_unexpected_im_infras(db)
+            logger.info('Checking for unexpected IM infrastructures')
+            find_unexpected_im_infras(db)
 
-        logger.info('Retrying any incomplete deletions')
-        retry_incomplete_deletions(db, 'deletion-failed')
-        retry_incomplete_deletions(db, 'deleting')
-        retry_incomplete_deletions(db, 'deletion-requested')
+            logger.info('Retrying any incomplete deletions')
+            retry_incomplete_deletions(db, 'deletion-failed')
+            retry_incomplete_deletions(db, 'deleting')
+            retry_incomplete_deletions(db, 'deletion-requested')
 
-        logger.info('Removing any old entries from the DB')
-        remove_old_entries(db, 'deleted')
-        remove_old_entries(db, 'unable')
+            logger.info('Removing any old entries from the DB')
+            remove_old_entries(db, 'deleted')
+            remove_old_entries(db, 'unable')
 
-        logger.info('Checking for infrastructure stuck in the accepted and creating states')
+            logger.info('Checking for infrastructure stuck in the accepted and creating states')
         
-        db.close()
+            db.close()
 
+        time.sleep(3600)

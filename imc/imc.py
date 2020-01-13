@@ -8,6 +8,7 @@ import time
 from random import shuffle
 import logging
 import configparser
+import tempfile
 
 import ansible
 import database
@@ -39,11 +40,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, identity
     db.deployment_update_status_with_retries(unique_id, 'creating')
 
     # Count number of instances
-    instances = 0
-    for line in radl_contents.split(b'\n'):
-        m = re.search(r'deploy.*\s(\d+)', str(line))
-        if m:
-            instances += int(m.group(1))
+    instances = utilities.get_num_instances(radl_contents)
     logger.info('Found %d instances to deploy', instances)
     requirements['resources']['instances'] = instances
 
@@ -173,12 +170,12 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, identity
 
         # Create complete RADL content
         try:
-            radl = Template(radl_contents).substitute(instance=flavour,
-                                                      image=image,
-                                                      cloud=cloud,
-                                                      ansible_ip=ip_addr,
-                                                      ansible_username=username,
-                                                      ansible_private_key=private_key)
+            radl = Template(str(radl_contents)).substitute(instance=flavour,
+                                                           image=image,
+                                                           cloud=cloud,
+                                                           ansible_ip=ip_addr,
+                                                           ansible_username=username,
+                                                           ansible_private_key=private_key)
         except Exception as ex:
             logger.critical('Error creating RADL from template due to %s', ex)
             return False
@@ -205,25 +202,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, identity
                     return False
                 elif infra_status_new == 'deletion-requested':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
-
-                    token = tokens.get_token(cloud, identity, db, clouds_info_list)
-
-                    im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
-                    client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
-                    (status, msg) = client.getauth()
-                    if status != 0:
-                        logger.critical('Error reading IM auth file: %s', msg)
-                        return False
-
-                    destroyed = destroy.destroy(client, infra_id)
-
-                    if destroyed:
-                        db.deployment_update_status_with_retries(unique_id, 'deleted')
-                        logger.info('Destroyed infrastructure with IM infrastructure id %s', infra_id)
-                    else:
-                        db.deployment_update_status_with_retries(unique_id, 'deletion-failed')
-                        logger.critical('Unable to destroy infrastructure with IM infrastructure id %s', infra_id)
-
+                    delete(infra_id)       
                     return False
                 else:
                     db.deployment_update_status_with_retries(unique_id, 'configured', cloud, infra_id)
@@ -242,11 +221,7 @@ def delete(unique_id):
 
     logger.info('Deleting infrastructure')
 
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
+    db = database.get_db()
     db.connect()
 
     (im_infra_id, infra_status, cloud, _, _) = db.deployment_get_im_infra_id(unique_id)
@@ -273,7 +248,7 @@ def delete(unique_id):
             if status != 0:
                 logger.critical('Error reading IM auth file: %s', msg)
                 db.close()
-                return 1
+                return False
 
             destroyed = destroy.destroy(client, im_infra_id)
 
@@ -283,6 +258,7 @@ def delete(unique_id):
             else:
                 db.deployment_update_status_with_retries(unique_id, 'deletion-failed')
                 logger.critical('Unable to destroy infrastructure with IM infrastructure id %s', im_infra_id)
+                return False
         else:
             logger.critical('IM infrastructure id %s does not match regex', im_infra_id)
             db.deployment_update_status_with_retries(unique_id, 'deleted')
@@ -290,50 +266,4 @@ def delete(unique_id):
         logger.info('No need to destroy infrastructure because IM infrastructure id is %s and cloud is %s', im_infra_id, cloud)
         db.deployment_update_status_with_retries(unique_id, 'deleted')
     db.close()
-    return 0
-
-def auto_deploy(unique_id):
-    """
-    Deploy infrastructure given a JSON specification and id
-    """
-    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
-
-    dryrun = False
-    logger.info('Deploying infrastructure [auto_deploy]')
-
-    db = database.Database(CONFIG.get('db', 'host'),
-                           CONFIG.get('db', 'port'),
-                           CONFIG.get('db', 'db'),
-                           CONFIG.get('db', 'username'),
-                           CONFIG.get('db', 'password'))
-
-    success = False
-    if db.connect():
-        logger.info('Connected to DB, about to deploy infrastructure for job')
-
-        # Get JSON description & identity from the DB
-        (description, identity) = db.deployment_get_json(unique_id)
-
-         # Get RADL
-        radl_contents = utilities.get_radl(description)
-        if not radl_contents:
-            logger.critical('RADL must be provided')
-            return 1
-
-        # Get requirements & preferences
-        (requirements, preferences) = utilities.get_reqs_and_prefs(description)
-
-        try:
-            success = deploy_job(db, radl_contents, requirements, preferences, unique_id, identity, dryrun)
-        except Exception as error:
-            logger.critical('deploy_job failed with exception: %s', error)
-        if not success:
-            db.deployment_update_status_with_retries(unique_id, 'unable')
-    db.close()
-
-    if not success:
-        logger.critical('Unable to deploy infrastructure on any cloud')
-        return 1
-
-    return 0
-
+    return True

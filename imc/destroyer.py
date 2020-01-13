@@ -30,12 +30,12 @@ if __name__ == "__main__":
                         level=logging.INFO,
                         format='%(asctime)s %(message)s')
 
-    logger.info('Starting deletion of infrastructure')
+    logging.info('Starting deletion of infrastructure')
 
     db = database.get_db()
     if db.connect():
         imc.delete(infra_id)
-    db.close()
+        db.close()
 
-    logger.info('Completed deleting infrastructure')
+    logging.info('Completed deleting infrastructure')
 
