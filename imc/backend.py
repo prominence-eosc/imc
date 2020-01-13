@@ -104,9 +104,7 @@ if __name__ == "__main__":
     while True:
         db = database.get_db()
         if db.connect():
-            logger.info('Checking for new infrastructures to deploy...')
             find_new_infra_for_creation(db)
-            logger.info('Checking for new infrastructures to delete...')
             find_new_infra_for_deletion(db)
             db.close()
         time.sleep(30)
