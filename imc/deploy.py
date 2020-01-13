@@ -104,7 +104,6 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                 (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deletion-requested':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
-                    destroy.destroy(client, infrastructure_id)
                     return None
                 elif infra_status_new == 'deleted':
                     logger.info('Deletion requested of infrastructure, aborting deployment, already deleted')
