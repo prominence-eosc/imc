@@ -13,20 +13,15 @@ import logging
 import configparser
 import paramiko
 
-import database
-import deploy
-import imclient
-import opaclient
-import tokens
-import utilities
+import imc.database as database
+import imc.deploy as deploy
+import imc.imclient as imclient
+import imc.opaclient as opaclient
+import imc.tokens as tokens
+import imc.utilities as utilities
 
 # Configuration
-CONFIG = configparser.ConfigParser()
-if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
-    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
-else:
-    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
-    exit(1)
+CONFIG = utilities.get_config()
 
 # Logging
 logger = logging.getLogger(__name__)

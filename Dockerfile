@@ -16,7 +16,9 @@ RUN apk add --no-cache gcc \
     pip3 install python-openstackclient
 
 
-COPY imc /imc
+RUN mkdir /imc
+COPY imc /imc/
+COPY bin /imc/
 
 RUN chown uwsgi /var/log && \
     mkdir /var/lib/prominence && \
@@ -30,5 +32,5 @@ ENTRYPOINT ["/usr/sbin/uwsgi", \
             "--uid", "uwsgi", \
             "--manage-script-name", \
             "--master", \
-            "--chdir", "/imc", \
+            "--chdir", "/imc/bin", \
             "--mount", "/=restapi:app"]

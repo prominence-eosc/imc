@@ -9,27 +9,22 @@ from random import shuffle
 import logging
 import configparser
 
-import destroy
-import imclient
-import opaclient
-import tokens
-import utilities
-import logger as custom_logger
+import imc.destroy as destroy
+import imc.imclient as imclient
+import imc.opaclient as opaclient
+import imc.tokens as tokens
+import imc.utilities as utilities
 
 # Configuration
-CONFIG = configparser.ConfigParser()
-if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
-    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
-else:
-    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
-    exit(1)
+CONFIG = utilities.get_config()
+
+# Logging
+logger = logging.getLogger(__name__)
 
 def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     """
     Deploy infrastructure from a specified RADL file
     """
-    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
-
     # Get full list of cloud info
     clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
 

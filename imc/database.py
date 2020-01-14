@@ -7,13 +7,10 @@ import time
 import psycopg2
 from psycopg2.extras import Json
 
+import imc.utilities as utilities
+
 # Configuration
-CONFIG = configparser.ConfigParser()
-if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
-    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
-else:
-    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
-    exit(1)
+CONFIG = utilities.get_config()
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -126,13 +123,15 @@ class Database(object):
         except Exception as error:
             logger.critical('Unable to the database connection due to: %s', error)
 
-    def deployment_get_infra_in_state_cloud(self, state, cloud=None):
+    def deployment_get_infra_in_state_cloud(self, state, cloud=None, order=False):
         """
         Return a list of all infrastructure IDs for infrastructure in the specified state and cloud
         """
         query = ""
         if cloud:
-            query = "and cloud='%s'" % cloud
+            query = "AND cloud='%s'" % cloud
+        if order:
+            query += " ORDER BY creation ASC"
         infra = []
         try:
             cursor = self._connection.cursor()

@@ -1,5 +1,4 @@
-""" Worker pool """
-
+#!/usr/bin/env python
 from __future__ import print_function
 import configparser
 import logging
@@ -11,28 +10,23 @@ import sys
 import subprocess
 import time
 
-import database
-import imc
-import imclient
-import opaclient
-import tokens
-import utilities
+from imc import database
+from imc import imc
+from imc import imclient
+from imc import opaclient
+from imc import tokens
+from imc import utilities
 
 # Configuration
-CONFIG = configparser.ConfigParser()
-if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
-    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
-else:
-    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
-    exit(1)
+CONFIG = utilities.get_config()
 
 # Logging
-handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-backend.log'),
+handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-manager.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
 handler.setFormatter(formatter)
-logger = logging.getLogger('backend')
+logger = logging.getLogger('manager')
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
@@ -47,7 +41,7 @@ def get_num_deployers():
     count = 0
     for proc in psutil.process_iter():
         if len(proc.cmdline()) > 1:
-            if proc.cmdline()[1] == '/imc/deployer.py':
+            if proc.cmdline()[1] == '/usr/bin/imc-deployer':
                 count += 1
     return count
 
@@ -58,7 +52,7 @@ def get_num_destroyers():
     count = 0
     for proc in psutil.process_iter():
         if len(proc.cmdline()) > 1:
-            if proc.cmdline()[1] == '/imc/destroyer.py':
+            if proc.cmdline()[1] == '/usr/bin/imc-destroyer':
                 count += 1
     return count
 
@@ -66,14 +60,14 @@ def find_new_infra_for_creation(db):
     """
     Find infrastructure to be deployed
     """
-    infras = db.deployment_get_infra_in_state_cloud('accepted', None)
+    infras = db.deployment_get_infra_in_state_cloud('accepted', order=True)
     current_deployers = get_num_deployers()
     num_not_run = 0
 
     for infra in infras:
         if current_deployers + 1 < int(CONFIG.get('pool', 'deployers')):
             logger.info('Running deploying for infra %s', infra['id'])
-            subprocess.Popen(['python3', '/imc/deployer.py', infra['id']])
+            subprocess.Popen(['/usr/bin/imc-deployer', infra['id']])
             current_deployers += 1
         else:
             num_not_run += 1
@@ -85,14 +79,14 @@ def find_new_infra_for_deletion(db):
     """
     Find infrastructure to be destroyed
     """
-    infras = db.deployment_get_infra_in_state_cloud('deletion-requested', None)
+    infras = db.deployment_get_infra_in_state_cloud('deletion-requested')
     current_destroyers = get_num_destroyers()
     num_not_run = 0
 
     for infra in infras:
         if current_destroyers + 1 < int(CONFIG.get('pool', 'deleters')):
             logger.info('Running destroyer for infra %s', infra['id'])
-            subprocess.Popen(['python3', '/imc/destroyer.py', infra['id']])
+            subprocess.Popen(['/usr/bin/imc-destroyer', infra['id']])
             current_destroyers += 1
         else:
             num_not_run += 1

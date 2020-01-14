@@ -10,32 +10,27 @@ import logging
 import configparser
 import tempfile
 
-import ansible
-import database
-import deploy
-import destroy
-import imclient
-import opaclient
-import tokens
-import utilities
-import cloud_images_flavours
-import cloud_quotas
-import logger as custom_logger
+import imc.ansible as ansible
+import imc.database as database
+import imc.deploy as deploy
+import imc.destroy as destroy
+import imc.imclient as imclient
+import imc.opaclient as opaclient
+import imc.tokens as tokens
+import imc.utilities as utilities
+import imc.cloud_images_flavours as cloud_images_flavours
+import imc.cloud_quotas as cloud_quotas
 
 # Configuration
-CONFIG = configparser.ConfigParser()
-if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
-    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
-else:
-    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
-    exit(1)
+CONFIG = utilities.get_config()
+
+# Logging
+logger = logging.getLogger(__name__)
 
 def deploy_job(db, radl_contents, requirements, preferences, unique_id, identity, dryrun):
     """
     Find an appropriate cloud to deploy infrastructure
     """
-    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
-
     # Update status as we are now handing deployment of the infrastructure
     db.deployment_update_status_with_retries(unique_id, 'creating')
 
@@ -217,8 +212,6 @@ def delete(unique_id):
     """
     Delete the infrastructure with the specified id
     """
-    logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': unique_id})
-
     logger.info('Deleting infrastructure')
 
     db = database.get_db()

@@ -4,11 +4,9 @@ import sys
 import time
 import requests
 
-import retry
+from imc.retry import retry
 
 # Logging
-logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 class OPAClient(object):
@@ -67,7 +65,7 @@ class OPAClient(object):
         except requests.exceptions.RequestException as ex:
             logger.warning('Unable to write cloud quotas to Open Policy Agent due to "%s"', ex)
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_clouds(self, data):
         """
         Get list of clouds meeting requirements
@@ -84,7 +82,7 @@ class OPAClient(object):
 
         return []
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_ranked_clouds(self, data, clouds):
         """
         Get list of ranked clouds based on preferences
@@ -102,7 +100,7 @@ class OPAClient(object):
 
         return []
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_image(self, data, cloud):
         """
         Get name of an image at the specified site meeting any given requirements
@@ -121,7 +119,7 @@ class OPAClient(object):
 
         return None
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_flavour(self, data, cloud):
         """
         Get name of a flavour at the specified site meeting requirements. We are given a list
@@ -153,7 +151,7 @@ class OPAClient(object):
         except requests.exceptions.RequestException:
             pass
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_cloud(self, cloud):
         """
         Get all info associated with the specified cloud
@@ -167,7 +165,7 @@ class OPAClient(object):
                 return response.json()['result']
         return None
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_all_clouds(self):
         """
         Get all clouds
@@ -181,7 +179,7 @@ class OPAClient(object):
                 return response.json()['result']
         return None
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_flavours(self, cloud):
         """
         Get all flavours associated with the specified cloud
@@ -195,7 +193,7 @@ class OPAClient(object):
                 return response.json()['result']
         return None        
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_images(self, cloud):
         """
         Get all images associated with the specified cloud
@@ -264,7 +262,7 @@ class OPAClient(object):
             return False
         return True
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_cloud_update_time(self, cloud):
         """
         Return when the cloud was last updated
@@ -278,7 +276,7 @@ class OPAClient(object):
                 return response.json()['result']['epoch']
         return 0
 
-    @retry.retry(tries=4, delay=3, backoff=2)
+    @retry(tries=4, delay=3, backoff=2)
     def get_quota_update_time(self, cloud):
         """
         Return when the cloud quotas were last updated

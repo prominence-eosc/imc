@@ -1,3 +1,5 @@
+"""Get images & flavours available on a cloud"""
+
 import json
 import logging
 import os
@@ -9,17 +11,12 @@ import configparser
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 
-import opaclient
-import tokens
-import utilities
+import imc.opaclient as opaclient
+import imc.tokens as tokens
+import imc.utilities as utilities
 
 # Configuration
-CONFIG = configparser.ConfigParser()
-if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
-    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
-else:
-    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
-    exit(1)
+CONFIG = utilities.get_config()
 
 # Logging
 logger = logging.getLogger(__name__)

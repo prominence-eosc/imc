@@ -1,5 +1,4 @@
-"""REST API"""
-
+#!/usr/bin/env python
 from __future__ import print_function
 from functools import wraps
 import os
@@ -11,20 +10,15 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, request, jsonify
 
-import database
-import imc
-import imclient
-import logger as custom_logger
-import tokens
-import utilities
+from imc import database
+from imc import imc
+from imc import imclient
+from imc import logger as custom_logger
+from imc import tokens
+from imc import utilities
 
 # Configuration
-CONFIG = configparser.ConfigParser()
-if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
-    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
-else:
-    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
-    exit(1)
+CONFIG = utilities.get_config()
 
 # Setup handlers for the root logger
 handler = RotatingFileHandler(CONFIG.get('logs', 'filename'),

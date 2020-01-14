@@ -11,16 +11,25 @@ import configparser
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 
-import opaclient
-import tokens
+import imc.opaclient as opaclient
+import imc.tokens as tokens
+
+def get_config():
+    """
+    Get configuration
+    """
+    config = configparser.ConfigParser()
+
+    if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
+        config.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
+    else:
+        print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
+        exit(1)
+
+    return config
 
 # Configuration
-CONFIG = configparser.ConfigParser()
-if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
-    CONFIG.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
-else:
-    print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
-    exit(1)
+CONFIG = get_config()
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -386,4 +395,3 @@ def get_num_instances(radl):
         if m:
             instances += int(m.group(1))
     return instances
-
