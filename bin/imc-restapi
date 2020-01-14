@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from functools import wraps
-import os
-import re
-import sys
 import uuid
-import configparser
 import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, request, jsonify
 
 from imc import database
-from imc import imc
 from imc import imclient
 from imc import logger as custom_logger
 from imc import tokens

@@ -8,7 +8,7 @@ import sys
 import time
 
 from imc import database
-from imc import imc
+from imc import destroy
 from imc import imclient
 from imc import opaclient
 from imc import tokens
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     db = database.get_db()
     if db.connect():
-        imc.delete(infra_id)
+        destroy.delete(infra_id)
         db.close()
 
     logging.info('Completed deleting infrastructure')

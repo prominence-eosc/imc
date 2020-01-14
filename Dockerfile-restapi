@@ -6,19 +6,25 @@ RUN apk add --no-cache gcc \
                        uwsgi-http \
                        python3 \
                        python3-dev \
-                       py3-requests \ 
+                       py3-requests \
                        py3-flask \
-                       py3-future \
                        py3-paramiko \
                        py3-psycopg2 \
+                       py3-psutil \
                        py3-pip && \
     pip3 install apache-libcloud && \
     pip3 install python-openstackclient
 
+RUN mkdir /tmp/imc
+COPY setup.py /tmp/imc/.
+COPY README.md /tmp/imc/.
+COPY imc /tmp/imc/imc/
+COPY bin /tmp/imc/bin/
+COPY start-daemon.sh /
 
-RUN mkdir /imc
-COPY imc /imc/
-COPY bin /imc/
+RUN cd /tmp/imc && \
+    pip3 install . && \
+    rm -rf /tmp/imc
 
 RUN chown uwsgi /var/log && \
     mkdir /var/lib/prominence && \
@@ -32,5 +38,5 @@ ENTRYPOINT ["/usr/sbin/uwsgi", \
             "--uid", "uwsgi", \
             "--manage-script-name", \
             "--master", \
-            "--chdir", "/imc/bin", \
-            "--mount", "/=restapi:app"]
+            "--chdir", "/usr/bin", \
+            "--mount", "/=imc-restapi:app"]
