@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+"""Deploy infrastructure"""
+
 from __future__ import print_function
 import configparser
 import logging
@@ -8,7 +10,7 @@ import sys
 import time
 
 from imc import database
-from imc import imc
+from imc import multicloud_deploy
 from imc import imclient
 from imc import opaclient
 from imc import tokens
@@ -44,7 +46,7 @@ if __name__ == "__main__":
         (requirements, preferences) = utilities.get_reqs_and_prefs(description)
 
         # Deploy infrastructure
-        success = imc.deploy_job(db, radl_contents, requirements, preferences, infra_id, identity, False)
+        success = multicloud_deploy.deploy_job(db, radl_contents, requirements, preferences, infra_id, identity, False)
 
         if not success:
             db.deployment_update_status_with_retries(infra_id, 'unable')
