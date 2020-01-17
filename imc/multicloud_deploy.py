@@ -27,12 +27,26 @@ CONFIG = utilities.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def deploy_job(db, radl_contents, requirements, preferences, unique_id, identity, dryrun):
+def deploy_job(db, unique_id):
     """
     Find an appropriate cloud to deploy infrastructure
     """
     # Update status as we are now handing deployment of the infrastructure
     db.deployment_update_status_with_retries(unique_id, 'creating')
+
+    # Get JSON description & identity from the DB
+    (description, identity) = db.deployment_get_json(infra_id)
+
+     # Get RADL
+    radl_contents = utilities.get_radl(description)
+    if not radl_contents:
+        logging.critical('RADL must be provided')
+        db.deployment_update_status_with_retries(infra_id, 'unable')
+        db.close()
+        exit(1)
+
+    # Get requirements & preferences
+    (requirements, preferences) = utilities.get_reqs_and_prefs(description)
 
     # Count number of instances
     instances = utilities.get_num_instances(radl_contents)
@@ -137,10 +151,6 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, identity
 
         logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image, flavour)
  
-        # Stop here if necessary
-        if dryrun:
-            continue
-
         # Setup Ansible node if necessary
         if requirements['resources']['instances'] > 1:
             (ip_addr, username) = ansible.setup_ansible_node(cloud, identity, db)
