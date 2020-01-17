@@ -7,7 +7,7 @@ import time
 import psycopg2
 from psycopg2.extras import Json
 
-import imc.utilities as utilities
+from imc import utilities
 
 # Configuration
 CONFIG = utilities.get_config()

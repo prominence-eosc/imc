@@ -7,10 +7,10 @@ import time
 import logging
 import configparser
 
-import imc.database as database
-import imc.imclient as imclient
-import imc.tokens as tokens
-import imc.utilities as utilities
+from imc import database
+from imc import imclient
+from imc import tokens
+from imc import utilities
 
 # Configuration
 CONFIG = utilities.get_config()

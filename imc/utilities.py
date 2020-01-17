@@ -11,8 +11,8 @@ import configparser
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 
-import imc.opaclient as opaclient
-import imc.tokens as tokens
+from imc import opaclient
+from imc import tokens
 
 def get_config():
     """

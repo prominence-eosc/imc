@@ -9,11 +9,11 @@ from random import shuffle
 import logging
 import configparser
 
-import imc.destroy as destroy
-import imc.imclient as imclient
-import imc.opaclient as opaclient
-import imc.tokens as tokens
-import imc.utilities as utilities
+from imc import destroy
+from imc import imclient
+from imc import opaclient
+from imc import tokens
+from imc import utilities
 
 # Configuration
 CONFIG = utilities.get_config()

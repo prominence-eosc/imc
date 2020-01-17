@@ -10,16 +10,16 @@ import logging
 import configparser
 import tempfile
 
-import imc.ansible as ansible
-import imc.database as database
-import imc.deploy as deploy
-import imc.destroy as destroy
-import imc.imclient as imclient
-import imc.opaclient as opaclient
-import imc.tokens as tokens
-import imc.utilities as utilities
-import imc.cloud_images_flavours as cloud_images_flavours
-import imc.cloud_quotas as cloud_quotas
+from imc import ansible
+from imc import database
+from imc import deploy
+from imc import destroy
+from imc import imclient
+from imc import opaclient
+from imc import tokens
+from imc import utilities
+from imc import cloud_images_flavours
+from imc import cloud_quotas
 
 # Configuration
 CONFIG = utilities.get_config()
@@ -197,7 +197,7 @@ def deploy_job(db, radl_contents, requirements, preferences, unique_id, identity
                     return False
                 elif infra_status_new == 'deletion-requested':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
-                    delete(infra_id)       
+                    destroy.delete(infra_id)
                     return False
                 else:
                     db.deployment_update_status_with_retries(unique_id, 'configured', cloud, infra_id)
