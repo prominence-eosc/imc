@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "starting daemon with: $IMC_DAEMON $IMC_DAEMON_ARGS"
+echo "starting daemon with: $PROMINENCE_IMC_DAEMON $PROMINENCE_IMC_DAEMON_ARGS"
 echo ""
 
-eval "/usr/bin/imc-$IMC_DAEMON $IMC_DAEMON_ARGS"
+eval "/usr/bin/imc-$PROMINENCE_IMC_DAEMON $PROMINENCE_IMC_DAEMON_ARGS"
