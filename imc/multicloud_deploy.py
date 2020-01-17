@@ -192,11 +192,7 @@ def deploy_job(db, unique_id):
             return False
 
         # Deploy infrastructure
-        try:
-            infra_id = deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
-        except Exception as error:
-            logger.critical('Deployment error, this is a bug: %s', error)
-            print(error)
+        infra_id = deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
 
         if infra_id:
             success = True
