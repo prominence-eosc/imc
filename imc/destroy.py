@@ -77,7 +77,7 @@ def delete(unique_id):
                 db.close()
                 return False
 
-            destroyed = destroy.destroy(client, im_infra_id)
+            destroyed = destroy(client, im_infra_id)
 
             if destroyed:
                 db.deployment_update_status_with_retries(unique_id, 'deleted')
