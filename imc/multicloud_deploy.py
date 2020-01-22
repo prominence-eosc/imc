@@ -35,13 +35,13 @@ def deploy_job(db, unique_id):
     db.deployment_update_status_with_retries(unique_id, 'creating')
 
     # Get JSON description & identity from the DB
-    (description, identity) = db.deployment_get_json(infra_id)
+    (description, identity) = db.deployment_get_json(unique_id)
 
-     # Get RADL
+    # Get RADL
     radl_contents = utilities.get_radl(description)
     if not radl_contents:
         logging.critical('RADL must be provided')
-        db.deployment_update_status_with_retries(infra_id, 'unable')
+        db.deployment_update_status_with_retries(unique_id, 'unable')
         db.close()
         exit(1)
 
