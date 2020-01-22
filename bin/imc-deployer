@@ -2,10 +2,8 @@
 """Deploy infrastructure"""
 
 from __future__ import print_function
-import configparser
 import logging
-import re
-import os
+import random
 import sys
 import time
 
@@ -26,6 +24,9 @@ if __name__ == "__main__":
                         format='%(asctime)s %(message)s')
     
     logging.info('Starting deployment of infrastructure')
+
+    # Random sleep
+    time.sleep(random.randint(0, 4))
 
     db = database.get_db()
     if db.connect():
