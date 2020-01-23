@@ -4,7 +4,6 @@
 from __future__ import print_function
 import logging
 import random
-import sys
 import time
 
 from imc import database
@@ -17,12 +16,14 @@ from imc import utilities
 # Configuration
 CONFIG = utilities.get_config()
 
-if __name__ == "__main__":
-    infra_id = sys.argv[1]
+def deployer(infra_id):
+    """
+    Deploy infrastructure
+    """
     logging.basicConfig(filename=CONFIG.get('logs', 'filename').replace('.log', '-deployer-%s.log' % infra_id),
                         level=logging.INFO,
                         format='%(asctime)s %(message)s')
-    
+
     logging.info('Starting deployment of infrastructure')
 
     # Random sleep

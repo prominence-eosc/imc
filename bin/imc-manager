@@ -2,21 +2,15 @@
 """Runs infrastructure deploy and destroy workers"""
 
 from __future__ import print_function
-import configparser
+from concurrent.futures import ProcessPoolExecutor
 import logging
 from logging.handlers import RotatingFileHandler
-import re
-import os
-import psutil
-import sys
-import subprocess
 import time
 
 from imc import database
-from imc import imclient
-from imc import opaclient
-from imc import tokens
 from imc import utilities
+from imc import deployer
+from imc import destroyer
 
 # Configuration
 CONFIG = utilities.get_config()
@@ -35,34 +29,12 @@ logger.setLevel(logging.INFO)
 dbi = database.get_db()
 dbi.init()
 
-def get_num_deployers():
-    """
-    Count the number of running deployment workers
-    """
-    count = 0
-    for proc in psutil.process_iter():
-        if len(proc.cmdline()) > 1:
-            if proc.cmdline()[1] == '/usr/bin/imc-deployer':
-                count += 1
-    return count
-
-def get_num_destroyers():
-    """
-    Count the number of running destroyer workers
-    """
-    count = 0
-    for proc in psutil.process_iter():
-        if len(proc.cmdline()) > 1:
-            if proc.cmdline()[1] == '/usr/bin/imc-destroyer':
-                count += 1
-    return count
-
-def find_new_infra_for_creation(db):
+def find_new_infra_for_creation(db, executor):
     """
     Find infrastructure to be deployed
     """
     infras = db.deployment_get_infra_in_state_cloud('accepted', order=True)
-    current_deployers = get_num_deployers()
+    current_deployers = 0
     num_not_run = 0
 
     logger.info('Found %d infrastructures to deploy', len(infras))
@@ -70,7 +42,7 @@ def find_new_infra_for_creation(db):
     for infra in infras:
         if current_deployers + 1 < int(CONFIG.get('pool', 'deployers')):
             logger.info('Running deploying for infra %s', infra['id'])
-            subprocess.Popen(['/usr/bin/imc-deployer', infra['id']])
+            executor.submit(deployer.deployer, infra['id'])
             current_deployers += 1
         else:
             num_not_run += 1
@@ -78,12 +50,12 @@ def find_new_infra_for_creation(db):
     if num_not_run > 0:
         logger.info('Not running %d deployers as we already have enough', num_not_run)
 
-def find_new_infra_for_deletion(db):
+def find_new_infra_for_deletion(db, executor):
     """
     Find infrastructure to be destroyed
     """
     infras = db.deployment_get_infra_in_state_cloud('deletion-requested')
-    current_destroyers = get_num_destroyers()
+    current_destroyers = 0
     num_not_run = 0
 
     logger.info('Found %d infrastructures to delete', len(infras))
@@ -91,7 +63,7 @@ def find_new_infra_for_deletion(db):
     for infra in infras:
         if current_destroyers + 1 < int(CONFIG.get('pool', 'deleters')):
             logger.info('Running destroyer for infra %s', infra['id'])
-            subprocess.Popen(['/usr/bin/imc-destroyer', infra['id']])
+            executor.submit(destroyer.destroyer, infra['id'])
             current_destroyers += 1
         else:
             num_not_run += 1
@@ -100,11 +72,15 @@ def find_new_infra_for_deletion(db):
         logger.info('Not running %d destroyers as we already have enough', num_not_run)
 
 if __name__ == "__main__":
+    executor_deployers = ProcessPoolExecutor(int(CONFIG.get('pool', 'deployers')))
+    executor_deleters = ProcessPoolExecutor(int(CONFIG.get('pool', 'deleters')))
+
     while True:
         db = database.get_db()
         if db.connect():
-            find_new_infra_for_creation(db)
-            find_new_infra_for_deletion(db)
+            find_new_infra_for_deletion(db, executor_deployers)
+            find_new_infra_for_creation(db, executor_deleters)
             db.close()
+
         time.sleep(30)
 
