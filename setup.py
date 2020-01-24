@@ -16,7 +16,7 @@ setuptools.setup(
     platforms=["any"],
     install_requires=["requests", "paramiko", "psycopg2", "psutil", "flask"],
     package_dir={'': '.'},
-    scripts=["bin/imc-cleaner", "bin/imc-deployer", "bin/imc-destroyer", "bin/imc-manager", "bin/imc-restapi"],
+    scripts=["bin/imc-cleaner", "bin/imc-manager", "bin/imc-restapi"],
     packages=['imc'],
     package_data={"": ["README.md"]},
 )
