@@ -5,6 +5,7 @@ from __future__ import print_function
 from concurrent.futures import ProcessPoolExecutor
 import logging
 from logging.handlers import RotatingFileHandler
+import signal
 import time
 
 from imc import database
@@ -28,6 +29,16 @@ logger.setLevel(logging.INFO)
 # Initialize DB if necessary
 dbi = database.get_db()
 dbi.init()
+
+EXIT_NOW = False
+
+def handle_signal(signum, frame):
+    """
+    Handle signals
+    """
+    global EXIT_NOW
+    EXIT_NOW = True
+    logger.info('Received signal %d, shutting down...', signum)
 
 def find_new_infra_for_creation(db, executor):
     """
@@ -72,10 +83,16 @@ def find_new_infra_for_deletion(db, executor):
         logger.info('Not running %d destroyers as we already have enough', num_not_run)
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, handle_signal)
+
     executor_deployers = ProcessPoolExecutor(int(CONFIG.get('pool', 'deployers')))
     executor_deleters = ProcessPoolExecutor(int(CONFIG.get('pool', 'deleters')))
 
     while True:
+        if EXIT_NOW:
+            logger.info('Exiting')
+            exit(0)
+ 
         db = database.get_db()
         if db.connect():
             find_new_infra_for_deletion(db, executor_deployers)
