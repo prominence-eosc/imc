@@ -5,12 +5,14 @@ import os
 import sys
 from string import Template
 import time
-from random import shuffle
+import random
 import logging
 import configparser
 
+from imc import database
 from imc import destroy
 from imc import imclient
+from imc import multicloud_deploy
 from imc import opaclient
 from imc import tokens
 from imc import utilities
@@ -20,6 +22,35 @@ CONFIG = utilities.get_config()
 
 # Logging
 logger = logging.getLogger(__name__)
+
+def deployer(infra_id):
+    """
+    Deploy infrastructure
+    """
+    logging.basicConfig(filename=CONFIG.get('logs', 'filename').replace('.log', '-deploy-%s.log' % infra_id),
+                        level=logging.INFO,
+                        format='%(asctime)s %(message)s')
+
+    logging.info('Starting deployment of infrastructure')
+
+    # Random sleep
+    time.sleep(random.randint(0, 4))
+
+    db = database.get_db()
+    if db.connect():
+        logging.info('Connected to DB, about to deploy infrastructure for job')
+
+        # Deploy infrastructure
+        success = multicloud_deploy.deploy_job(db, infra_id)
+
+        if not success:
+            db.deployment_update_status_with_retries(infra_id, 'unable')
+        db.close()
+
+    if not success:
+        logging.critical('Unable to deploy infrastructure on any cloud')
+
+    logging.info('Completed deploying infrastructure')
 
 def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     """
@@ -55,7 +86,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     if 'availability_zones' in cloud_info:
         availability_zones = cloud_info['availability_zones']
         if availability_zones:
-            shuffle(availability_zones)
+            random.shuffle(availability_zones)
             logger.info('Using availability zone %s', availability_zones[0])
             radl_base = utilities.set_availability_zone(radl_base, availability_zones[0])
 
