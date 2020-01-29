@@ -87,11 +87,15 @@ def set_quotas(requirements, db, identity, opa_client, config):
             # Get a scoped token if necessary from Keystone
             if token:
                 logger.info('Getting a scoped token from Keystone')
-                token = tokens.get_scoped_token(credentials['host'], credentials['project_id'],
-                                                tokens.get_unscoped_token(credentials['host'],
-                                                                          token,
-                                                                          credentials['username'],
-                                                                          credentials['tenant']))
+                try:
+                    token = tokens.get_scoped_token(credentials['host'], credentials['project_id'],
+                                                    tokens.get_unscoped_token(credentials['host'],
+                                                                              token,
+                                                                              credentials['username'],
+                                                                              credentials['tenant']))
+                except timeout_decorator.timeout_decorator.TimeoutError:
+                    logger.critical('Unable to get a scoped token from Keystone due to a timeout')
+                    continue
 
             # Check if the cloud hasn't been updated recently
             logger.info('Checking if we need to update cloud %s quotas', name)
