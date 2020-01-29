@@ -10,6 +10,7 @@ import configparser
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
+import timeout_decorator
 
 from imc import opaclient
 from imc import tokens
@@ -56,6 +57,7 @@ def compare_dicts(cloud1, cloud2):
             return False
     return True
 
+@timeout_decorator.timeout(60)
 def generate_images_and_flavours(config, cloud, token):
     """
     Create a list of images and flavours available on the specified cloud
@@ -139,11 +141,14 @@ def update_cloud_details(requirements, db, identity, opa_client, config):
 
         # Get new images & flavours
         logger.info('Getting list of new images and flavours')
-        new_data = generate_images_and_flavours(cloud, name, token)
+        try:
+            new_data = generate_images_and_flavours(cloud, name, token)
+        except timeout_decorator.timeout_decorator.TimeoutError:
+            new_data = {'images':{}, 'flavours':{}}
 
         # Check if need to continue with this cloud
         if not new_data['images'] and not new_data['flavours']:
-            logger.info('Not continuing with considering updating details for cloud %s', name)
+            logger.info('Not continuing with considering updating details for cloud %s as there is no data', name)
             continue
     
         # Get old images & flavours

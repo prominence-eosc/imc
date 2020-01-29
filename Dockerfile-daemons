@@ -13,7 +13,8 @@ RUN apk add --no-cache gcc \
                        py3-psutil \
                        py3-pip && \
     pip3 install apache-libcloud && \
-    pip3 install python-openstackclient
+    pip3 install python-openstackclient && \
+    pip3 install timeout-decorator
 
 RUN mkdir /tmp/imc
 COPY setup.py /tmp/imc/.

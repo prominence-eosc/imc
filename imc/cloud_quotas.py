@@ -8,6 +8,7 @@ import time
 import configparser
 
 from novaclient import client
+import timeout_decorator
 
 from imc import opaclient
 from imc import tokens
@@ -19,6 +20,7 @@ CONFIG = utilities.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
+@timeout_decorator.timeout(60)
 def get_quotas_openstack(cloud, credentials, token):
     """
     Get quotas remaining for an OpenStack cloud
@@ -101,7 +103,10 @@ def set_quotas(requirements, db, identity, opa_client, config):
  
             if time.time() - update_time > int(CONFIG.get('updates', 'quotas')):
                 logger.info('Quotas for cloud %s have not been updated recently, so getting current values', name)
-                (instances, cores, memory) = get_quotas_openstack(name, credentials, token)
+                try:
+                    (instances, cores, memory) = get_quotas_openstack(name, credentials, token)
+                except timeout_decorator.timeout_decorator.TimeoutError:
+                    (instances, cores, memory) = (None, None, None)
         elif credentials['type'] != 'InfrastructureManager':
             logger.warning('Unable to determine quotas for cloud %s of type %s', name, credentials['type'])
 

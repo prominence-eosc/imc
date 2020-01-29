@@ -10,6 +10,7 @@ import configparser
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
+import timeout_decorator
 
 from imc import opaclient
 from imc import tokens
@@ -312,11 +313,17 @@ def update_clouds_status(opa_client, db, identity, config):
         # Get a token if necessary
         token = tokens.get_token(name, identity, db, config)
 
-        status = check_cloud(name, cloud_info, token)
-        if not status:
-            logger.info('Setting status of cloud %s to down', name)
+        try:
+            status = check_cloud(name, cloud_info, token)
+        except timeout_decorator.timeout_decorator.TimeoutError:
+            logger.info('Setting status of cloud %s to down due to timeout', name)
             opa_client.set_status(name, 'down')
+        else:
+            if not status:
+                logger.info('Setting status of cloud %s to down', name)
+                opa_client.set_status(name, 'down')
 
+@timeout_decorator.timeout(60)
 def check_cloud(cloud, config, token):
     """
     Check if a cloud is functional by listing VMs
