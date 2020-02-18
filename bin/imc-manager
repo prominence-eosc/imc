@@ -44,8 +44,15 @@ def find_new_infra_for_creation(db, executor):
     """
     Find infrastructure to be deployed
     """
+    # Get all new infrastructures to deploy
     infras = db.deployment_get_infra_in_state_cloud('accepted', order=True)
 
+    # Include any infrastructures which have been in the waiting state for long enough
+    infras_waiting = db.deployment_get_infra_in_state_cloud('waiting', order=True)
+    for infra in infras_waiting:
+        if time.time() - infra['updated'] > 15*60:
+            infras.append(infra)
+            
     current_deployers = 0
     num_not_run = 0
 
