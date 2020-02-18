@@ -44,7 +44,10 @@ def find_new_infra_for_creation(db, executor):
     """
     Find infrastructure to be deployed
     """
-    infras = db.deployment_get_infra_in_state_cloud('accepted', order=True)
+    infras = []
+    infras.append(db.deployment_get_infra_in_state_cloud('accepted', order=True))
+    infras.append(db.deployment_get_infra_in_state_cloud('waiting', order=True))
+
     current_deployers = 0
     num_not_run = 0
 
