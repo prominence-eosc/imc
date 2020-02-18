@@ -16,11 +16,12 @@ from imc import utilities
 
 # Configuration
 CONFIG = utilities.get_config()
+CLOUD_TIMEOUT = int(CONFIG.get('timeouts', 'cloud'))
 
 # Logging
 logger = logging.getLogger(__name__)
 
-@timeout_decorator.timeout(60)
+@timeout_decorator.timeout(CLOUD_TIMEOUT)
 def get_quotas_openstack(cloud, credentials, token):
     """
     Get quotas remaining for an OpenStack cloud
