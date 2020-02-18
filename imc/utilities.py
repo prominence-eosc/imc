@@ -30,7 +30,8 @@ def get_config():
     return config
 
 # Configuration
-CONFIG = get_config()
+CONFIG = utilities.get_config()
+CLOUD_TIMEOUT = int(CONFIG.get('timeouts', 'cloud'))
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -323,7 +324,7 @@ def update_clouds_status(opa_client, db, identity, config):
                 logger.info('Setting status of cloud %s to down', name)
                 opa_client.set_status(name, 'down')
 
-@timeout_decorator.timeout(60)
+@timeout_decorator.timeout(CLOUD_TIMEOUT)
 def check_cloud(cloud, config, token):
     """
     Check if a cloud is functional by listing VMs
