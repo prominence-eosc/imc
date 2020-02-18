@@ -44,9 +44,7 @@ def find_new_infra_for_creation(db, executor):
     """
     Find infrastructure to be deployed
     """
-    infras = []
-    infras.append(db.deployment_get_infra_in_state_cloud('accepted', order=True))
-    infras.append(db.deployment_get_infra_in_state_cloud('waiting', order=True))
+    infras = db.deployment_get_infra_in_state_cloud('accepted', order=True)
 
     current_deployers = 0
     num_not_run = 0
@@ -55,6 +53,7 @@ def find_new_infra_for_creation(db, executor):
 
     for infra in infras:
         if current_deployers + 1 < int(CONFIG.get('pool', 'deployers')):
+            if infra['state']
             logger.info('Running deploying for infra %s', infra['id'])
             executor.submit(deployer.deployer, infra['id'])
             current_deployers += 1
