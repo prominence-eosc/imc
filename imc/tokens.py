@@ -13,6 +13,12 @@ except ImportError:
 
 import timeout_decorator
 
+from imc import utilities
+
+# Configuration
+CONFIG = utilities.get_config()
+CLOUD_TIMEOUT = int(CONFIG.get('timeouts', 'cloud'))
+
 # Logging
 logger = logging.getLogger(__name__)
 
@@ -180,7 +186,7 @@ def get_unscoped_token(os_auth_url, access_token, username, tenant_name):
         return response.headers['X-Subject-Token']
     return None
 
-@timeout_decorator.timeout(60)
+@timeout_decorator.timeout(CLOUD_TIMEOUT)
 def get_scoped_token(os_auth_url, os_project_id, unscoped_token):
     """
     Get a scoped token from an unscoped token
