@@ -18,6 +18,7 @@ from imc import utilities
 
 # Configuration
 CONFIG = utilities.get_config()
+CLOUD_TIMEOUT = int(CONFIG.get('timeouts', 'cloud'))
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ def compare_dicts(cloud1, cloud2):
             return False
     return True
 
-@timeout_decorator.timeout(60)
+@timeout_decorator.timeout(CLOUD_TIMEOUT)
 def generate_images_and_flavours(config, cloud, token):
     """
     Create a list of images and flavours available on the specified cloud
