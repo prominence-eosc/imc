@@ -54,7 +54,8 @@ def deploy_job(db, unique_id):
     requirements['resources']['instances'] = instances
 
     # Generate JSON to be given to Open Policy Agent
-    userdata = {'requirements':requirements, 'preferences':preferences}
+    userdata = {'requirements':requirements, 'preferences':preferences, 'include_usage': 1}
+    userdata_check = {'requirements':requirements, 'preferences':preferences}
 
     # Setup Open Policy Agent client
     opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
@@ -69,6 +70,19 @@ def deploy_job(db, unique_id):
     # Update cloud images & flavours if necessary
     logger.info('Updating cloud images and flavours if necessary')
     cloud_images_flavours.update_cloud_details(requirements, db, identity, opa_client, clouds_info_list)
+
+    # Check if deployment could be possible, ignoring current quotas/usage
+    logger.info('Checking if job requirements will match any clouds')
+    try:
+        clouds_check = opa_client.get_clouds(userdata_check)
+    except Exception as err:
+        logger.critical('Unable to get list of clouds due to %s:', err)
+        return False
+
+    if not clouds_check:
+        logger.critical('No clouds exist which meet the requested requirements')
+        db.deployment_update_status_reason(unique_id, 'NoMatchingResources')
+        return False
 
     # Update quotas if necessary
     logger.info('Updating cloud quotas if necessary')
@@ -89,7 +103,7 @@ def deploy_job(db, unique_id):
 
     if not clouds:
         logger.critical('No clouds exist which meet the requested requirements')
-        db.deployment_update_status_reason(unique_id, 'NoMatchingResources')
+        db.deployment_update_status_reason(unique_id, 'NoMatchingResourcesAvailable')
         return False
 
     # Shuffle list of clouds
@@ -110,7 +124,7 @@ def deploy_job(db, unique_id):
     # Check if we still have any clouds meeting requirements & preferences
     if not clouds_ranked:
         logger.critical('No suitables clouds after ranking - if we get to this point there must be a bug in the OPA policy')
-        db.deployment_update_status_reason(unique_id, 'NoMatchingResources')
+        db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
         return False
 
     # Check if we should stop
