@@ -135,9 +135,14 @@ satisfies_static_quotas(cloud) {
 
 # Quotas - dynamic
 satisfies_dynamic_quotas(cloud) {
+    not input.ignore_usage
     input.requirements.resources.cores * input.requirements.resources.instances <= status[cloud.name].quota.cpus
     input.requirements.resources.memory * input.requirements.resources.instances <= status[cloud.name].quota.memory
     input.requirements.resources.instances <= status[cloud.name].quota.instances
+}
+
+satisfies_dynamic_quotas(cloud) {
+    input.ignore_usage
 }
 
 satisfies_dynamic_quotas(cloud) {
