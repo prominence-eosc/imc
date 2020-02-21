@@ -54,8 +54,8 @@ def deploy_job(db, unique_id):
     requirements['resources']['instances'] = instances
 
     # Generate JSON to be given to Open Policy Agent
-    userdata = {'requirements':requirements, 'preferences':preferences, 'include_usage': 1}
-    userdata_check = {'requirements':requirements, 'preferences':preferences}
+    userdata = {'requirements':requirements, 'preferences':preferences}
+    userdata_check = {'requirements':requirements, 'preferences':preferences, 'ignore_usage': True}
 
     # Setup Open Policy Agent client
     opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
