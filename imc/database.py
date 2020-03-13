@@ -130,7 +130,7 @@ class Database(object):
         """
         query = ""
         if cloud:
-            query = "AND cloud='%s'" % cloud
+            query = "AND resource_name='%s'" % cloud
         if order:
             query += " ORDER BY creation ASC"
         infra = []
