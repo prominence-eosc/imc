@@ -23,7 +23,7 @@ CONFIG = utilities.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
+def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     """
     Deploy infrastructure from a specified RADL file
     """
