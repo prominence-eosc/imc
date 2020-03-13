@@ -34,7 +34,7 @@ def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     token = tokens.get_token(cloud, identity, db, clouds_info_list)
 
     # Setup Open Policy Agent client
-    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'),
+    client_opa = opaclient.OPAClient(url=CONFIG.get('opa', 'url'),
                                      timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Setup Infrastructure Manager client
@@ -53,7 +53,7 @@ def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
         radl_base = radl
 
     # Set availability zone in RADL if necessary
-    cloud_info = opa_client.get_cloud(cloud)
+    cloud_info = client_opa.get_cloud(cloud)
     if 'availability_zones' in cloud_info:
         availability_zones = cloud_info['availability_zones']
         if availability_zones:
@@ -194,21 +194,21 @@ def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                 # Destroy infrastructure which is taking too long to enter the configured state
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'configured')):
                     logger.warning('Waiting too long for infrastructure to be configured, so destroying')
-                    opa_client.set_status(cloud, 'configuration-too-long')
+                    client_opa.set_status(cloud, 'configuration-too-long')
                     cloud_destroy.destroy(client, infrastructure_id)
                     break
 
                 # Destroy infrastructure which is taking too long to enter the running state
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes == 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
-                    opa_client.set_status(cloud, 'pending-too-long')
+                    client_opa.set_status(cloud, 'pending-too-long')
                     cloud_destroy.destroy(client, infrastructure_id)
                     break
 
                 # FIXME: This factor of 3 is a hack
                 if time.time() - time_created > 3*int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes > 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
-                    opa_client.set_status(cloud, 'pending-too-long')
+                    client_opa.set_status(cloud, 'pending-too-long')
                     cloud_destroy.destroy(client, infrastructure_id)
                     break
 
@@ -251,7 +251,7 @@ def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                         # so it's best to just start again
                         if failed_vms == num_nodes:
                             logger.warning('All VMs failed and deleted, so destroying infrastructure')
-                            opa_client.set_status(cloud, state)
+                            client_opa.set_status(cloud, state)
                             cloud_destroy.destroy(client, infrastructure_id)
                             break
 
@@ -259,7 +259,7 @@ def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
 
                     else:
                         logger.warning('Infrastructure creation failed on cloud %s, so destroying', cloud)
-                        opa_client.set_status(cloud, state)
+                        client_opa.set_status(cloud, state)
                         cloud_destroy.destroy(client, infrastructure_id)
                         break
 
@@ -278,7 +278,7 @@ def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                         client.reconfigure(infrastructure_id, int(CONFIG.get('timeouts', 'reconfigure')))
                     else:
                         logger.warning('Infrastructure has been unconfigured too many times, so destroying after writing contmsg to a file')
-                        opa_client.set_status(cloud, state)
+                        client_opa.set_status(cloud, state)
                         try:
                             with open(file_unconf, 'w') as unconf:
                                 unconf.write(contmsg)
@@ -290,10 +290,10 @@ def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
             logger.warning('Deployment failure on cloud %s with id %s with msg="%s"', cloud, infrastructure_id, msg)
             if msg == 'timedout':
                 logger.warning('Infrastructure creation failed due to a timeout')
-                opa_client.set_status(cloud, 'creation-timeout')
+                client_opa.set_status(cloud, 'creation-timeout')
             else:
                 file_failed = '%s/failed-%s-%d.txt' % (CONFIG.get('logs', 'contmsg'), unique_id, time.time())
-                opa_client.set_status(cloud, 'creation-failed')
+                client_opa.set_status(cloud, 'creation-failed')
                 logger.warning('Infrastructure creation failed, writing stdout/err to file "%s"', file_failed)
                 try:
                     with open(file_failed, 'w') as failed:

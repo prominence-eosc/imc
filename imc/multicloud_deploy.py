@@ -59,23 +59,23 @@ def deploy_job(db, unique_id):
     userdata_check = {'requirements':requirements, 'preferences':preferences, 'ignore_usage': True}
 
     # Setup Open Policy Agent client
-    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+    client_opa = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Update available clouds & their static info if necessary
     logger.info('Updating static cloud info')
-    utilities.update_clouds(opa_client, CONFIG.get('clouds', 'path'))
+    utilities.update_clouds(client_opa, CONFIG.get('clouds', 'path'))
 
     # Get full list of cloud info
     clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
 
     # Update cloud images & flavours if necessary
     logger.info('Updating cloud images and flavours if necessary')
-    cloud_images_flavours.update_cloud_details(requirements, db, identity, opa_client, clouds_info_list)
+    cloud_images_flavours.update_cloud_details(requirements, db, identity, client_opa, clouds_info_list)
 
     # Check if deployment could be possible, ignoring current quotas/usage
     logger.info('Checking if job requirements will match any clouds')
     try:
-        clouds_check = opa_client.get_clouds(userdata_check)
+        clouds_check = client_opa.get_clouds(userdata_check)
     except Exception as err:
         logger.critical('Unable to get list of clouds due to %s:', err)
         return False
@@ -87,15 +87,15 @@ def deploy_job(db, unique_id):
 
     # Update quotas if necessary
     logger.info('Updating cloud quotas if necessary')
-    cloud_quotas.set_quotas(requirements, db, identity, opa_client, clouds_info_list)
+    cloud_quotas.set_quotas(requirements, db, identity, client_opa, clouds_info_list)
 
     # Check if clouds are functional
     logger.info('Checking if clouds are functional')
-    utilities.update_clouds_status(opa_client, db, identity, clouds_info_list)
+    utilities.update_clouds_status(client_opa, db, identity, clouds_info_list)
 
     # Get list of clouds meeting the specified requirements
     try:
-        clouds = opa_client.get_clouds(userdata)
+        clouds = client_opa.get_clouds(userdata)
     except Exception as err:
         logger.critical('Unable to get list of clouds due to %s:', err)
         return False
@@ -112,7 +112,7 @@ def deploy_job(db, unique_id):
 
     # Rank clouds as needed
     try:
-        clouds_ranked = opa_client.get_ranked_clouds(userdata, clouds)
+        clouds_ranked = client_opa.get_ranked_clouds(userdata, clouds)
     except Exception as err:
         logger.critical('Unable to get list of ranked clouds due to:', err)
         return False
@@ -143,13 +143,13 @@ def deploy_job(db, unique_id):
         cloud = item['site']
         
         try:
-            image = opa_client.get_image(userdata, cloud)
+            image = client_opa.get_image(userdata, cloud)
         except Exception as err:
             logger.critical('Unable to get image due to:', err)
             return False
 
         try:
-            flavour = opa_client.get_flavour(userdata, cloud)
+            flavour = client_opa.get_flavour(userdata, cloud)
         except Exception as err:
             logger.critical('Unable to get flavour due to:', err)
             return False

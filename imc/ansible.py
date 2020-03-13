@@ -212,17 +212,17 @@ def deploy_ansible_node(cloud, db):
     userdata = {'requirements':requirements, 'preferences':{}}
 
     # Setup Open Policy Agent client
-    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+    client_opa = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Get the image & flavour
     try:
-        image = opa_client.get_image(userdata, cloud)
+        image = client_opa.get_image(userdata, cloud)
     except Exception as err:
         logger.critical('Unable to get image due to:', err)
         return None
 
     try:
-        flavour = opa_client.get_flavour(userdata, cloud)
+        flavour = client_opa.get_flavour(userdata, cloud)
     except Exception as err:
         logger.critical('Unable to get flavour due to:', err)
         return None

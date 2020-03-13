@@ -65,7 +65,7 @@ def get_quotas_openstack(cloud, credentials, token):
     instances_available = quotas_dict['instances']['limit'] - quotas_dict['instances']['in_use'] - quotas_dict['instances']['reserved']
     return (instances_available, cores_available, int(memory_available/1024))
 
-def set_quotas(requirements, db, identity, opa_client, config):
+def set_quotas(requirements, db, identity, client_opa, config):
     """
     Determine the available remaining quotas and set in Open Policy Agent
     """
@@ -101,7 +101,7 @@ def set_quotas(requirements, db, identity, opa_client, config):
             # Check if the cloud hasn't been updated recently
             logger.info('Checking if we need to update cloud %s quotas', name)
             try:
-                update_time = opa_client.get_quota_update_time(name)
+                update_time = client_opa.get_quota_update_time(name)
             except Exception as err:
                 logger.critical('Unable to get quota update time due to:', err)
                 return False
@@ -117,7 +117,7 @@ def set_quotas(requirements, db, identity, opa_client, config):
 
         if instances and cores and memory:
             logger.info('Setting updated quotas for cloud %s: instances %d, cpus %d, memory %d', name, instances, cores, memory)
-            opa_client.set_quotas(name, instances, cores, memory)
+            client_opa.set_quotas(name, instances, cores, memory)
         else:
             logger.info('Not setting updated quotas for cloud %s', name)
 

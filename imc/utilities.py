@@ -217,7 +217,7 @@ def compare_dicts(cloud1, cloud2, ignores):
             return False
     return True
 
-def update_clouds(opa_client, path):
+def update_clouds(client_opa, path):
     """
     Update clouds
     """
@@ -234,21 +234,21 @@ def update_clouds(opa_client, path):
         logger.info('Checking cloud %s', name)
 
         try:
-            old_cloud = opa_client.get_cloud(name)
+            old_cloud = client_opa.get_cloud(name)
         except Exception as err:
             logger.critical('Unable to get cloud info due to %s:', err)
             return
 
         if not compare_dicts(new_cloud_info[new_cloud], old_cloud, ['images', 'flavours', 'updated']):
             logger.info('Updating cloud %s', name)
-            opa_client.set_cloud(name, new_cloud_info[new_cloud])
+            client_opa.set_cloud(name, new_cloud_info[new_cloud])
 
     # Remove clouds if necessary
-    existing_clouds = opa_client.get_all_clouds()
+    existing_clouds = client_opa.get_all_clouds()
     for cloud in existing_clouds:
         if cloud not in new_cloud_names:
             logger.info('Removing cloud %s from Open Policy Agent', cloud)
-            opa_client.delete_cloud(cloud)
+            client_opa.delete_cloud(cloud)
 
     logger.info('Completed updating static cloud info')
 
@@ -303,7 +303,7 @@ def connect_to_cloud(cloud, config, token):
 
     return conn
 
-def update_clouds_status(opa_client, db, identity, config):
+def update_clouds_status(client_opa, db, identity, config):
     """
     Update status of each cloud
     """
@@ -318,11 +318,11 @@ def update_clouds_status(opa_client, db, identity, config):
             status = check_cloud(name, cloud_info, token)
         except timeout_decorator.timeout_decorator.TimeoutError:
             logger.info('Setting status of cloud %s to down due to timeout', name)
-            opa_client.set_status(name, 'down')
+            client_opa.set_status(name, 'down')
         else:
             if not status:
                 logger.info('Setting status of cloud %s to down', name)
-                opa_client.set_status(name, 'down')
+                client_opa.set_status(name, 'down')
 
 @timeout_decorator.timeout(CLOUD_TIMEOUT)
 def check_cloud(cloud, config, token):
