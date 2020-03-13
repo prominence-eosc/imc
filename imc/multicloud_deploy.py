@@ -15,7 +15,7 @@ from imc import database
 from imc import batch_deploy
 from imc import cloud_deploy
 from imc import destroy
-from imc import imclient
+from imc import im_client
 from imc import opaclient
 from imc import tokens
 from imc import utilities
