@@ -82,8 +82,9 @@ class Database(object):
                                           description JSON NOT NULL,
                                           status TEXT NOT NULL,
                                           status_reason TEXT,
-                                          im_infra_id TEXT,
-                                          cloud TEXT,
+                                          resource_id TEXT,
+                                          resource_name TEXT,
+                                          resource_type TEXT NOT NULL,
                                           identity TEXT,
                                           identifier TEXT,
                                           creation INT NOT NULL,
@@ -225,7 +226,7 @@ class Database(object):
 
         try:
             cursor = self._connection.cursor()
-            cursor.execute("SELECT id,status,cloud FROM deployments WHERE im_infra_id='%s'" % im_infra_id)
+            cursor.execute("SELECT id,status,resource_name FROM deployments WHERE resource_id='%s'" % im_infra_id)
             for row in cursor:
                 infra_id = row[0]
                 status = row[1]
@@ -247,7 +248,7 @@ class Database(object):
 
         try:
             cursor = self._connection.cursor()
-            cursor.execute("SELECT im_infra_id,status,cloud,creation,updated FROM deployments WHERE id='%s'" % infra_id)
+            cursor.execute("SELECT resource_id,status,resource_name,creation,updated FROM deployments WHERE id='%s'" % infra_id)
             for row in cursor:
                 im_infra_id = row[0]
                 status = row[1]
@@ -326,11 +327,11 @@ class Database(object):
         try:
             cursor = self._connection.cursor()
             if cloud and im_infra_id and status:
-                cursor.execute("UPDATE deployments SET status='%s',cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (status, cloud, im_infra_id, time.time(), infra_id))
+                cursor.execute("UPDATE deployments SET status='%s',resource_name='%s',resource_id='%s',updated=%d WHERE id='%s'" % (status, cloud, im_infra_id, time.time(), infra_id))
             elif cloud and status:
-                cursor.execute("UPDATE deployments SET status='%s',cloud='%s',updated=%d WHERE id='%s'" % (status, cloud, time.time(), infra_id))
+                cursor.execute("UPDATE deployments SET status='%s',resource_name='%s',updated=%d WHERE id='%s'" % (status, cloud, time.time(), infra_id))
             elif im_infra_id and cloud and not status:
-                cursor.execute("UPDATE deployments SET cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (cloud, im_infra_id, time.time(), infra_id))
+                cursor.execute("UPDATE deployments SET resource_name='%s',resource_id='%s',updated=%d WHERE id='%s'" % (cloud, im_infra_id, time.time(), infra_id))
             elif status:
                 cursor.execute("UPDATE deployments SET status='%s',updated=%d WHERE id='%s'" % (status, time.time(), infra_id))
             self._connection.commit()
