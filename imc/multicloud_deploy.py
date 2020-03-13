@@ -14,7 +14,7 @@ from imc import ansible
 from imc import database
 from imc import batch_deploy
 from imc import cloud_deploy
-from imc import destroy
+from imc import cloud_destroy
 from imc import im_client
 from imc import opa_client
 from imc import tokens
@@ -218,7 +218,7 @@ def deploy_job(db, unique_id):
                     return False
                 elif infra_status_new == 'deletion-requested':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
-                    destroy.delete(infra_id)
+                    cloud_destroy.delete(infra_id)
                     return False
                 else:
                     db.deployment_update_status_with_retries(unique_id, 'configured', cloud, infra_id)

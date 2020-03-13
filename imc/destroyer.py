@@ -6,7 +6,7 @@ import time
 import logging
 
 from imc import database
-from imc import destroy
+from imc import cloud_destroy
 from imc import utilities
 
 # Configuration
@@ -30,7 +30,7 @@ def destroyer(infra_id):
 
     db = database.get_db()
     if db.connect():
-        destroy.delete(infra_id)
+        cloud_destroy.delete(infra_id)
         db.close()
 
     logging.info('Completed deleting infrastructure')
