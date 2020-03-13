@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 def deploy_job(db, unique_id):
     """
-    Find an appropriate cloud to deploy infrastructure
+    Find an appropriate resource to deploy infrastructure
     """
     # Update status as we are now handing deployment of the infrastructure
     db.deployment_update_status_with_retries(unique_id, 'creating')
@@ -73,15 +73,15 @@ def deploy_job(db, unique_id):
     cloud_images_flavours.update_cloud_details(requirements, db, identity, client_opa, clouds_info_list)
 
     # Check if deployment could be possible, ignoring current quotas/usage
-    logger.info('Checking if job requirements will match any clouds')
+    logger.info('Checking if job requirements will match any resources')
     try:
         clouds_check = client_opa.get_clouds(userdata_check)
     except Exception as err:
-        logger.critical('Unable to get list of clouds due to %s:', err)
+        logger.critical('Unable to get list of resources due to %s:', err)
         return False
 
     if not clouds_check:
-        logger.critical('No clouds exist which meet the requested requirements')
+        logger.critical('No resources exist which meet the requested requirements')
         db.deployment_update_status_reason(unique_id, 'NoMatchingResources')
         return False
 
@@ -100,31 +100,31 @@ def deploy_job(db, unique_id):
         logger.critical('Unable to get list of clouds due to %s:', err)
         return False
 
-    logger.info('Suitable clouds = [%s]', ','.join(clouds))
+    logger.info('Suitable resources = [%s]', ','.join(clouds))
 
     if not clouds:
-        logger.critical('No clouds exist which meet the requested requirements')
+        logger.critical('No resources exist which meet the requested requirements')
         db.deployment_update_status_reason(unique_id, 'NoMatchingResourcesAvailable')
         return False
 
-    # Shuffle list of clouds
+    # Shuffle list of resources
     shuffle(clouds)
 
-    # Rank clouds as needed
+    # Rank resources as needed
     try:
         clouds_ranked = client_opa.get_ranked_clouds(userdata, clouds)
     except Exception as err:
-        logger.critical('Unable to get list of ranked clouds due to:', err)
+        logger.critical('Unable to get list of ranked resources due to:', err)
         return False
 
     clouds_ranked_list = []
     for item in sorted(clouds_ranked, key=lambda k: k['weight'], reverse=True):
         clouds_ranked_list.append(item['site'])
-    logger.info('Ranked clouds = [%s]', ','.join(clouds_ranked_list))
+    logger.info('Ranked resources = [%s]', ','.join(clouds_ranked_list))
 
-    # Check if we still have any clouds meeting requirements & preferences
+    # Check if we still have any resources meeting requirements & preferences
     if not clouds_ranked:
-        logger.critical('No suitables clouds after ranking - if we get to this point there must be a bug in the OPA policy')
+        logger.critical('No suitables resources after ranking - if we get to this point there must be a bug in the OPA policy')
         db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
         return False
 
