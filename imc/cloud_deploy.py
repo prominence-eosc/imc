@@ -12,7 +12,6 @@ import configparser
 from imc import database
 from imc import cloud_destroy
 from imc import im_client
-from imc import multicloud_deploy
 from imc import opa_client
 from imc import tokens
 from imc import utilities

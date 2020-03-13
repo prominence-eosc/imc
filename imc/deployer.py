@@ -6,7 +6,7 @@ import random
 import logging
 
 from imc import database
-from imc import multicloud_deploy
+from imc import provisioner
 from imc import utilities
 
 # Configuration
@@ -33,7 +33,7 @@ def deployer(infra_id):
         logging.info('Connected to DB, about to deploy infrastructure for job')
 
         # Deploy infrastructure
-        success = multicloud_deploy.deploy_job(db, infra_id)
+        success = provisioner.deploy_job(db, infra_id)
 
         if not success:
             db.deployment_update_status_with_retries(infra_id, 'unable')
