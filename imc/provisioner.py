@@ -59,7 +59,7 @@ def deploy_job(db, unique_id):
     userdata_check = {'requirements':requirements, 'preferences':preferences, 'ignore_usage': True}
 
     # Setup Open Policy Agent client
-    client_opa = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+    client_opa = opa_client.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Update available clouds & their static info if necessary
     logger.info('Updating static cloud info')

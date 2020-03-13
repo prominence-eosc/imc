@@ -212,7 +212,7 @@ def deploy_ansible_node(cloud, db):
     userdata = {'requirements':requirements, 'preferences':{}}
 
     # Setup Open Policy Agent client
-    client_opa = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+    client_opa = opa_client.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Get the image & flavour
     try:

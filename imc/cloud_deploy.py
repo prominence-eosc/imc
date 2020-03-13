@@ -33,7 +33,7 @@ def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     token = tokens.get_token(cloud, identity, db, clouds_info_list)
 
     # Setup Open Policy Agent client
-    client_opa = opaclient.OPAClient(url=CONFIG.get('opa', 'url'),
+    client_opa = opa_client.OPAClient(url=CONFIG.get('opa', 'url'),
                                      timeout=int(CONFIG.get('opa', 'timeout')))
 
     # Setup Infrastructure Manager client
