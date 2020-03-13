@@ -39,7 +39,7 @@ def cloud_deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
 
     # Setup Infrastructure Manager client
     im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
-    client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
+    client = im_client.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
         logger.critical('Error reading IM auth file: %s', msg)

@@ -69,7 +69,7 @@ def delete_ansible_node(cloud, identity, db):
 
     # Destroy infrastructure
     im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
-    client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
+    client = im_client.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
         logger.critical('Error reading IM auth file: %s', msg)
@@ -168,7 +168,7 @@ def get_public_ip(infrastructure_id):
 
     # Setup Infrastructure Manager client
     im_auth = utilities.create_im_auth(cloud, None, clouds_info_list)
-    client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
+    client = im_client.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
         logger.critical('Error reading IM auth file: %s', msg)
