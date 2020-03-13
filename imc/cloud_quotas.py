@@ -10,7 +10,7 @@ import configparser
 from novaclient import client
 import timeout_decorator
 
-from imc import opaclient
+from imc import opa_client
 from imc import tokens
 from imc import utilities
 

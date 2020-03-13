@@ -12,7 +12,7 @@ from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 import timeout_decorator
 
-from imc import opaclient
+from imc import opa_client
 from imc import tokens
 from imc import utilities
 

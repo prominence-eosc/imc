@@ -12,7 +12,7 @@ import configparser
 from imc import database
 from imc import destroy
 from imc import im_client
-from imc import opaclient
+from imc import opa_client
 from imc import tokens
 from imc import utilities
 
