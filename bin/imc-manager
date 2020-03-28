@@ -8,13 +8,14 @@ from logging.handlers import RotatingFileHandler
 import signal
 import time
 
+from imc import config
 from imc import database
 from imc import utilities
 from imc import deployer
 from imc import destroyer
 
 # Configuration
-CONFIG = utilities.get_config()
+CONFIG = config.get_config()
 
 # Logging
 handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-manager.log'),
@@ -60,7 +61,6 @@ def find_new_infra_for_creation(db, executor):
 
     for infra in infras:
         if current_deployers + 1 < int(CONFIG.get('pool', 'deployers')):
-            if infra['state']
             logger.info('Running deploying for infra %s', infra['id'])
             executor.submit(deployer.deployer, infra['id'])
             current_deployers += 1

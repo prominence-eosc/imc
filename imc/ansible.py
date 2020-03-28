@@ -13,6 +13,7 @@ import logging
 import configparser
 import paramiko
 
+from imc import config
 from imc import database
 from imc import deploy
 from imc import imclient
@@ -21,7 +22,7 @@ from imc import tokens
 from imc import utilities
 
 # Configuration
-CONFIG = utilities.get_config()
+CONFIG = config.get_config()
 
 # Logging
 logger = logging.getLogger(__name__)

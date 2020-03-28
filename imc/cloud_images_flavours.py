@@ -12,12 +12,13 @@ from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 import timeout_decorator
 
+from imc import config
 from imc import opaclient
 from imc import tokens
 from imc import utilities
 
 # Configuration
-CONFIG = utilities.get_config()
+CONFIG = config.get_config()
 CLOUD_TIMEOUT = int(CONFIG.get('timeouts', 'cloud'))
 
 # Logging

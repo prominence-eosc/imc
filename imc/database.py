@@ -7,10 +7,11 @@ import time
 import psycopg2
 from psycopg2.extras import Json
 
+from imc import config
 from imc import utilities
 
 # Configuration
-CONFIG = utilities.get_config()
+CONFIG = config.get_config()
 
 # Logging
 logger = logging.getLogger(__name__)

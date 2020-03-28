@@ -8,6 +8,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, request, jsonify
 
+from imc import config
 from imc import database
 from imc import imclient
 from imc import logger as custom_logger
@@ -15,7 +16,7 @@ from imc import tokens
 from imc import utilities
 
 # Configuration
-CONFIG = utilities.get_config()
+CONFIG = config.get_config()
 
 # Setup handlers for the root logger
 handler = RotatingFileHandler(CONFIG.get('logs', 'filename'),

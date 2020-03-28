@@ -12,25 +12,12 @@ from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 import timeout_decorator
 
+from imc import config
 from imc import opaclient
 from imc import tokens
 
-def get_config():
-    """
-    Get configuration
-    """
-    config = configparser.ConfigParser()
-
-    if 'PROMINENCE_IMC_CONFIG_DIR' in os.environ:
-        config.read('%s/imc.ini' % os.environ['PROMINENCE_IMC_CONFIG_DIR'])
-    else:
-        print('ERROR: Environment variable PROMINENCE_IMC_CONFIG_DIR has not been defined')
-        exit(1)
-
-    return config
-
 # Configuration
-CONFIG = utilities.get_config()
+CONFIG = config.get_config()
 CLOUD_TIMEOUT = int(CONFIG.get('timeouts', 'cloud'))
 
 # Logging

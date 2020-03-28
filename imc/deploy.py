@@ -9,6 +9,7 @@ import random
 import logging
 import configparser
 
+from imc import config
 from imc import database
 from imc import destroy
 from imc import imclient
@@ -18,7 +19,7 @@ from imc import tokens
 from imc import utilities
 
 # Configuration
-CONFIG = utilities.get_config()
+CONFIG = config.get_config()
 
 # Logging
 logger = logging.getLogger(__name__)

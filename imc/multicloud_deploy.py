@@ -11,6 +11,7 @@ import configparser
 import tempfile
 
 from imc import ansible
+from imc import config
 from imc import database
 from imc import deploy
 from imc import destroy
@@ -22,7 +23,7 @@ from imc import cloud_images_flavours
 from imc import cloud_quotas
 
 # Configuration
-CONFIG = utilities.get_config()
+CONFIG = config.get_config()
 
 # Logging
 logger = logging.getLogger(__name__)

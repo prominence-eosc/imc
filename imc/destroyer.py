@@ -5,12 +5,13 @@ import random
 import time
 import logging
 
+from imc import config
 from imc import database
 from imc import destroy
 from imc import utilities
 
 # Configuration
-CONFIG = utilities.get_config()
+CONFIG = config.get_config()
 
 # Logging
 logger = logging.getLogger(__name__)
