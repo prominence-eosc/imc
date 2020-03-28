@@ -13,7 +13,8 @@ RUN apk add --no-cache gcc \
                        py3-psutil \
                        py3-pip && \
     pip3 install apache-libcloud && \
-    pip3 install python-openstackclient
+    pip3 install python-openstackclient && \
+    pip3 install timeout-decorator
 
 RUN mkdir /tmp/imc
 COPY setup.py /tmp/imc/.
@@ -33,10 +34,10 @@ RUN chown uwsgi /var/log && \
 ENTRYPOINT ["/usr/sbin/uwsgi", \
             "--plugins-dir", "/usr/lib/uwsgi", \
             "--plugins", "http,python", \
-            "--http-socket", "127.0.0.1:5000", \
+            "--http-socket", ":5000", \
             "--threads", "2", \
             "--uid", "uwsgi", \
             "--manage-script-name", \
             "--master", \
             "--chdir", "/usr/bin", \
-            "--mount", "/=imc-restapi:app"]
+            "--mount", "/usr/bin=imc-restapi:app"]
