@@ -1,5 +1,6 @@
 """Miscellaneous functions"""
 
+from __future__ import print_function
 import base64
 import glob
 import json
@@ -255,6 +256,8 @@ def connect_to_cloud(cloud, config, token):
                 details['ex_domain_name'] = config['credentials']['domain']
             if 'service_region' in config['credentials']:
                 details['ex_force_service_region'] = config['credentials']['service_region']
+            if 'project_domain_id' in config['credentials']:
+                details['ex_tenant_domain_id'] = config['credentials']['project_domain_id']
 
             provider = get_driver(Provider.OPENSTACK)
             try:
