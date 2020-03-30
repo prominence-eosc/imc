@@ -76,7 +76,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
 
         # Check if we should stop
         (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
-        if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted' or infra_status_new == 'deletion-failed':
+        if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return None
 
@@ -103,7 +103,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
 
                 # Check if we should stop
                 (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
-                if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted' or infra_status_new == 'deletion-failed':
+                if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
                     logger.info('Deletion requested of infrastructure so aborting deployment')
                     return None
 
