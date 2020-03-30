@@ -225,7 +225,8 @@ def deploy_job(db, unique_id):
             break
 
     if unique_id and not infra_id:
-        db.deployment_update_status_with_retries(unique_id, 'failed', 'none', 'none')
+        # Set status to 'waiting', so deployment can be tried again later
+        db.deployment_update_status_with_retries(unique_id, 'waiting', 'none', 'none')
         db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
     return success
 
