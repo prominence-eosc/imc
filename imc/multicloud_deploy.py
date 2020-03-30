@@ -32,9 +32,6 @@ def deploy_job(db, unique_id):
     """
     Find an appropriate cloud to deploy infrastructure
     """
-    # Update status as we are now handing deployment of the infrastructure
-    db.deployment_update_status_with_retries(unique_id, 'creating')
-
     # Get JSON description & identity from the DB
     (description, identity) = db.deployment_get_json(unique_id)
 
@@ -130,7 +127,7 @@ def deploy_job(db, unique_id):
 
     # Check if we should stop
     (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
-    if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted' or infra_status_new == 'deletion-failed':
+    if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
         logger.info('Deletion requested of infrastructure, aborting deployment')
         return False
 
@@ -202,7 +199,7 @@ def deploy_job(db, unique_id):
 
         # Check if we should stop
         (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
-        if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted' or infra_status_new == 'deletion-failed':
+        if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return False
 
@@ -214,7 +211,7 @@ def deploy_job(db, unique_id):
             if unique_id:
                 # Final check if we should delete the infrastructure
                 (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
-                if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted' or infra_status_new == 'deletion-failed':
+                if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
                     logger.info('Deletion requested of infrastructure, aborting deployment')
                     return False
                 else:
