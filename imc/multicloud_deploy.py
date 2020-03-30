@@ -40,7 +40,7 @@ def deploy_job(db, unique_id):
     if not radl_contents:
         logging.critical('RADL must be provided')
         db.deployment_update_status_with_retries(unique_id, 'unable')
-        return False
+        return None
 
     # Get requirements & preferences
     (requirements, preferences) = utilities.get_reqs_and_prefs(description)
@@ -74,12 +74,12 @@ def deploy_job(db, unique_id):
         clouds_check = opa_client.get_clouds(userdata_check)
     except Exception as err:
         logger.critical('Unable to get list of clouds due to %s:', err)
-        return False
+        return None
 
     if not clouds_check:
         logger.critical('No clouds exist which meet the requested requirements')
         db.deployment_update_status_reason(unique_id, 'NoMatchingResources')
-        return False
+        return None
 
     # Update quotas if necessary
     logger.info('Updating cloud quotas if necessary')
@@ -222,7 +222,6 @@ def deploy_job(db, unique_id):
             break
 
     if unique_id and not infra_id:
-        # Set status to 'waiting', so deployment can be tried again later
         db.deployment_update_status_with_retries(unique_id, 'waiting', 'none', 'none')
         db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
     return success

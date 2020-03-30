@@ -36,8 +36,12 @@ def deployer(infra_id):
         # Deploy infrastructure
         success = multicloud_deploy.deploy_job(db, infra_id)
 
-        if not success:
+        if success is None:
+            logging.info('Setting status to unable - permanent failure')
             db.deployment_update_status_with_retries(infra_id, 'unable')
+        elif not success:
+            logging.info('Setting status to waiting - temporary failure')
+            db.deployment_update_status_with_retries(infra_id, 'waiting')
         db.close()
 
     if not success:
