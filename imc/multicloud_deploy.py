@@ -40,8 +40,7 @@ def deploy_job(db, unique_id):
     if not radl_contents:
         logging.critical('RADL must be provided')
         db.deployment_update_status_with_retries(unique_id, 'unable')
-        db.close()
-        exit(1)
+        return False
 
     # Get requirements & preferences
     (requirements, preferences) = utilities.get_reqs_and_prefs(description)
