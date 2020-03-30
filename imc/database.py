@@ -333,7 +333,10 @@ class Database(object):
             elif im_infra_id and cloud and not status:
                 cursor.execute("UPDATE deployments SET cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (cloud, im_infra_id, time.time(), infra_id))
             elif status:
-                cursor.execute("UPDATE deployments SET status='%s',updated=%d WHERE id='%s'" % (status, time.time(), infra_id))
+                if status in ('configured', 'waiting', 'unable', 'creating'):
+                    cursor.execute("UPDATE deployments SET status='%s',updated=%d WHERE id='%s' AND status NOT IN ('deleted', 'deleting', 'deletion-requested', 'deletion-failed')" % (status, time.time(), infra_id))
+                else:
+                    cursor.execute("UPDATE deployments SET status='%s',updated=%d WHERE id='%s'" % (status, time.time(), infra_id))
             self._connection.commit()
             cursor.close()
         except Exception as error:
