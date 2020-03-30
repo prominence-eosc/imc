@@ -98,6 +98,9 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
 
             # Wait for infrastructure to enter the configured state
             while True:
+                # Sleep
+                time.sleep(int(CONFIG.get('polling', 'duration')))
+
                 # Check if we should stop
                 (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new == 'deletion-requested':
@@ -114,7 +117,6 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                     return None
 
                 # Get the current overall state & states of all VMs in the infrastructure
-                time.sleep(int(CONFIG.get('polling', 'duration')))
                 (states, msg) = client.getstates(infrastructure_id, int(CONFIG.get('timeouts', 'status')))
 
                 # If state is not known, wait
