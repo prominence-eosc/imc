@@ -62,6 +62,7 @@ def find_new_infra_for_creation(db, executor):
     for infra in infras:
         if current_deployers + 1 < int(CONFIG.get('pool', 'deployers')):
             logger.info('Running deploying for infra %s', infra['id'])
+            db.deployment_update_status_with_retries(infra['id'], 'creating')
             executor.submit(deployer.deployer, infra['id'])
             current_deployers += 1
         else:
@@ -83,6 +84,7 @@ def find_new_infra_for_deletion(db, executor):
     for infra in infras:
         if current_destroyers + 1 < int(CONFIG.get('pool', 'deleters')):
             logger.info('Running destroyer for infra %s', infra['id'])
+            db.deployment_update_status_with_retries(infra['id'], 'deleting')
             executor.submit(destroyer.destroyer, infra['id'])
             current_destroyers += 1
         else:
