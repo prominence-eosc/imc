@@ -214,7 +214,10 @@ def deploy_job(db, unique_id):
                     logger.info('Deletion requested of infrastructure, aborting deployment')
                     return False
                 else:
-                    db.deployment_update_status_with_retries(unique_id, 'configured', cloud, infra_id)
+                    # Set cloud and IM infra id
+                    db.deployment_update_status_with_retries(unique_id, None, cloud, infra_id)
+                    # Set status
+                    db.deployment_update_status_with_retries(unique_id, 'configured')
             break
 
     if unique_id and not infra_id:
