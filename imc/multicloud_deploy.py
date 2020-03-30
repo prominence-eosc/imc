@@ -130,7 +130,7 @@ def deploy_job(db, unique_id):
 
     # Check if we should stop
     (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
-    if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted':
+    if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted' or infra_status_new == 'deletion-failed':
         logger.info('Deletion requested of infrastructure, aborting deployment')
         return False
 
@@ -202,7 +202,7 @@ def deploy_job(db, unique_id):
 
         # Check if we should stop
         (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
-        if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted':
+        if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted' or infra_status_new == 'deletion-failed':
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return False
 
@@ -214,11 +214,8 @@ def deploy_job(db, unique_id):
             if unique_id:
                 # Final check if we should delete the infrastructure
                 (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
-                if infra_status_new == 'deleted':
-                    return False
-                elif infra_status_new == 'deletion-requested':
+                if infra_status_new == 'deletion-requested' or infra_status_new == 'deleted' or infra_status_new == 'deletion-failed':
                     logger.info('Deletion requested of infrastructure, aborting deployment')
-                    destroy.delete(infra_id)
                     return False
                 else:
                     db.deployment_update_status_with_retries(unique_id, 'configured', cloud, infra_id)
