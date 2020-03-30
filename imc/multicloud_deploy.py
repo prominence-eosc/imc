@@ -208,14 +208,15 @@ def deploy_job(db, unique_id):
         if infra_id:
             success = True
             if unique_id:
+                # Set cloud and IM infra id
+                db.deployment_update_status_with_retries(unique_id, None, cloud, infra_id)
+
                 # Final check if we should delete the infrastructure
                 (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
                     logger.info('Deletion requested of infrastructure, aborting deployment')
                     return False
                 else:
-                    # Set cloud and IM infra id
-                    db.deployment_update_status_with_retries(unique_id, None, cloud, infra_id)
                     # Set status
                     db.deployment_update_status_with_retries(unique_id, 'configured')
             break
