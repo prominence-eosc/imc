@@ -15,7 +15,7 @@ import paramiko
 
 from imc import config
 from imc import database
-from imc import deploy
+from imc import cloud_deploy
 from imc import imclient
 from imc import opaclient
 from imc import tokens
@@ -267,7 +267,7 @@ def deploy_ansible_node(cloud, db):
     time_begin = time.time()
 
     # Deploy infrastructure
-    infra_id = deploy.deploy(radl, cloud, time_begin, None, db)
+    infra_id = cloud_deploy.deploy(radl, cloud, time_begin, None, db)
 
     return infra_id
 
