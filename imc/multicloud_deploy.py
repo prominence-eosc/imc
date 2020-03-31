@@ -13,7 +13,7 @@ import tempfile
 from imc import ansible
 from imc import config
 from imc import database
-from imc import deploy
+from imc import cloud_deploy
 from imc import destroy
 from imc import imclient
 from imc import opaclient
@@ -203,7 +203,7 @@ def deploy_job(db, unique_id):
             return False
 
         # Deploy infrastructure
-        infra_id = deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
+        infra_id = cloud_deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
 
         if infra_id:
             success = True
