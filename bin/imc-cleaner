@@ -56,9 +56,14 @@ def find_unexpected_im_infras(db):
             (infra_id, status, cloud) = db.get_infra_from_im_infra_id(im_id)
             if not infra_id:
                 logger.info('Found unknown infrastructure with IM ID %s', im_id)
-                (_, data) = client.getdata(im_id, 10)
+                (data, _) = client.getdata(im_id, 10)
                 if data:
-                    #print('IM data=', data)
+                    my_infra_id = None
+                    extract_infra_id = re.search("dns_name = '([\w-]+)-[\d]+-[\d]+'", data['data'])
+                    if extract_infra_id:
+                        my_infra_id = extract_infra_id.group(1)
+                        logger.info('- this IM infrastructure is associated with my infrastructure id %s', my_infra_id)
+
                     for cloud_info in clouds_info_list:
                         cloud_name = cloud_info['name']
                         if cloud_name in data:
