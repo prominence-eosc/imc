@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 def deploy_job(db, unique_id):
     """
-    Find an appropriate cloud to deploy infrastructure
+    Find an appropriate resource to deploy infrastructure
     """
     # Get JSON description & identity from the DB
     (description, identity) = db.deployment_get_json(unique_id)
@@ -57,9 +57,9 @@ def deploy_job(db, unique_id):
     # Setup Open Policy Agent client
     opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
 
-    # Update available clouds & their static info if necessary
-    logger.info('Updating static cloud info')
-    utilities.update_clouds(opa_client, CONFIG.get('clouds', 'path'))
+    # Update available resources & their static info if necessary
+    logger.info('Updating static resources info')
+    utilities.update_resources(opa_client, CONFIG.get('clouds', 'path'))
 
     # Get full list of cloud info
     clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
@@ -86,20 +86,20 @@ def deploy_job(db, unique_id):
     cloud_quotas.set_quotas(requirements, db, identity, opa_client, clouds_info_list)
 
     # Check if clouds are functional
-    logger.info('Checking if clouds are functional')
+    logger.info('Checking if resources are functional')
     utilities.update_clouds_status(opa_client, db, identity, clouds_info_list)
 
     # Get list of clouds meeting the specified requirements
     try:
         clouds = opa_client.get_clouds(userdata)
     except Exception as err:
-        logger.critical('Unable to get list of clouds due to %s:', err)
+        logger.critical('Unable to get list of resources due to %s:', err)
         return False
 
-    logger.info('Suitable clouds = [%s]', ','.join(clouds))
+    logger.info('Suitable resources = [%s]', ','.join(clouds))
 
     if not clouds:
-        logger.critical('No clouds exist which meet the requested requirements')
+        logger.critical('No resources exist which meet the requested requirements')
         db.deployment_update_status_reason(unique_id, 'NoMatchingResourcesAvailable')
         return False
 

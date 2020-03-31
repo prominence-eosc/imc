@@ -147,9 +147,9 @@ def create_clouds_list(path):
 
     return clouds
 
-def create_clouds_for_opa(path):
+def create_resources_for_opa(path):
     """
-    Generate list of clouds and properties for Open Policy Agent
+    Generate list of resources and properties for Open Policy Agent
     """
     clouds = {}
     cloud_names = []
@@ -205,13 +205,13 @@ def compare_dicts(cloud1, cloud2, ignores):
             return False
     return True
 
-def update_clouds(opa_client, path):
+def update_resources(opa_client, path):
     """
     Update clouds
     """
-    new_cloud_info = create_clouds_for_opa(path)
+    new_cloud_info = create_resources_for_opa(path)
     if not new_cloud_info:
-        logger.info('No cloud info')
+        logger.info('No resources info')
         return
 
     # Update existing clouds or add new clouds
