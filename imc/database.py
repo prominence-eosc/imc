@@ -85,6 +85,7 @@ class Database(object):
                                           status_reason TEXT,
                                           im_infra_id TEXT,
                                           cloud TEXT,
+                                          resource_type TEXT,
                                           identity TEXT,
                                           identifier TEXT,
                                           creation INT NOT NULL,
@@ -163,6 +164,22 @@ class Database(object):
         if number > 0:
             return 0
         return 1
+
+    def deployment_get_resource_type(self, infra_id):
+        """
+        Return the resource type for the current status
+        """
+        resource_type = None
+
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("SELECT resource_type FROM deployments WHERE id='%s'" % infra_id)
+            for row in cursor:
+                resource_type = row[0]
+            cursor.close()
+        except Exception as error:
+            logger.critical('[deployment_get_resource_type] Unable to execute query due to: %s', error)
+        return resource_type
 
     def deployment_get_status_reason(self, infra_id):
         """
@@ -304,7 +321,7 @@ class Database(object):
             return False
         return True
 
-    def deployment_update_status_with_retries(self, infra_id, status=None, cloud=None, im_infra_id=None):
+    def deployment_update_status_with_retries(self, infra_id, status=None, cloud=None, im_infra_id=None, resource_type='cloud'):
         """
         Update deployment status with retries
         """
@@ -312,7 +329,7 @@ class Database(object):
         count = 0
         success = False
         while count < max_retries and not success:
-            success = self.deployment_update_status(infra_id, status, cloud, im_infra_id)
+            success = self.deployment_update_status(infra_id, status, cloud, im_infra_id, resource_type)
             if not success:
                 count += 1
                 self.close()
@@ -320,23 +337,23 @@ class Database(object):
                 self.connect()
         return success
 
-    def deployment_update_status(self, infra_id, status=None, cloud=None, im_infra_id=None):
+    def deployment_update_status(self, infra_id, status=None, cloud=None, im_infra_id=None, resource_type='cloud'):
         """
         Update deployment status
         """
         try:
             cursor = self._connection.cursor()
             if cloud and im_infra_id and status:
-                cursor.execute("UPDATE deployments SET status='%s',cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (status, cloud, im_infra_id, time.time(), infra_id))
+                cursor.execute("UPDATE deployments SET resource_type='%s',status='%s',cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, status, cloud, im_infra_id, time.time(), infra_id))
             elif cloud and status:
-                cursor.execute("UPDATE deployments SET status='%s',cloud='%s',updated=%d WHERE id='%s'" % (status, cloud, time.time(), infra_id))
+                cursor.execute("UPDATE deployments SET resource_type='%s',status='%s',cloud='%s',updated=%d WHERE id='%s'" % (resource_type, status, cloud, time.time(), infra_id))
             elif im_infra_id and cloud and not status:
-                cursor.execute("UPDATE deployments SET cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (cloud, im_infra_id, time.time(), infra_id))
+                cursor.execute("UPDATE deployments SET resource_type='%s',cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, cloud, im_infra_id, time.time(), infra_id))
             elif status:
                 if status in ('configured', 'waiting', 'unable', 'creating'):
-                    cursor.execute("UPDATE deployments SET status='%s',updated=%d WHERE id='%s' AND status NOT IN ('deleted', 'deleting', 'deletion-requested', 'deletion-failed')" % (status, time.time(), infra_id))
+                    cursor.execute("UPDATE deployments SET resource_type='%s',status='%s',updated=%d WHERE id='%s' AND status NOT IN ('deleted', 'deleting', 'deletion-requested', 'deletion-failed')" % (status, time.time(), infra_id))
                 else:
-                    cursor.execute("UPDATE deployments SET status='%s',updated=%d WHERE id='%s'" % (status, time.time(), infra_id))
+                    cursor.execute("UPDATE deployments SET resource_type='%s',status='%s',updated=%d WHERE id='%s'" % (status, time.time(), infra_id))
             self._connection.commit()
             cursor.close()
         except Exception as error:
