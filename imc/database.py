@@ -219,19 +219,21 @@ class Database(object):
         """
         description = None
         identity = None
+        identifier = None
 
         try:
             cursor = self._connection.cursor()
-            cursor.execute("SELECT description,identity FROM deployments WHERE id='%s'" % infra_id)
+            cursor.execute("SELECT description,identity,identifier FROM deployments WHERE id='%s'" % infra_id)
             for row in cursor:
                 description = row[0]
                 identity = row[1]
+                identifier = row[2]
             cursor.close()
         except Exception as error:
             logger.critical('[deployment_get_json] Unable to execute query due to: %s', error)
             return None, None
 
-        return (description, identity)
+        return (description, identity, identifier)
 
     def get_infra_from_im_infra_id(self, im_infra_id):
         """
