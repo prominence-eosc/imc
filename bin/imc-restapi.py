@@ -12,6 +12,7 @@ from imc import config
 from imc import database
 from imc import imclient
 from imc import logger as custom_logger
+from imc import return_sites
 from imc import tokens
 from imc import utilities
 
@@ -85,6 +86,10 @@ def create_infrastructure():
     identifier = None
     if 'identifier' in request.get_json():
         identifier = request.get_json()['identifier']
+
+    if 'dryrun' in request.get_json():
+        sites = return_sites.return_sites(request.get_json())
+        return jsonify({'sites':sites}), 200
 
     db = database.get_db()
     if db.connect():
