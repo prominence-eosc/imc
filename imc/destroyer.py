@@ -13,9 +13,6 @@ from imc import utilities
 # Configuration
 CONFIG = config.get_config()
 
-# Logging
-logger = logging.getLogger(__name__)
-
 def destroyer(infra_id):
     """
     Destroy infrastructure

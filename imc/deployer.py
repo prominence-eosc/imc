@@ -13,9 +13,6 @@ from imc import utilities
 # Configuration
 CONFIG = config.get_config()
 
-# Logging
-logger = logging.getLogger(__name__)
-
 def deployer(infra_id):
     """
     Deploy infrastructure
@@ -48,4 +45,3 @@ def deployer(infra_id):
         logging.critical('Unable to deploy infrastructure on any cloud')
 
     logging.info('Completed deploying infrastructure')
-
