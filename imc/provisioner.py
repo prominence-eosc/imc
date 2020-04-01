@@ -34,7 +34,8 @@ def deploy_job(db, unique_id):
     Find an appropriate resource to deploy infrastructure
     """
     # Get JSON description & identity from the DB
-    (description, identity) = db.deployment_get_json(unique_id)
+    (description, identity, identifier) = db.deployment_get_json(unique_id)
+    logger.info('Deploying infrastructure %s with identifier %s', unique_id, identifier)
 
     # Get RADL
     radl_contents = utilities.get_radl(description)
