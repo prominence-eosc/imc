@@ -59,20 +59,21 @@ def find_unexpected_im_infras(db):
                 (data, _) = client.getdata(im_id, 10)
                 if data:
                     my_infra_id = None
-                    extract_infra_id = re.search("dns_name = '([\w-]+)-[\d]+-[\d]+'", data['data'])
+                    extract_infra_id = re.search("dns_name = '([\w-]+)-[\d]+", data['data'])
                     if extract_infra_id:
                         my_infra_id = extract_infra_id.group(1)
-                        logger.info('- this IM infrastructure is associated with my infrastructure id %s', my_infra_id)
+                        (_, my_infra_status, _, _, _) = db.deployment_get_im_infra_id(my_infra_id)
+                        logger.info('- this IM infrastructure is associated with my infrastructure id %s which has status %s', my_infra_id, my_infra_status)
 
-                    for cloud_info in clouds_info_list:
-                        cloud_name = cloud_info['name']
-                        if cloud_name in data:
-                            logger.info('Found unknown IM id %s on cloud %s, deleting...', im_id, cloud_name)
-                            #if delete_from_im(im_id, cloud_name):
-                            #    logger.info('Successfully deleted infrastructure with IM id %s on cloud %s', im_id, cloud_name)
-                            #break
-            else:
-                logger.info('Found IM id %s on cloud %s with status %s and our id %s', im_id, cloud, status, infra_id)
+                        if my_infra_status in ('deleted', 'deleting', 'deletion-failed', 'deletion-required', 'unable'):
+                            for cloud_info in clouds_info_list:
+                                if cloud_info['name'] in data['data']:
+                                    logger.info('- found unknown IM id %s on cloud %s, deleting...', im_id, cloud_info['name'])
+                                    if delete_from_im(im_id, cloud_info['name']):
+                                        logger.info('- successfully deleted infrastructure with IM id %s on cloud %s', im_id, cloud_info['name'])
+                                    break
+                    else:
+                        logger.info('- could not get my associated infrastructure id')
 
 def retry_incomplete_deletions(db, state):
     """
@@ -104,7 +105,7 @@ def delete_from_im(im_infrastructure_id, cloud):
     db = database.get_db()
     if db.connect():
         clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
-        token = tokens.get_token(cloud, db, clouds_info_list)
+        token = tokens.get_token(cloud, None, db, clouds_info_list)
         db.close()
         im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
         client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
