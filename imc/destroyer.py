@@ -24,7 +24,7 @@ def destroyer(infra_id):
                         level=logging.INFO,
                         format='%(asctime)s %(message)s')
 
-    logging.info('Starting deletion of infrastructure')
+    logging.info('Starting deletion of infrastructure %s', infra_id)
 
     # Random sleep
     time.sleep(random.randint(0, 4))
