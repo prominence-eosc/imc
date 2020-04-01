@@ -167,6 +167,7 @@ def create_resources_for_opa(path):
             cloud = {}
             name = data['name']
             cloud['name'] = name
+            cloud['type'] = data['type']
             cloud['images'] = data['default_images']
             if 'region' in data:
                 cloud['region'] = data['region']
@@ -186,7 +187,7 @@ def create_resources_for_opa(path):
             clouds[name] = cloud
             cloud_names.append(name)
 
-    logger.info('Found clouds: %s', ','.join(cloud_names))
+    logger.info('Found resources: %s', ','.join(cloud_names))
 
     return clouds
 
