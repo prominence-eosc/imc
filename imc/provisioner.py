@@ -11,9 +11,10 @@ import configparser
 import tempfile
 
 from imc import ansible
+from imc import batch_deploy
+from imc import cloud_deploy
 from imc import config
 from imc import database
-from imc import cloud_deploy
 from imc import destroy
 from imc import imclient
 from imc import opaclient
@@ -137,64 +138,76 @@ def deploy_job(db, unique_id):
     for item in sorted(clouds_ranked, key=lambda k: k['weight'], reverse=True):
         infra_id = None
         cloud = item['site']
-        
-        try:
-            image = opa_client.get_image(userdata, cloud)
-        except Exception as err:
-            logger.critical('Unable to get image due to:', err)
-            return False
 
-        try:
-            flavour = opa_client.get_flavour(userdata, cloud)
-        except Exception as err:
-            logger.critical('Unable to get flavour due to:', err)
-            return False
+        resource_type = None
+        for cloud_info in clouds_info_list:
+            if cloud_info['name'] == cloud:
+                resource_type = cloud_info['type']
 
-        # If no flavour meets the requirements we should skip the current cloud
-        if not flavour:
-            logger.info('Skipping because no flavour could be determined')
-            continue
-
-        # If no image meets the requirements we should skip the current cloud
-        if not image:
-            logger.info('Skipping because no image could be determined')
-            continue
-
-        logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image, flavour)
- 
-        # Setup Ansible node if necessary
-        if requirements['resources']['instances'] > 1:
-            (ip_addr, username) = ansible.setup_ansible_node(cloud, identity, db)
-            if not ip_addr or not username:
-                logger.critical('Unable to find existing or create an Ansible node in cloud %s because ip=%s,username=%s', cloud, ip_addr, username)
-                continue
-            logger.info('Ansible node in cloud %s available, now will deploy infrastructure for the job', cloud)
+        if resource_type:
+            logger.info('Resource %s is of type %s', cloud, resource_type)
         else:
-            logger.info('Ansible node not required')
-            ip_addr = None
-            username = None
-
-        # Get the Ansible private key if necessary
-        private_key = None
-        if ip_addr and username:
+            logger.info('Skipping because no resource type could be determined for resource %s', cloud)
+            continue
+        
+        if resource_type == 'cloud':
             try:
-                with open(CONFIG.get('ansible', 'private_key')) as data:
-                    private_key = data.read()
-            except IOError:
-                logger.critical('Unable to open private key for Ansible node from file "%s"', CONFIG.get('ansible', 'private_key'))
+                image = opa_client.get_image(userdata, cloud)
+            except Exception as err:
+                logger.critical('Unable to get image due to:', err)
                 return False
 
-        # Create complete RADL content
-        try:
-            radl = Template(str(radl_contents)).substitute(instance=flavour,
-                                                           image=image,
-                                                           cloud=cloud,
-                                                           ansible_ip=ip_addr,
-                                                           ansible_username=username,
-                                                           ansible_private_key=private_key)
-        except Exception as ex:
-            logger.critical('Error creating RADL from template due to %s', ex)
-            return False
+            try:
+                flavour = opa_client.get_flavour(userdata, cloud)
+            except Exception as err:
+                logger.critical('Unable to get flavour due to:', err)
+                return False
+
+            # If no flavour meets the requirements we should skip the current cloud
+            if not flavour:
+                logger.info('Skipping because no flavour could be determined')
+                continue
+
+            # If no image meets the requirements we should skip the current cloud
+            if not image:
+                logger.info('Skipping because no image could be determined')
+                continue
+
+            logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image, flavour)
+ 
+            # Setup Ansible node if necessary
+            if requirements['resources']['instances'] > 1:
+                (ip_addr, username) = ansible.setup_ansible_node(cloud, identity, db)
+                if not ip_addr or not username:
+                    logger.critical('Unable to find existing or create an Ansible node in cloud %s because ip=%s,username=%s', cloud, ip_addr, username)
+                    continue
+                logger.info('Ansible node in cloud %s available, now will deploy infrastructure for the job', cloud)
+            else:
+                logger.info('Ansible node not required')
+                ip_addr = None
+                username = None
+
+            # Get the Ansible private key if necessary
+            private_key = None
+            if ip_addr and username:
+                try:
+                    with open(CONFIG.get('ansible', 'private_key')) as data:
+                        private_key = data.read()
+                except IOError:
+                    logger.critical('Unable to open private key for Ansible node from file "%s"', CONFIG.get('ansible', 'private_key'))
+                    return False
+
+            # Create complete RADL content
+            try:
+                radl = Template(str(radl_contents)).substitute(instance=flavour,
+                                                               image=image,
+                                                               cloud=cloud,
+                                                               ansible_ip=ip_addr,
+                                                               ansible_username=username,
+                                                               ansible_private_key=private_key)
+            except Exception as ex:
+                logger.critical('Error creating RADL from template due to %s', ex)
+                return False
 
         # Check if we should stop
         (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
@@ -203,13 +216,16 @@ def deploy_job(db, unique_id):
             return False
 
         # Deploy infrastructure
-        infra_id = cloud_deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
+        if resource_type == 'cloud':
+            infra_id = cloud_deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
+        elif resource_type == 'batch':
+            infra_id = batch_deploy.deploy(cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
 
         if infra_id:
             success = True
             if unique_id:
                 # Set cloud and IM infra id
-                db.deployment_update_status_with_retries(unique_id, None, cloud, infra_id)
+                db.deployment_update_status_with_retries(unique_id, None, cloud, infra_id, resource_type)
 
                 # Final check if we should delete the infrastructure
                 (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
