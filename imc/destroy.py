@@ -12,7 +12,7 @@ import configparser
 from imc import config
 from imc import database
 from imc import destroy
-from imc import htcondorclient
+#from imc import htcondorclient
 from imc import imclient
 from imc import opaclient
 from imc import tokens
@@ -105,8 +105,8 @@ def delete(unique_id):
             match_obj_name = re.match(r'[\d]+', im_infra_id)
             if match_obj_name:
                 logger.info('Deleting batch infrastructure with HTCondor job id %s', im_infra_id)
-                client = htcondorclient.HTCondorClient()
-                client.destroy(int(im_infra_id))
+                #client = htcondorclient.HTCondorClient()
+                #client.destroy(int(im_infra_id))
     else:
         logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s, resource type is %s', im_infra_id, cloud, resource_type)
         db.deployment_update_status_with_retries(unique_id, 'deleted')

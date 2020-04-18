@@ -10,7 +10,7 @@ import logging
 
 from imc import config
 from imc import database
-from imc import htcondorclient
+#from imc import htcondorclient
 from imc import opaclient
 from imc import tokens
 
@@ -44,7 +44,7 @@ def deploy(resource_name, time_begin, unique_id, identity, db, num_nodes=1):
     """
     Submit a startd job to the specified batch system
     """
-    client = htcondorclient.HTCondorClient()
+    #client = htcondorclient.HTCondorClient()
 
     retries_per_cloud = int(CONFIG.get('deployment', 'retries'))
     retry = 0
@@ -66,7 +66,7 @@ def deploy(resource_name, time_begin, unique_id, identity, db, num_nodes=1):
 
         # Create infrastructure
         job = create_job()
-        job_id = client.create(job)
+        #job_id = client.create(job)
 
         if job_id:
             logger.info('Submitted to batch system %s with job id %d and waiting for it to run', resource_name, job_id)
