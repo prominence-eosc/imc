@@ -59,7 +59,7 @@ def find_unexpected_im_infras(db):
                 (data, _) = client.getdata(im_id, 10)
                 if data:
                     my_infra_id = None
-                    extract_infra_id = re.search("dns_name = '([\w-]+)-[\d]+", data['data'])
+                    extract_infra_id = re.search("PROMINENCE_INFRASTRUCTURE_ID=([0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})", data['data'])
                     if extract_infra_id:
                         my_infra_id = extract_infra_id.group(1)
                         (_, my_infra_status, _, _, _) = db.deployment_get_im_infra_id(my_infra_id)
