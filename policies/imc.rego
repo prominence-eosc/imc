@@ -80,11 +80,18 @@ satisfies_image_name(image){
     not input.requirements.image.name
 }
 
-satisfies_image(image) {
+satisfies_image(cloud) {
+    cloud["type"] == "cloud"
     not input.requirements.image
 }
 
-satisfies_image(image) {
+satisfies_image(cloud) {
+    cloud["type"] == "batch"
+}
+
+satisfies_image(cloud) {
+    cloud["type"] == "cloud"
+    image = cloud["images"][i]
     satisfies_image_architecture(image)
     satisfies_image_distribution(image)
     satisfies_image_type(image)
@@ -177,12 +184,11 @@ satisfies_network(cloud) {
 # Get list of sites meeting requirements
 sites[site] {
     cloud = clouds[site]
-    image = clouds[site]["images"][i]
     flavour = clouds[site]["flavours"][j]
     satisfies_region(cloud)
     satisfies_site(cloud)
     satisfies_tags(cloud)
-    satisfies_image(image)
+    satisfies_image(cloud)
     satisfies_flavour(flavour)
     satisfies_dynamic_quotas(cloud)
     satisfies_static_quotas(cloud)
@@ -195,7 +201,11 @@ sites[site] {
 images[name] {
     image = clouds[input.cloud]["images"][i]
     name = image.name
-    satisfies_image(image)
+    satisfies_image_architecture(image)
+    satisfies_image_distribution(image)
+    satisfies_image_type(image)
+    satisfies_image_version(image)
+    satisfies_image_name(image)
 }
 
 # Rank flavours for a specified cloud
