@@ -239,8 +239,7 @@ def deploy_job(db, unique_id):
             break
 
     if unique_id and not infra_id:
-        db.deployment_update_status_with_retries(unique_id, 'waiting')
-        db.deployment_update_status_with_retries(unique_id, None, 'none', 'none')
-        db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
+        db.deployment_update_status_reason(unique_id, 'NoMatchingResourcesAvailable')
+        return False
     return success
 
