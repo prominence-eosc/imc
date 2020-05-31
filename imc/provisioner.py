@@ -1,24 +1,14 @@
 from __future__ import print_function
-import base64
-import os
-import sys
-import re
 from string import Template
 import time
 from random import shuffle
 import logging
-import configparser
-import tempfile
 
 from imc import ansible
 from imc import batch_deploy
 from imc import cloud_deploy
 from imc import config
-from imc import database
-from imc import destroy
-from imc import imclient
 from imc import opaclient
-from imc import tokens
 from imc import utilities
 from imc import cloud_images_flavours
 from imc import cloud_quotas
@@ -29,7 +19,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def deploy_job(db, unique_id):
+def deploy_job(db, batch_client, unique_id):
     """
     Find an appropriate resource to deploy infrastructure
     """
@@ -46,6 +36,7 @@ def deploy_job(db, unique_id):
 
     # Get requirements & preferences
     (requirements, preferences) = utilities.get_reqs_and_prefs(description)
+    job_want = description['want']
 
     # Count number of instances
     instances = utilities.get_num_instances(radl_contents)
@@ -127,7 +118,7 @@ def deploy_job(db, unique_id):
         return False
 
     # Check if we should stop
-    (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
+    (_, infra_status_new, _, _, _) = db.deployment_get_im_infra_id(unique_id)
     if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
         logger.info('Deletion requested of infrastructure, aborting deployment')
         return False
@@ -155,13 +146,13 @@ def deploy_job(db, unique_id):
             try:
                 image = opa_client.get_image(userdata, cloud)
             except Exception as err:
-                logger.critical('Unable to get image due to:', err)
+                logger.critical('Unable to get image due to %s', err)
                 return False
 
             try:
                 flavour = opa_client.get_flavour(userdata, cloud)
             except Exception as err:
-                logger.critical('Unable to get flavour due to:', err)
+                logger.critical('Unable to get flavour due to %s', err)
                 return False
 
             # If no flavour meets the requirements we should skip the current cloud
@@ -210,8 +201,39 @@ def deploy_job(db, unique_id):
                 logger.critical('Error creating RADL from template due to %s', ex)
                 return False
 
+        elif resource_type == 'batch':
+            batch_desc = {}
+            batch_desc['job_want'] = job_want
+            if 'instances' in requirements['resources']:
+                batch_desc['nodes'] = int(requirements['resources']['instances'])
+            else:
+                batch_desc['nodes'] = 1
+            if 'cores' in requirements['resources']:
+                batch_desc['cpus'] = int(requirements['resources']['cores'])
+            else:
+                batch_desc['cpus'] = 1
+            if 'memory' in requirements['resources']:
+                batch_desc['memory'] = int(requirements['resources']['memory'])
+            else:
+                batch_desc['memory'] = 1
+            if 'walltime' in requirements['resources']:
+                batch_desc['walltime'] = int(requirements['resources']['walltime'])
+            else:
+                batch_desc['walltime'] = 720
+
+            for cloud_info in clouds_info_list:
+                if cloud_info['name'] == cloud:
+                    if 'queue' in cloud_info['credentials']:
+                        batch_desc['queue'] = cloud_info['credentials']['queue']
+                    if 'executable' in cloud_info['credentials']:
+                        batch_desc['executable'] = cloud_info['credentials']['executable']
+                    if 'log_path' in cloud_info['credentials']:
+                        batch_desc['log_path'] = cloud_info['credentials']['log_path']
+                    if 'project' in cloud_info['credentials']:
+                        batch_desc['project'] = cloud_info['credentials']['project']
+
         # Check if we should stop
-        (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
+        (_, infra_status_new, _, _, _) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return False
@@ -220,7 +242,7 @@ def deploy_job(db, unique_id):
         if resource_type == 'cloud':
             infra_id = cloud_deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
         elif resource_type == 'batch':
-            infra_id = batch_deploy.deploy(cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
+            infra_id = batch_deploy.deploy(cloud, time_begin, unique_id, identity, batch_desc, db, batch_client)
 
         if infra_id:
             success = True
@@ -229,7 +251,7 @@ def deploy_job(db, unique_id):
                 db.deployment_update_status_with_retries(unique_id, None, cloud, infra_id, resource_type)
 
                 # Final check if we should delete the infrastructure
-                (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
+                (_, infra_status_new, _, _, _) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
                     logger.info('Deletion requested of infrastructure, aborting deployment')
                     return False
@@ -239,7 +261,8 @@ def deploy_job(db, unique_id):
             break
 
     if unique_id and not infra_id:
-        db.deployment_update_status_reason(unique_id, 'NoMatchingResourcesAvailable')
-        return False
+        db.deployment_update_status_with_retries(unique_id, 'waiting')
+        db.deployment_update_status_with_retries(unique_id, None, 'none', 'none')
+        db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
     return success
 
