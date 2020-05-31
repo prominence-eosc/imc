@@ -13,22 +13,24 @@ from imc import utilities
 # Configuration
 CONFIG = config.get_config()
 
-def destroyer(infra_id):
+# Logging
+logger = logging.getLogger('imc.destroyer')
+
+def destroyer(infra_id, batch_client):
     """
     Destroy infrastructure
     """
-    logging.basicConfig(filename=CONFIG.get('logs', 'filename').replace('.log', '-destroy-%s.log' % infra_id),
-                        level=logging.INFO,
-                        format='%(asctime)s %(message)s')
-
-    logging.info('Starting deletion of infrastructure %s', infra_id)
+    logger.info('Starting deletion of infrastructure %s', infra_id)
 
     # Random sleep
     time.sleep(random.randint(0, 4))
 
     db = database.get_db()
     if db.connect():
-        destroy.delete(infra_id)
+        try:
+            destroy.delete(infra_id, batch_client)
+        except Exception as exc:
+            logging.info('Got exception running delete: %s', exc)
         db.close()
 
-    logging.info('Completed deleting infrastructure')
+    logger.info('Completed deleting infrastructure')
