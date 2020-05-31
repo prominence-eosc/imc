@@ -8,7 +8,6 @@ import time
 import configparser
 
 from novaclient import client
-import timeout_decorator
 
 from imc import config
 from imc import opaclient
@@ -17,12 +16,10 @@ from imc import utilities
 
 # Configuration
 CONFIG = config.get_config()
-CLOUD_TIMEOUT = int(CONFIG.get('timeouts', 'cloud'))
 
 # Logging
 logger = logging.getLogger(__name__)
 
-@timeout_decorator.timeout(CLOUD_TIMEOUT)
 def get_quotas_openstack(cloud, credentials, token):
     """
     Get quotas remaining for an OpenStack cloud
@@ -57,7 +54,7 @@ def get_quotas_openstack(cloud, credentials, token):
         nova = client.Client(2, credentials['username'], timeout=10, **auth)
         quotas = nova.quotas.get(credentials['tenant_id'], detail=True)
     except Exception as ex:
-        logger.critical('Unable to get quotas from cloud %s due to "%s"', cloud, ex)
+        logger.critical('Unable to get quotas from cloud %s due to "%s"', cloud, ex.encode('utf-8'))
         return (None, None, None)
 
     quotas_dict = quotas.to_dict()
@@ -82,6 +79,9 @@ def set_quotas(requirements, db, identity, opa_client, config):
             if name not in requirements['sites']:
                 continue
 
+        if cloud['type'] != 'cloud':
+            continue
+
         # Get a token if necessary
         token = tokens.get_token(name, identity, db, config)
 
@@ -95,7 +95,7 @@ def set_quotas(requirements, db, identity, opa_client, config):
                                                                               token,
                                                                               credentials['username'],
                                                                               credentials['tenant']))
-                except timeout_decorator.timeout_decorator.TimeoutError:
+                except:
                     logger.critical('Unable to get a scoped token from Keystone due to a timeout')
                     continue
 
@@ -111,7 +111,7 @@ def set_quotas(requirements, db, identity, opa_client, config):
                 logger.info('Quotas for cloud %s have not been updated recently, so getting current values', name)
                 try:
                     (instances, cores, memory) = get_quotas_openstack(name, credentials, token)
-                except timeout_decorator.timeout_decorator.TimeoutError:
+                except:
                     (instances, cores, memory) = (None, None, None)
         elif credentials['type'] != 'InfrastructureManager':
             logger.warning('Unable to determine quotas for cloud %s of type %s', name, credentials['type'])

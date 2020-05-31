@@ -10,7 +10,6 @@ import configparser
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-import timeout_decorator
 
 from imc import config
 from imc import opaclient
@@ -19,7 +18,6 @@ from imc import utilities
 
 # Configuration
 CONFIG = config.get_config()
-CLOUD_TIMEOUT = int(CONFIG.get('timeouts', 'cloud'))
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -59,7 +57,6 @@ def compare_dicts(cloud1, cloud2):
             return False
     return True
 
-@timeout_decorator.timeout(CLOUD_TIMEOUT)
 def generate_images_and_flavours(config, cloud, token):
     """
     Create a list of images and flavours available on the specified cloud
@@ -121,10 +118,14 @@ def update_cloud_details(requirements, db, identity, opa_client, config):
     """
     for cloud in config:
         name = cloud['name']
+
         # Check if we need to consider this cloud at all
         if 'sites' in requirements:
             if name not in requirements['sites']:
                 continue
+
+        if cloud['type'] != 'cloud':
+            continue
 
         logger.info('Checking if we need to update cloud %s details', name)
 
@@ -145,7 +146,7 @@ def update_cloud_details(requirements, db, identity, opa_client, config):
         logger.info('Getting list of new images and flavours')
         try:
             new_data = generate_images_and_flavours(cloud, name, token)
-        except timeout_decorator.timeout_decorator.TimeoutError:
+        except:
             new_data = {'images':{}, 'flavours':{}}
 
         # Check if need to continue with this cloud
