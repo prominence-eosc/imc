@@ -98,6 +98,18 @@ def remove_old_entries(db, state):
             logger.info('Removing infrastructure %s from DB', infra['id'])
             db.deployment_remove(infra['id'])
 
+def delete_stuck_infras(db, state):
+    """
+    Delete any infras stuck in the accepted or creating state
+    """
+    infras = db.deployment_get_infra_in_state_cloud(state)
+    logger.info('Found %d infrastructures in state %s', len(infras), state)
+    for infra in infras:
+        if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'delete_stuck_infras_after')):
+            logger.info('Setting status of infrastructure %s to deleted', infra['id'])
+            db.deployment_update_status_with_retries(unique_id, 'deletion-requested')
+            db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
+
 def delete_from_im(im_infrastructure_id, cloud):
     """
     Delete infrastructure from IM
@@ -139,6 +151,8 @@ if __name__ == "__main__":
             remove_old_entries(db, 'unable')
 
             logger.info('Checking for infrastructure stuck in the accepted and creating states')
+            delete_stuck_infras(db, 'accepted')
+            delete_stuck_infras(db, 'creating')
         
             db.close()
 
