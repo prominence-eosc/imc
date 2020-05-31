@@ -11,7 +11,6 @@ import configparser
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-import timeout_decorator
 
 from imc import config
 from imc import opaclient
@@ -19,7 +18,6 @@ from imc import tokens
 
 # Configuration
 CONFIG = config.get_config()
-CLOUD_TIMEOUT = int(CONFIG.get('timeouts', 'cloud'))
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -168,7 +166,8 @@ def create_resources_for_opa(path):
             name = data['name']
             cloud['name'] = name
             cloud['type'] = data['type']
-            cloud['images'] = data['default_images']
+            if 'default_images' in data:
+                cloud['images'] = data['default_images']
             if 'region' in data:
                 cloud['region'] = data['region']
             if 'tags' in data:
@@ -183,11 +182,12 @@ def create_resources_for_opa(path):
                 cloud['availability_zones'] = data['availability_zones']
             if 'enabled' in data:
                 cloud['enabled'] = data['enabled']
-            cloud['flavours'] = data['default_flavours']
+            if 'default_flavours' in data:
+                cloud['flavours'] = data['default_flavours']
             clouds[name] = cloud
             cloud_names.append(name)
 
-    logger.info('Found resources: %s', ','.join(cloud_names))
+    logger.info('Found resources from json files: %s', ','.join(cloud_names))
 
     return clouds
 
@@ -212,7 +212,7 @@ def update_resources(opa_client, path):
     """
     new_cloud_info = create_resources_for_opa(path)
     if not new_cloud_info:
-        logger.info('No resources info')
+        logger.info('No resources info for Open Policy Agent')
         return
 
     # Update existing clouds or add new clouds
@@ -228,8 +228,8 @@ def update_resources(opa_client, path):
             logger.critical('Unable to get cloud info due to %s:', err)
             return
 
-        if not compare_dicts(new_cloud_info[new_cloud], old_cloud, ['images', 'flavours', 'updated']):
-            logger.info('Updating cloud %s', name)
+        if not compare_dicts(new_cloud_info[new_cloud], old_cloud, ['images', 'flavours', 'updated']) or new_cloud_info[new_cloud]['type'] == 'batch':
+            logger.info('Updating cloud %s in Open Policy Agent', name)
             opa_client.set_cloud(name, new_cloud_info[new_cloud])
 
     # Remove clouds if necessary
@@ -300,6 +300,10 @@ def update_clouds_status(opa_client, db, identity, config):
     """
     for cloud_info in config:
         name = cloud_info['name']
+
+        if cloud_info['type'] != 'cloud':
+            continue
+
         logger.info('Checking cloud %s', name)
 
         # Get a token if necessary
@@ -307,7 +311,7 @@ def update_clouds_status(opa_client, db, identity, config):
 
         try:
             status = check_cloud(name, cloud_info, token)
-        except timeout_decorator.timeout_decorator.TimeoutError:
+        except:
             logger.info('Setting status of cloud %s to down due to timeout', name)
             opa_client.set_status(name, 'down')
         else:
@@ -315,7 +319,6 @@ def update_clouds_status(opa_client, db, identity, config):
                 logger.info('Setting status of cloud %s to down', name)
                 opa_client.set_status(name, 'down')
 
-@timeout_decorator.timeout(CLOUD_TIMEOUT)
 def check_cloud(cloud, config, token):
     """
     Check if a cloud is functional by listing VMs
