@@ -1,20 +1,21 @@
-FROM alpine:latest
-RUN apk add --no-cache gcc \
-                       musl-dev \
-                       linux-headers \
-                       uwsgi-python \
-                       uwsgi-http \
-                       python3 \
-                       python3-dev \
-                       py3-requests \
-                       py3-flask \
-                       py3-paramiko \
-                       py3-psycopg2 \
-                       py3-psutil \
-                       py3-pip && \
-    pip3 install apache-libcloud && \
+FROM ubuntu:18.04
+
+# Install Radical-Saga
+RUN apt update && \
+    apt-get install -y python3 python3-pip && \
+    pip3 install -U setuptools && \
+    ln -s /usr/bin/python3 /usr/bin/python && \
+    pip3 install radical.saga
+
+# Install remaining dependencies
+RUN apt-get install -y python3-requests python3-flask python3-paramiko python3-psycopg2 python3-psutil uwsgi-plugin-python3
+
+RUN pip3 install apache-libcloud && \
     pip3 install python-openstackclient && \
     pip3 install timeout-decorator
+
+RUN apt-get install -y ssh-client build-essential swig libssl-dev
+RUN pip3 install M2Crypto
 
 RUN mkdir /tmp/imc
 COPY setup.py /tmp/imc/.
@@ -27,10 +28,17 @@ RUN cd /tmp/imc && \
     pip3 install . && \
     rm -rf /tmp/imc
 
-RUN chown uwsgi /var/log && \
+RUN useradd --shell /sbin/nologin --home-dir /dev/null uwsgi && \ 
+    chown uwsgi /var/log && \
     mkdir /var/lib/prominence && \
     chown uwsgi /var/lib/prominence
 
-USER uwsgi
+ENV RADICAL_SAGA_LOG_TGT /var/log/imc/rs.log
+ENV RADICAL_UTILS_LOG_TGT /var/log/imc/radical.utils.log
+ENV RADICAL_LOG_TGT /var/log/imc/radical.log
+ENV RADICAL_BASE_DIR /var/log/imc
+ENV HOME /var/log/imc
 
 ENTRYPOINT ["/start-daemon.sh"]
+
+USER uwsgi
