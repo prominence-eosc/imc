@@ -1,10 +1,7 @@
 """Destroy the specified IM infrastructure, with retries"""
 
 from __future__ import print_function
-import os
-import random
 import re
-import sys
 import time
 import logging
 import configparser
@@ -12,7 +9,7 @@ import configparser
 from imc import config
 from imc import database
 from imc import destroy
-#from imc import htcondorclient
+from imc import batchclient
 from imc import imclient
 from imc import opaclient
 from imc import tokens
@@ -47,11 +44,11 @@ def destroy(client, infrastructure_id):
 
     return destroyed
 
-def delete(unique_id):
+def delete(unique_id, batch_client):
     """
     Delete the infrastructure with the specified id
     """
-    logger.info('Deleting infrastructure')
+    logger.info('Deleting infrastructure with id %s', unique_id)
 
     db = database.get_db()
     db.connect()
@@ -102,11 +99,10 @@ def delete(unique_id):
                 logger.critical('IM infrastructure id %s does not match regex', im_infra_id)
                 db.deployment_update_status_with_retries(unique_id, 'deleted')
         elif resource_type == 'batch':
-            match_obj_name = re.match(r'[\d]+', im_infra_id)
-            if match_obj_name:
-                logger.info('Deleting batch infrastructure with HTCondor job id %s', im_infra_id)
-                #client = htcondorclient.HTCondorClient()
-                #client.destroy(int(im_infra_id))
+            logger.info('Deleting batch infrastructure with job id %s', im_infra_id)
+            batch_client.destroy(im_infra_id, cloud)
+            time.sleep(2)
+            logger.info('Batch job with id %s now in status %s', im_infra_id, batch_client.getstate(im_infra_id, cloud))
     else:
         logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s, resource type is %s', im_infra_id, cloud, resource_type)
         db.deployment_update_status_with_retries(unique_id, 'deleted')
