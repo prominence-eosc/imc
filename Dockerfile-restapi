@@ -39,5 +39,5 @@ ENTRYPOINT ["/usr/sbin/uwsgi", \
             "--uid", "uwsgi", \
             "--manage-script-name", \
             "--master", \
-            "--chdir", "/usr/bin", \
-            "--mount", "/usr/bin=imc-restapi:app"]
+            "--chdir", "/usr/lib/python3.8/site-packages/imc", \
+            "--mount", "/usr/lib/python3.8/site-packages/imc=restapi:app"]
