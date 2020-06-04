@@ -33,6 +33,9 @@ def destroy(client, infrastructure_id):
         (return_code, msg) = client.destroy(infrastructure_id, int(CONFIG.get('timeouts', 'deletion')))
         if return_code == 0:
             destroyed = True
+        elif 'Invalid infrastructure ID or access not granted' in msg:
+            destroyed = True
+            logger.info('Got "Invalid infrastructure ID or access not granted" message when deleting IM id %s', infrastructure_id)
         count += 1
         delay = delay*delay_factor
         time.sleep(int(count + delay))
