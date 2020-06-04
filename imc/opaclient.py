@@ -1,6 +1,5 @@
 import json
 import logging
-import sys
 import time
 import requests
 
@@ -96,7 +95,11 @@ class OPAClient(object):
         response.raise_for_status()
 
         if 'result' in response.json():
-            return response.json()['result']
+            clouds_ranked_list = []
+            for item in sorted(response.json()['result'], key=lambda k: k['weight'], reverse=True):
+                clouds_ranked_list.append(item['site'])
+
+            return clouds_ranked_list
 
         return []
 
