@@ -103,13 +103,10 @@ def deploy_job(db, batch_client, unique_id):
     try:
         clouds_ranked = opa_client.get_ranked_clouds(userdata, clouds)
     except Exception as err:
-        logger.critical('Unable to get list of ranked clouds due to:', err)
+        logger.critical('Unable to get list of ranked clouds due to: %s', err)
         return False
 
-    clouds_ranked_list = []
-    for item in sorted(clouds_ranked, key=lambda k: k['weight'], reverse=True):
-        clouds_ranked_list.append(item['site'])
-    logger.info('Ranked clouds = [%s]', ','.join(clouds_ranked_list))
+    logger.info('Ranked clouds = [%s]', ','.join(clouds_ranked))
 
     # Check if we still have any clouds meeting requirements & preferences
     if not clouds_ranked:
@@ -127,9 +124,8 @@ def deploy_job(db, batch_client, unique_id):
     time_begin = time.time()
     success = False
 
-    for item in sorted(clouds_ranked, key=lambda k: k['weight'], reverse=True):
+    for cloud in clouds_ranked:
         infra_id = None
-        cloud = item['site']
 
         resource_type = None
         for cloud_info in clouds_info_list:
