@@ -244,9 +244,10 @@ def update_resources(opa_client, path):
         new_cloud_names.append(name)
         logger.info('Checking cloud %s', name)
 
-        if name in sites_vos:
-            logger.info('Updating supported_groups in cloud %s', name)
-            new_cloud_info[new_cloud]['supported_groups'] = sites_vos[name]
+        for site in sites_vos:
+            if site in name:
+                logger.info('Updating supported_groups in cloud %s', name)
+                new_cloud_info[new_cloud]['supported_groups'] = sites_vos[site]
 
         try:
             old_cloud = opa_client.get_cloud(name)
