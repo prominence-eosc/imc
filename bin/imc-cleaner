@@ -27,7 +27,7 @@ handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
 handler.setFormatter(formatter)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('cleaner')
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
