@@ -12,6 +12,7 @@ import configparser
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 
+from imc import appdbclient
 from imc import config
 from imc import opaclient
 from imc import tokens
@@ -206,6 +207,21 @@ def compare_dicts(cloud1, cloud2, ignores):
             return False
     return True
 
+def get_supported_vos_per_cloud():
+    """
+    Update supported VOs per cloud
+    """
+    data = {}
+
+    for vo in CONFIG.get('features', 'vos').split(','):
+        sites = appdbclient.get_clouds_for_vo(vo)
+        for site in sites:
+            if site not in data:
+                data[site] = []
+            if vo not in data[site]:
+                data[site].append(vo)
+    return data
+
 def update_resources(opa_client, path):
     """
     Update clouds
@@ -215,12 +231,22 @@ def update_resources(opa_client, path):
         logger.info('No resources info for Open Policy Agent')
         return
 
+    # Get supported sites by VO from AppDB
+    sites_vos = {}
+    if CONFIG.get('features', 'enable_appdb'):
+        logger.info('Getting supported VOs per cloud from AppDB')
+        sites_vos = get_supported_vos_per_cloud()
+
     # Update existing clouds or add new clouds
     new_cloud_names = []
     for new_cloud in new_cloud_info:
         name = new_cloud_info[new_cloud]['name']
         new_cloud_names.append(name)
         logger.info('Checking cloud %s', name)
+
+        if name in sites_vos:
+            logger.info('Updating supported_groups in cloud %s', name)
+            new_cloud_info[new_cloud]['supported_groups'] = sites_vos[name]
 
         try:
             old_cloud = opa_client.get_cloud(name)
