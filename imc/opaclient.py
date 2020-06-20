@@ -194,7 +194,7 @@ class OPAClient(object):
         if 'result' in response.json():
             if response.json()['result']:
                 return response.json()['result']
-        return None        
+        return {}
 
     @retry(tries=4, delay=3, backoff=2)
     def get_images(self, cloud):
@@ -208,7 +208,7 @@ class OPAClient(object):
         if 'result' in response.json():
             if response.json()['result']:
                 return response.json()['result']
-        return None
+        return {}
 
     def set_flavours(self, cloud, data):
         """
