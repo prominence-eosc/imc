@@ -85,6 +85,7 @@ def generate_images_and_flavours(config, cloud, token):
             output_images[image.name] = data
 
     output['images'] = output_images
+    logger.info('Got %d images from cloud %s', len(output['images']), cloud)
 
     # List flavours
     try:
@@ -109,6 +110,7 @@ def generate_images_and_flavours(config, cloud, token):
             output_flavours[flavour.name] = data
 
     output['flavours'] = output_flavours
+    logger.info('Got %d flavours from cloud %s', len(output['flavours']), cloud)
 
     return output
 
