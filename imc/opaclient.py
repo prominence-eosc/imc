@@ -236,6 +236,37 @@ class OPAClient(object):
             return False
         return True
 
+    def set_mon_status(self, cloud, status):
+        """
+        Set the overall status of a resource
+        """
+        data = {}
+        data['status'] = status
+        data['epoch'] = time.time()
+
+        try:
+            response = requests.put('%s/v1/data/status/%s/monitoring' % (self._url, cloud),
+                                    json=data,
+                                    timeout=self._timeout)
+        except requests.exceptions.RequestException as ex:
+            logger.critical('Unable to write cloud images to Open Policy Agent due to "%s"', ex)
+            return False
+        return True
+
+    @retry(tries=4, delay=3, backoff=2)
+    def get_mon_status(self, cloud):
+        """
+        Get the overall status of a resource
+        """
+        response = requests.get('%s/v1/data/status/%s/monitoring' % (self._url, cloud),
+                                timeout=self._timeout)
+        response.raise_for_status()
+
+        if 'result' in response.json():
+            if 'status' in response.json()['result']:
+                return response.json()['result']['status']
+        return None
+
     def set_cloud(self, cloud, data):
         """
         Set all info associated with the specified cloud
