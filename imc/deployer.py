@@ -34,6 +34,7 @@ def deployer(infra_id, batch_client):
             success = provisioner.deploy_job(db, batch_client, infra_id)
         except Exception as exc:
             logger.info('Got exception: %s', exc)
+            success = None
 
         if success is None:
             logger.info('Setting status to unable due to a permanent failure')
