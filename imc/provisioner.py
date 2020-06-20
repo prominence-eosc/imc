@@ -57,6 +57,10 @@ def deploy_job(db, batch_client, unique_id):
     # Get full list of cloud info
     clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
 
+    # Check if clouds are functional
+    logger.info('Checking if resources are functional')
+    utilities.update_clouds_status(opa_client, db, identity, clouds_info_list)
+
     # Update cloud images & flavours if necessary
     logger.info('Updating cloud images and flavours if necessary')
     cloud_images_flavours.update_cloud_details(requirements, db, identity, opa_client, clouds_info_list)
@@ -77,10 +81,6 @@ def deploy_job(db, batch_client, unique_id):
     # Update quotas if necessary
     logger.info('Updating cloud quotas if necessary')
     cloud_quotas.set_quotas(requirements, db, identity, opa_client, clouds_info_list)
-
-    # Check if clouds are functional
-    logger.info('Checking if resources are functional')
-    utilities.update_clouds_status(opa_client, db, identity, clouds_info_list)
 
     # Get list of clouds meeting the specified requirements
     try:
