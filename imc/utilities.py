@@ -231,6 +231,12 @@ def update_resources(opa_client, path):
         logger.info('No resources info for Open Policy Agent')
         return
 
+    # Update status from AppDB
+    sites_status = {}
+    if CONFIG.get('features', 'enable_appdb'):
+        logger.info('Getting cloud status from AppDB')
+        sites_status = appdbclient.get_cloud_status_appdb()
+
     # Get supported sites by VO from AppDB
     sites_vos = {}
     if CONFIG.get('features', 'enable_appdb'):
@@ -244,6 +250,17 @@ def update_resources(opa_client, path):
         new_cloud_names.append(name)
         logger.info('Checking cloud %s', name)
 
+        # Update cloud status if necessary
+        for site in sites_status:
+            if site in name:
+                if sites_status[site] == 'OK':
+                    logger.info('Setting cloud %s monitoring status to up', name)
+                    opa_client.set_mon_status(name, True)
+                else:
+                    logger.info('Setting cloud %s monitoring status to down', name)
+                    opa_client.set_mon_status(name, False)
+      
+        # Update supported groups by cloud if necessary
         for site in sites_vos:
             if site in name:
                 logger.info('Updating supported_groups in cloud %s', name)
@@ -329,6 +346,11 @@ def update_clouds_status(opa_client, db, identity, config):
         name = cloud_info['name']
 
         if cloud_info['type'] != 'cloud':
+            continue
+
+        status = opa_client.get_mon_status(name)
+        if not status and status is not None:
+            logger.info('Not checking functionality of cloud %s as monitoring shows it as being down', name)
             continue
 
         logger.info('Checking cloud %s', name)
