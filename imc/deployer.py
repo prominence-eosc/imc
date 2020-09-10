@@ -40,8 +40,10 @@ def deployer(infra_id, batch_client):
             logger.info('Setting status to unable due to a permanent failure')
             db.deployment_update_status_with_retries(infra_id, 'unable')
         elif not success:
-            logger.info('Setting status to waiting due to a temporary failure')
-            db.deployment_update_status_with_retries(infra_id, 'waiting')
+            (_, status, _, _, _) = db.deployment_get_im_infra_id(infra_id)
+            if 'del' not in status:
+                logger.info('Setting status to waiting due to a temporary failure')
+                db.deployment_update_status_with_retries(infra_id, 'waiting')
         db.close()
 
     if not success:
