@@ -137,6 +137,10 @@ satisfies_static_quotas(cloud) {
 }
 
 satisfies_static_quotas(cloud) {
+    not cloud.quotas.cores
+}
+
+satisfies_static_quotas(cloud) {
     not cloud.quotas
 }
 
