@@ -81,8 +81,12 @@ def generate_images_and_flavours(config, cloud, token):
     for image in images:
         for image_t in config['image_templates']:
             if image_t in image.name:
+                image_identifier = image.name
+                if config['credentials']['type'] == 'OpenStack':
+                    image_identifier = image.id
+
                 data = config['image_templates'][image_t]
-                data['name'] = '%s/%s' % (config['image_prefix'], image.id)
+                data['name'] = '%s/%s' % (config['image_prefix'], image_identifier)
                 output_images[image.name] = data
 
     output['images'] = output_images
