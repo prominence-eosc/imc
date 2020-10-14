@@ -79,10 +79,11 @@ def generate_images_and_flavours(config, cloud, token):
 
     output_images = {}
     for image in images:
-        if image.name in config['image_templates']:
-            data = config['image_templates'][image.name]
-            data['name'] = '%s/%s' % (config['image_prefix'], image.id)
-            output_images[image.name] = data
+        for image_t in config['image_templates']:
+            if image_t in image.name:
+                data = config['image_templates'][image_t]
+                data['name'] = '%s/%s' % (config['image_prefix'], image.id)
+                output_images[image.name] = data
 
     output['images'] = output_images
     logger.info('Got %d images from cloud %s', len(output['images']), cloud)
@@ -103,11 +104,14 @@ def generate_images_and_flavours(config, cloud, token):
             use = False
 
         if not match_obj_name or use:
-            data = {"name":flavour.name,
-                    "cores":flavour.vcpus,
-                    "memory":memory_convert(flavour.ram),
-                    "disk":flavour.disk}
-            output_flavours[flavour.name] = data
+            try:
+                data = {"name":flavour.name,
+                        "cores":flavour.vcpus,
+                        "memory":memory_convert(flavour.ram),
+                        "disk":flavour.disk}
+                output_flavours[flavour.name] = data
+            except:
+                pass
 
     output['flavours'] = output_flavours
     logger.info('Got %d flavours from cloud %s', len(output['flavours']), cloud)
