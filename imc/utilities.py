@@ -97,7 +97,6 @@ def create_im_line(name, block, token):
                 value = block[item]
             line = '%s = %s; ' % (item, value)
             im_auth_line += line
-    logger.info('im auth line=%s', im_auth_line)
     return im_auth_line
 
 def create_im_auth(cloud, token, config):
