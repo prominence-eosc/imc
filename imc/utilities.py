@@ -92,7 +92,7 @@ def create_im_line(name, block, token):
                 value = token
             elif item == 'password' and 'BEGIN PRIVATE KEY' in block[item]:
                 value = block[item]
-                value = value.replace('\n', '\\\\\\\\n')
+                value = value.replace('\n', '____n')
             else:
                 value = block[item]
             line = '%s = %s; ' % (item, value)
