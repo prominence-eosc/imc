@@ -11,6 +11,7 @@ def appdb_call(query):
         response = requests.get('https://appdb.egi.eu' + query)
         data = response.text
     except:
+        logger.error('Unable to query AppDB with query: %s', query)
         return {}
 
     data.replace('\n', '')
@@ -20,9 +21,13 @@ def get_cloud_status_appdb():
     data = appdb_call('/rest/1.0/va_providers/nova')
 
     output = {}
-    for provider in data['appdb:appdb']['virtualization:provider']:
-        if '@service_status' in provider:
-            output[provider['provider:name']] = provider['@service_status']
+    if 'appdb:appdb' not in data:
+        return output
+
+    if 'virtualization:provider' in data['appdb:appdb']:
+        for provider in data['appdb:appdb']['virtualization:provider']:
+            if '@service_status' in provider:
+                output[provider['provider:name']] = provider['@service_status']
 
     return output
 
