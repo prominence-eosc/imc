@@ -90,10 +90,14 @@ def create_im_line(name, block, token):
         if item in valid_im_fields:
             if item == 'password' and token:
                 value = token
+            elif item == 'password' and 'BEGIN PRIVATE KEY' in block[item]:
+                value = block[item]
+                value = value.replace('\n', '\\\\\\\\n')
             else:
                 value = block[item]
             line = '%s = %s; ' % (item, value)
             im_auth_line += line
+    logger.info('im auth line=%s', im_auth_line)
     return im_auth_line
 
 def create_im_auth(cloud, token, config):
