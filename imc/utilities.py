@@ -333,6 +333,23 @@ def connect_to_cloud(cloud, config, token):
                 return None
         else:
             return None
+
+    elif config['credentials']['type'] == 'GCE':
+        details = {}
+        if 'project' in config['credentials']:
+            details['project'] = config['credentials']['project']
+        if 'datacenter' in config['credentials']:
+            details['datacenter'] = config['credentials']['datacenter']
+
+        provider = get_driver(Provider.GCE)
+        try:
+            conn = provider(config['credentials']['username'],
+                            config['credentials']['password'],
+                            **details)
+        except Exception as ex:
+            logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
+            return None
+
     else:
         return None
 
