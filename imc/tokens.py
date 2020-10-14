@@ -74,11 +74,16 @@ def get_token(cloud, identity, db, config):
             logger.critical('Unable to get a new access token')
 
         # Update token in DB
+        success = False
         if user_token:
-            db.update_user_access_token(identity, token, expiry, creation)
+            success = db.update_user_access_token(identity, token, expiry, creation)
         else:
-            db.delete_token(cloud)
-            db.set_token(cloud, token, expiry, creation)
+            success = db.update_token(cloud, token, expiry, creation)
+
+        if success:
+            logger.info('Successfully wrote new token into database')
+        else:
+            logger.info('Unable to write new token into database')
 
     else:
         logger.info('Using token from DB for cloud %s', cloud)
