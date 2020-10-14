@@ -36,6 +36,8 @@ def deployer(infra_id, batch_client):
             logger.info('Got exception: %s', exc)
             success = None
 
+        # TODO: if get exception, should return status as failed
+
         if success is None:
             logger.info('Setting status to unable due to a permanent failure')
             db.deployment_update_status_with_retries(infra_id, 'unable')
