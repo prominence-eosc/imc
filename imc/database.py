@@ -393,19 +393,39 @@ class Database(object):
             return False
         return True
 
+    def update_token(self, cloud, token, expiry, creation):
+        """
+        Update token in the DB
+        """
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute("UPDATE credentials SET token='%s',expiry=%d,creation=%d WHERE cloud='%s'" % (token, expiry, creation, cloud))
+            self._connection.commit()
+            cursor.close()
+        except Exception as error:
+            logger.critical('[update_token] Unable to execute UPDATE query due to: %s', error)
+            return False
+        return True
+
     def set_token(self, cloud, token, expiry, creation):
         """
         Write token to the DB
         """
+        success = True
         try:
             cursor = self._connection.cursor()
             cursor.execute("INSERT INTO credentials (cloud, token, expiry, creation) VALUES (%s, %s, %s, %s)", (cloud, token, expiry, creation))
             self._connection.commit()
-            cursor.close()
-        except Exception as error:
+        except BaseException as error:
             logger.critical('[set_token] Unable to execute INSERT query due to: %s', error)
-            return False
-        return True
+            success = False
+            if cursor is not None:
+                self._connection.rollback()
+        finally:
+            if cursor is not None:
+                cursor.close()
+
+        return success
 
     def set_ansible_node(self, cloud, infrastructure_id, public_ip, username):
         """
