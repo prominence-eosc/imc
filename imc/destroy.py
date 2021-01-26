@@ -59,12 +59,7 @@ def delete(unique_id):
     (im_infra_id, infra_status, cloud, _, _) = db.deployment_get_im_infra_id(unique_id)
     logger.info('Obtained IM id %s and cloud %s and status %s', im_infra_id, cloud, infra_status)
 
-    # Deterime resource type
     resource_type = 'cloud'
-    #for cloud_info in clouds_info_list:
-    #    if cloud_info['name'] == cloud:
-    #        resource_type = cloud_info['type']
-
     if im_infra_id and cloud:
         if resource_type == 'cloud':
             match_obj_name = re.match(r'\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b', im_infra_id)
@@ -107,8 +102,10 @@ def delete(unique_id):
 
     # Check for any remaining infrastructures in IM
     logger.info('Checking any remaining infrastructures in IM...')
-    #for infra in db.get_im_deployments(unique_id):
-    
+    for infra in db.get_im_deployments(unique_id):
+        if infra != im_infra_id and im_infra_id:
+            logger.info('- will try to destroy %s', infra)
+            destroy(client, infra)
 
     db.close()
     return True
