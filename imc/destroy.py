@@ -7,11 +7,11 @@ import logging
 import configparser
 
 from imc import config
+from imc import cloud_utils
+from imc import im_utils
 from imc import database
 from imc import destroy
-from imc import batchclient
 from imc import imclient
-from imc import opaclient
 from imc import tokens
 from imc import utilities
 
@@ -47,7 +47,7 @@ def destroy(client, infrastructure_id):
 
     return destroyed
 
-def delete(unique_id, batch_client):
+def delete(unique_id):
     """
     Delete the infrastructure with the specified id
     """
@@ -59,14 +59,11 @@ def delete(unique_id, batch_client):
     (im_infra_id, infra_status, cloud, _, _) = db.deployment_get_im_infra_id(unique_id)
     logger.info('Obtained IM id %s and cloud %s and status %s', im_infra_id, cloud, infra_status)
 
-    # Get full list of cloud info
-    clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
-
     # Deterime resource type
-    resource_type = None
-    for cloud_info in clouds_info_list:
-        if cloud_info['name'] == cloud:
-            resource_type = cloud_info['type']
+    resource_type = 'cloud'
+    #for cloud_info in clouds_info_list:
+    #    if cloud_info['name'] == cloud:
+    #        resource_type = cloud_info['type']
 
     if im_infra_id and cloud:
         if resource_type == 'cloud':
@@ -76,12 +73,15 @@ def delete(unique_id, batch_client):
 
                 # Get the identity of the user who created the infrastructure
                 identity = db.deployment_get_identity(unique_id)
+
+                # Get cloud details
+                clouds_info_list = cloud_utils.create_clouds_list(db, identity)
      
                 # Check & get auth token if necessary
                 token = tokens.get_token(cloud, identity, db, clouds_info_list)
 
                 # Setup Infrastructure Manager client
-                im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
+                im_auth = im_utils.create_im_auth(cloud, token, clouds_info_list)
                 client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
                 (status, msg) = client.getauth()
                 if status != 0:
@@ -92,23 +92,24 @@ def delete(unique_id, batch_client):
                 destroyed = destroy(client, im_infra_id)
 
                 if destroyed:
-                    db.deployment_update_status_with_retries(unique_id, 'deleted')
+                    db.deployment_update_status(unique_id, 'deleted')
                     logger.info('Destroyed infrastructure with IM infrastructure id %s', im_infra_id)
                 else:
-                    db.deployment_update_status_with_retries(unique_id, 'deletion-failed')
+                    db.deployment_update_status(unique_id, 'deletion-failed')
                     logger.critical('Unable to destroy infrastructure with IM infrastructure id %s', im_infra_id)
                     return False
             else:
                 logger.critical('IM infrastructure id %s does not match regex', im_infra_id)
-                db.deployment_update_status_with_retries(unique_id, 'deleted')
-        elif resource_type == 'batch':
-            logger.info('Deleting batch infrastructure with job id %s', im_infra_id)
-            batch_client.destroy(im_infra_id, cloud)
-            time.sleep(2)
-            logger.info('Batch job with id %s now in status %s', im_infra_id, batch_client.getstate(im_infra_id, cloud))
+                db.deployment_update_status(unique_id, 'deleted')
     else:
         logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s, resource type is %s', im_infra_id, cloud, resource_type)
-        db.deployment_update_status_with_retries(unique_id, 'deleted')
+        db.deployment_update_status(unique_id, 'deleted')
+
+    # Check for any remaining infrastructures in IM
+    logger.info('Checking any remaining infrastructures in IM...')
+    #for infra in db.get_im_deployments(unique_id):
+    
+
     db.close()
     return True
 

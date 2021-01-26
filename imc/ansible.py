@@ -1,25 +1,22 @@
 """Functions for checking for & deploying an Ansible node"""
-
 from __future__ import print_function
-import base64
-import os
-import sys
 import re
+import sys
 from string import Template
-import json
 import time
 from random import shuffle
 import logging
-import configparser
 import paramiko
 
 from imc import config
 from imc import database
 from imc import cloud_deploy
 from imc import imclient
-from imc import opaclient
 from imc import tokens
+from imc import im_utils
+from imc import cloud_utils
 from imc import utilities
+from imc import opaclient
 
 # Configuration
 CONFIG = config.get_config()
@@ -63,13 +60,13 @@ def delete_ansible_node(cloud, identity, db):
     logger.info('[delete_ansible_node] About to delete Ansible node from clouds %s with infrastructure id %s', cloud, infrastructure_id)
 
     # Get full list of cloud info
-    clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+    clouds_info_list = cloud_utils.create_clouds_list(db, identity)
 
     #  Get a token if necessary
     token = tokens.get_token(cloud, identity, db, clouds_info_list)
 
     # Destroy infrastructure
-    im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
+    im_auth = im_utils.create_im_auth(cloud, token, clouds_info_list)
     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
@@ -90,7 +87,7 @@ def setup_ansible_node(cloud, identity, db):
     """
 
     # Check if there is a static Ansible node
-    (ip_addr, username) = get_static_ansible_node(cloud)
+    (ip_addr, username) = get_static_ansible_node(cloud, db, identity)
 
     if ip_addr and username:
         logger.info('Found static Ansible node with ip_addr %s on cloud %s', ip_addr, cloud)
@@ -129,7 +126,7 @@ def setup_ansible_node(cloud, identity, db):
         return (None, None)
 
     # Get the public IP
-    ip_addr = get_public_ip(infrastructure_id)
+    ip_addr = get_public_ip(infrastructure_id, identity, db)
 
     if not ip_addr:
         logger.critical('Newly deployed Ansible node has no public IP')
@@ -147,28 +144,29 @@ def get_dynamic_ansible_node(cloud, db):
     (infrastructure_id, public_ip, username, timestamp) = db.get_ansible_node(cloud)
     return (public_ip, username)
 
-def get_static_ansible_node(cloud):
+def get_static_ansible_node(cloud, db, identity):
     """
     Check if the given cloud has a static Ansible node and return it's details if it does
     """
-    for cloud_info in utilities.create_clouds_list(CONFIG.get('clouds', 'path')):
+    for cloud_info in cloud_utils.create_clouds_list(db, identity):
         if cloud_info['name'] == cloud:
             if 'ansible' in cloud_info:
                 return (cloud_info['ansible']['public_ip'], cloud_info['ansible']['username'])
 
     return (None, None)
 
-def get_public_ip(infrastructure_id):
+def get_public_ip(infrastructure_id, identity, db):
     """
     Get the public IP of infrastructure
     """
     public_ip = None
 
     # Get full list of cloud info
-    clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+    clouds_info_list = cloud_utils.create_clouds_list(db, identity)
 
     # Setup Infrastructure Manager client
-    im_auth = utilities.create_im_auth(cloud, None, clouds_info_list)
+    #FIXME: 1st argument should be cloud
+    im_auth = im_utils.create_im_auth(None, None, clouds_info_list)
     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:

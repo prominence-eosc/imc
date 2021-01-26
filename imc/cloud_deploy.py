@@ -13,9 +13,10 @@ from imc import config
 from imc import database
 from imc import destroy
 from imc import imclient
-from imc import opaclient
 from imc import tokens
 from imc import utilities
+from imc import im_utils
+from imc import cloud_utils
 
 # Configuration
 CONFIG = config.get_config()
@@ -28,17 +29,13 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     Deploy infrastructure from a specified RADL file
     """
     # Get full list of cloud info
-    clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+    clouds_info_list = cloud_utils.create_clouds_list(db, identity)
 
     # Check & get auth token if necessary
     token = tokens.get_token(cloud, identity, db, clouds_info_list)
 
-    # Setup Open Policy Agent client
-    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'),
-                                     timeout=int(CONFIG.get('opa', 'timeout')))
-
     # Setup Infrastructure Manager client
-    im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
+    im_auth = im_utils.create_im_auth(cloud, token, clouds_info_list)
     client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
     (status, msg) = client.getauth()
     if status != 0:
@@ -48,18 +45,18 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     # Create RADL content for initial deployment: for multiple nodes we strip out all configure/contextualize
     # blocks and will add this back in once we have successfully deployed all required VMs
     if num_nodes > 1:
-        radl_base = utilities.create_basic_radl(radl)
+        radl_base = im_utils.create_basic_radl(radl)
     else:
         radl_base = radl
 
-    # Set availability zone in RADL if necessary
-    cloud_info = opa_client.get_cloud(cloud)
-    if 'availability_zones' in cloud_info:
-        availability_zones = cloud_info['availability_zones']
-        if availability_zones:
-            random.shuffle(availability_zones)
-            logger.info('Using availability zone %s', availability_zones[0])
-            radl_base = utilities.set_availability_zone(radl_base, availability_zones[0])
+    # Set availability zone in RADL if necessary TODO: remove OPA
+    #cloud_info = opa_client.get_cloud(cloud)
+    #if 'availability_zones' in cloud_info:
+    #    availability_zones = cloud_info['availability_zones']
+    #    if availability_zones:
+    #        random.shuffle(availability_zones)
+    #        logger.info('Using availability zone %s', availability_zones[0])
+    #        radl_base = utilities.set_availability_zone(radl_base, availability_zones[0])
 
     retries_per_cloud = int(CONFIG.get('deployment', 'retries'))
     retry = 0
@@ -84,7 +81,9 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
 
         if infrastructure_id:
             logger.info('Created infrastructure on cloud %s with IM id %s and waiting for it to be configured', cloud, infrastructure_id)
-            db.deployment_update_status_with_retries(unique_id, None, cloud, infrastructure_id)
+            if not db.create_im_deployment(unique_id, infrastructure_id):
+                logger.critical('Unable to add IM infrastructure ID %s for infra with id %s to deployments log', infrastructure_id, unique_id)
+            db.deployment_update_status(unique_id, None, cloud, infrastructure_id)
 
             time_created = time.time()
             count_unconfigured = 0
@@ -109,6 +108,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
                     logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with IM id %s', infrastructure_id)
+                    db.set_deployment_failure(cloud, identity, 5, time.time()-time_begin)
                     destroy.destroy(client, infrastructure_id)
                     return None
 
@@ -146,6 +146,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                     # The final configured state
                     if num_nodes == 1 or (num_nodes > 1 and initial_step_complete):
                         logger.info('Successfully configured infrastructure on cloud %s, took %d secs', cloud, time.time() - time_begin_this_cloud)
+                        db.set_deployment_failure(cloud, identity, 0, time.time()-time_begin_this_cloud)
                         success = True
                         return infrastructure_id
 
@@ -193,21 +194,21 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                 # Destroy infrastructure which is taking too long to enter the configured state
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'configured')):
                     logger.warning('Waiting too long for infrastructure to be configured, so destroying')
-                    opa_client.set_status(cloud, 'configuration-too-long')
+                    db.set_deployment_failure(cloud, identity, 3, time.time()-time_created)
                     destroy.destroy(client, infrastructure_id)
                     break
 
                 # Destroy infrastructure which is taking too long to enter the running state
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes == 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
-                    opa_client.set_status(cloud, 'pending-too-long')
+                    db.set_deployment_failure(cloud, identity, 2, time.time()-time_created)
                     destroy.destroy(client, infrastructure_id)
                     break
 
                 # FIXME: This factor of 3 is a hack
                 if time.time() - time_created > 3*int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes > 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
-                    opa_client.set_status(cloud, 'pending-too-long')
+                    db.set_deployment_failure(cloud, identity, 2, time.time()-time_created)
                     destroy.destroy(client, infrastructure_id)
                     break
 
@@ -250,15 +251,15 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                         # so it's best to just start again
                         if failed_vms == num_nodes:
                             logger.warning('All VMs failed and deleted, so destroying infrastructure')
-                            opa_client.set_status(cloud, state)
-                            destroy.destroy(client, infrastructure_id)
+                            db.set_deployment_failure(cloud, identity, 1, time.time()-time_created) # TODO 1 might not be correct
+                            destroy.destroy(client, infrastructure_id) 
                             break
 
                         continue
 
                     else:
                         logger.warning('Infrastructure creation failed on cloud %s, so destroying', cloud)
-                        opa_client.set_status(cloud, state)
+                        db.set_deployment_failure(cloud, identity, 1, time.time()-time_created)
                         destroy.destroy(client, infrastructure_id)
                         break
 
@@ -277,7 +278,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                         client.reconfigure(infrastructure_id, int(CONFIG.get('timeouts', 'reconfigure')))
                     else:
                         logger.warning('Infrastructure has been unconfigured too many times, so destroying after writing contmsg to a file')
-                        opa_client.set_status(cloud, state)
+                        db.set_deployment_failure(cloud, identity, 4, time.time()-time_created)
                         try:
                             with open(file_unconf, 'w') as unconf:
                                 unconf.write(contmsg)
@@ -289,10 +290,10 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
             logger.warning('Deployment failure on cloud %s with id %s with msg="%s"', cloud, infrastructure_id, msg)
             if msg == 'timedout':
                 logger.warning('Infrastructure creation failed due to a timeout')
-                opa_client.set_status(cloud, 'creation-timeout')
+                db.set_deployment_failure(cloud, identity, 4, time.time()-time_created)
             else:
                 file_failed = '%s/failed-%s-%d.txt' % (CONFIG.get('logs', 'contmsg'), unique_id, time.time())
-                opa_client.set_status(cloud, 'creation-failed')
+                db.set_deployment_failure(cloud, identity, 4, time.time()-time_created)
                 logger.warning('Infrastructure creation failed, writing stdout/err to file "%s"', file_failed)
                 try:
                     with open(file_failed, 'w') as failed:

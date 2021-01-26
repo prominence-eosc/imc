@@ -16,7 +16,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger('imc.destroyer')
 
-def destroyer(infra_id, batch_client):
+def destroyer(infra_id):
     """
     Destroy infrastructure
     """
@@ -28,7 +28,7 @@ def destroyer(infra_id, batch_client):
     db = database.get_db()
     if db.connect():
         try:
-            destroy.delete(infra_id, batch_client)
+            destroy.delete(infra_id)
         except Exception as exc:
             logging.info('Got exception running delete: %s', exc)
         db.close()

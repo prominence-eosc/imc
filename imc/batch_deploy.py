@@ -92,7 +92,7 @@ def deploy(resource_name, time_begin, unique_id, identity, desc, db, batch_clien
 
         if job_id:
             logger.info('Submitted to batch system %s with job id %s and waiting for it to run', resource_name, job_id)
-            db.deployment_update_status_with_retries(unique_id, None, resource_name, job_id, 'batch')
+            db.deployment_update_status(unique_id, None, resource_name, job_id, 'batch')
 
             time_created = time.time()
             state_previous = None

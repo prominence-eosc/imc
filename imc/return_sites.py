@@ -1,7 +1,7 @@
 import logging
 
 from imc import config
-from imc import opaclient
+from imc import policies
 from imc import utilities
 
 # Configuration
@@ -31,16 +31,13 @@ def return_sites(description):
     # Generate JSON to be given to Open Policy Agent
     userdata = {'requirements':requirements, 'preferences':preferences, 'ignore_usage': True}
 
-    # Setup Open Policy Agent client
-    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+    # Setup policy engine
+    logger.info('Setting up policies')
+    policy = policies.PolicyEngine(clouds_info_list, userdata, db, identity)
 
     # Check if deployment could be possible, ignoring current quotas/usage
     logger.info('Checking if job requirements will match any clouds')
-    try:
-        clouds = opa_client.get_clouds(userdata)
-    except Exception as err:
-        logger.critical('Unable to get list of clouds due to %s:', err)
-        return None
+    clouds = policy.statisfies_requirements(ignore_usage=True)
 
     logger.info('Suitable resources = [%s]', ','.join(clouds))
 

@@ -14,6 +14,7 @@ from imc import imclient
 from imc import logger as custom_logger
 from imc import return_sites
 from imc import tokens
+from imc import cloud_utils
 from imc import utilities
 
 # Configuration
@@ -130,7 +131,7 @@ def get_infrastructures():
             cloud = request.args.get('cloud')
             db = database.get_db()
             if db.connect():
-                clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
+                clouds_info_list = cloud_utils.create_clouds_list(db, identity)
                 token = tokens.get_token(cloud, None, db, clouds_info_list)
                 db.close()
                 im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
@@ -198,7 +199,7 @@ def delete_infrastructure(infra_id):
                 logger.info('Infrastructure deletion has already been requested')
                 return jsonify({}), 200
 
-            success = db.deployment_update_status_with_retries(infra_id, 'deletion-requested')
+            success = db.deployment_update_status(infra_id, 'deletion-requested')
             if success:
                 db.close()
                 logger.info('Infrastructure deletion request successfully initiated')

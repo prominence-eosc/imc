@@ -30,28 +30,3 @@ def get_cloud_status_appdb():
                 output[provider['provider:name']] = provider['@service_status']
 
     return output
-
-def get_clouds_for_vo(vo):
-    data = appdb_call('/rest/1.0/sites?listmode=details&flt=%%3Dvo.name%%3A%s' % vo)
-
-    sites = []
-    if 'appdb:appdb' not in data:
-        return sites
-
-    if 'appdb:site' in data['appdb:appdb']:
-        for site in data['appdb:appdb']['appdb:site']:
-            if 'site:service' in site:
-                if type(site['site:service']) == type([]):
-                    for service in site['site:service']:
-                        if '@type' in service:
-                            if service['@type'] == 'openstack':
-                                if site['@name'] not in sites:
-                                    sites.append(site['@name'])
-                else:
-                    if '@type' in site['site:service']:
-                        if site['site:service']['@type'] == 'openstack':
-                            if site['@name'] not in sites:
-                                sites.append(site['@name'])
-
-    return sites
-

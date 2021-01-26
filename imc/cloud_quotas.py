@@ -1,16 +1,12 @@
 """Get cloud quotas & usage"""
+#TODO: set static quotas (i.e. limits) as well from here
 
-import json
 import logging
-import os
-import sys
 import time
-import configparser
 
 from novaclient import client
 
 from imc import config
-from imc import opaclient
 from imc import tokens
 from imc import utilities
 
@@ -26,19 +22,19 @@ def get_quotas_openstack(cloud, credentials, token):
     """
     if 'password' not in credentials:
         logger.critical('password is not in the credentials file')
-        return (None, None, None)
+        return {}
     if 'project_id' not in credentials:
         logger.critical('project_id is not in the credentials file')
-        return (None, None, None)
+        return {}
     if 'project_domain_id' not in credentials:
         logger.critical('project_domain_id is not in the credentials file')
-        return (None, None, None)
+        return {}
     if 'host' not in credentials:
         logger.critical('host is not in the credentials file')
-        return (None, None, None)
+        return {}
     if 'user_domain_name' not in credentials:
         logger.critical('user_domain_name is not in the credentials file')
-        return (None, None, None)
+        return {}
 
     auth = {'project_id':credentials['project_id'],
             'project_domain_id':credentials['project_domain_id'],
@@ -47,32 +43,64 @@ def get_quotas_openstack(cloud, credentials, token):
 
     if token:
         auth['auth_token'] = token
-    else:
+    elif 'password' in credentials:
         auth['password'] = credentials['password']
+    else:
+        logger.critical('Do not have a token for cloud %s', cloud)
+        return {}
 
+    quotas = {}
+
+    # Get limits only first, as some clouds don't allow users to get their own usage info (why??)
     try:
         nova = client.Client(2, credentials['username'], timeout=10, **auth)
-        quotas = nova.quotas.get(credentials['tenant_id'], detail=True)
+        os_quotas = nova.quotas.get(credentials['tenant_id'], detail=False)
     except Exception as ex:
-        logger.critical('Unable to get quotas from cloud %s due to "%s"', cloud, ex.encode('utf-8'))
-        return (None, None, None)
+        logger.warning('Unable to get quotas from cloud %s due to "%s"', cloud, str(ex).encode('utf-8'))
+        return quotas
 
-    quotas_dict = quotas.to_dict()
-    cores_available = quotas_dict['cores']['limit'] - quotas_dict['cores']['in_use'] - quotas_dict['cores']['reserved']
-    memory_available = quotas_dict['ram']['limit'] - quotas_dict['ram']['in_use'] - quotas_dict['ram']['reserved']
-    instances_available = quotas_dict['instances']['limit'] - quotas_dict['instances']['in_use'] - quotas_dict['instances']['reserved']
-    return (instances_available, cores_available, int(memory_available/1024))
+    os_quotas_dict = os_quotas.to_dict()
 
-def set_quotas(requirements, db, identity, opa_client, config):
+    quotas['cpu-limit'] = os_quotas_dict['cores']
+    quotas['memory-limit'] = int(os_quotas_dict['ram']/1024)
+    quotas['instances-limit'] = os_quotas_dict['instances']
+
+    logger.info('Got limits cpu=%d, memory=%d, instances=%d', int(quotas['cpu-limit']), quotas['memory-limit'], int(quotas['instances-limit']))
+
+    # Try to get usage now
+    try:
+        nova = client.Client(2, credentials['username'], timeout=10, **auth)
+        os_quotas = nova.quotas.get(credentials['tenant_id'], detail=True)
+    except Exception as ex:
+        logger.critical('Unable to get quota usage from cloud %s due to "%s"', cloud, str(ex).encode('utf-8'))
+        return quotas
+
+    os_quotas_dict = os_quotas.to_dict()
+
+    quotas['cpu-used'] = os_quotas_dict['cores']['in_use'] + os_quotas_dict['cores']['reserved']
+    quotas['memory-used'] = int(os_quotas_dict['ram']['in_use'] + os_quotas_dict['ram']['reserved'])/1024
+    quotas['instances-used'] = os_quotas_dict['instances']['in_use'] + os_quotas_dict['instances']['reserved']
+
+    logger.info('Got usage cpu=%d, memory=%d, instances=%d', int(quotas['cpu-used']), quotas['memory-used'], int(quotas['instances-used']))
+
+    return quotas
+
+def set_quotas(requirements, db, identity, config):
     """
-    Determine the available remaining quotas and set in Open Policy Agent
+    Determine the available remaining quotas
     """
     for cloud in config:
         name = cloud['name']
+        logger.info('[set_quotas] Considering cloud %s', name)
         credentials = cloud['credentials']
+
         instances = None
         cores = None
         memory = None
+
+        instances_static = -1
+        cores_static = -1
+        memory_static = -1
 
         # Check if we need to consider this cloud at all
         if 'sites' in requirements:
@@ -81,6 +109,15 @@ def set_quotas(requirements, db, identity, opa_client, config):
 
         if cloud['type'] != 'cloud':
             continue
+
+        # Check for hardwired quotas in config file
+        if 'quotas' in cloud:
+            if 'instances' in cloud['quotas']:
+                instances_static = cloud['quotas']['instances']
+            if 'cores' in cloud['quotas']:
+                cores_static = cloud['quotas']['cores']
+            if 'memory' in cloud['quotas']:
+                memory_static = cloud['quotas']['memory']
 
         # Get a token if necessary
         token = tokens.get_token(name, identity, db, config)
@@ -101,24 +138,42 @@ def set_quotas(requirements, db, identity, opa_client, config):
 
             # Check if the cloud hasn't been updated recently
             logger.info('Checking if we need to update cloud %s quotas', name)
-            try:
-                update_time = opa_client.get_quota_update_time(name)
-            except Exception as err:
-                logger.critical('Unable to get quota update time due to:', err)
-                return False
+            last_update = db.get_cloud_updated_quotas(name, identity)
  
-            if time.time() - update_time > int(CONFIG.get('updates', 'quotas')):
+            if time.time() - last_update > int(CONFIG.get('updates', 'quotas')):
                 logger.info('Quotas for cloud %s have not been updated recently, so getting current values', name)
-                try:
-                    (instances, cores, memory) = get_quotas_openstack(name, credentials, token)
-                except:
-                    (instances, cores, memory) = (None, None, None)
+                quotas = get_quotas_openstack(name, credentials, token)
+
+                if 'cpu-limit' in quotas:
+                    logger.info('Setting static quotas in DB for cloud %s', name)
+
+                    cores_limit = quotas['cpu-limit']
+                    memory_limit = quotas['memory-limit']
+                    instances_limit = quotas['instances-limit']
+
+                    if cores_static < cores_limit:
+                        cores_limit = cores_static
+
+                    if memory_static < memory_limit:
+                        memory_limit = memory_static
+
+                    if instances_static < instances_limit:
+                        instances_limit = instances_static
+
+                    db.set_cloud_static_quotas(name, identity, cores_limit, memory_limit, instances_limit)
+                    db.set_cloud_updated_quotas(name, identity)
+
+                if 'cpu-limit' in quotas and 'cpu-used' in quotas:
+                    (instances, cores, memory) = (quotas['instances-limit'] - quotas['instances-used'],
+                                                  quotas['cpu-limit'] - quotas['cpu-used'],
+                                                  quotas['memory-limit'] - quotas['memory-used'])
+
         elif credentials['type'] != 'InfrastructureManager':
             logger.warning('Unable to determine quotas for cloud %s of type %s', name, credentials['type'])
 
         if instances and cores and memory:
             logger.info('Setting updated quotas for cloud %s: instances %d, cpus %d, memory %d', name, instances, cores, memory)
-            opa_client.set_quotas(name, instances, cores, memory)
+            db.set_cloud_dynamic_quotas(name, identity, cores, memory, instances)
         else:
             logger.info('Not setting updated quotas for cloud %s', name)
 

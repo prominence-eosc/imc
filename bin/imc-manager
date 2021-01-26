@@ -6,14 +6,16 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 from logging.handlers import RotatingFileHandler
 import signal
+import sys
 import time
 
-from imc import batchclient
 from imc import config
 from imc import database
 from imc import utilities
 from imc import deployer
 from imc import destroyer
+from imc import cloud_updates
+from imc import opaclient
 
 # Configuration
 CONFIG = config.get_config()
@@ -42,7 +44,7 @@ def handle_signal(signum, frame):
     EXIT_NOW = True
     logger.info('Received signal %d, shutting down...', signum)
 
-def find_new_infra_for_creation(db, batch_client, executor):
+def find_new_infra_for_creation(db, executor):
     """
     Find infrastructure to be deployed
     """
@@ -51,6 +53,7 @@ def find_new_infra_for_creation(db, batch_client, executor):
 
     # Include any infrastructures which have been in the waiting state for long enough
     infras_waiting = db.deployment_get_infra_in_state_cloud('waiting', order=True)
+
     for infra in infras_waiting:
         if time.time() - infra['updated'] > int(CONFIG.get('updates', 'waiting')):
             infras.append(infra)
@@ -58,13 +61,14 @@ def find_new_infra_for_creation(db, batch_client, executor):
     current_deployers = 0
     num_not_run = 0
 
-    logger.info('Found %d infrastructures to deploy', len(infras))
+    if len(infras) > 0:
+        logger.info('Found %d infrastructures to deploy', len(infras))
 
     for infra in infras:
         if current_deployers + 1 < int(CONFIG.get('pool', 'deployers')):
             logger.info('Running deploying for infra %s', infra['id'])
-            db.deployment_update_status_with_retries(infra['id'], 'creating')
-            executor.submit(deployer.deployer, infra['id'], batch_client)
+            db.deployment_update_status(infra['id'], 'creating')
+            executor.submit(deployer.deployer, infra['id'])
             current_deployers += 1
         else:
             num_not_run += 1
@@ -72,7 +76,7 @@ def find_new_infra_for_creation(db, batch_client, executor):
     if num_not_run > 0:
         logger.info('Not running %d deployers as we already have enough', num_not_run)
 
-def find_new_infra_for_deletion(db, batch_client, executor):
+def find_new_infra_for_deletion(db, executor):
     """
     Find infrastructure to be destroyed
     """
@@ -80,13 +84,14 @@ def find_new_infra_for_deletion(db, batch_client, executor):
     current_destroyers = 0
     num_not_run = 0
 
-    logger.info('Found %d infrastructures to delete', len(infras))
+    if len(infras) > 0:
+        logger.info('Found %d infrastructures to delete', len(infras))
 
     for infra in infras:
         if current_destroyers + 1 < int(CONFIG.get('pool', 'deleters')):
             logger.info('Running destroyer for infra %s', infra['id'])
-            db.deployment_update_status_with_retries(infra['id'], 'deleting')
-            executor.submit(destroyer.destroyer, infra['id'], batch_client)
+            db.deployment_update_status(infra['id'], 'deleting')
+            executor.submit(destroyer.destroyer, infra['id'])
             current_destroyers += 1
         else:
             num_not_run += 1
@@ -100,23 +105,16 @@ if __name__ == "__main__":
     executor_deployers = ThreadPoolExecutor(int(CONFIG.get('pool', 'deployers')))
     executor_deleters = ThreadPoolExecutor(int(CONFIG.get('pool', 'deleters')))
 
-    config_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
-    batch_client = batchclient.BatchClient(config_list)
-    batch_check_time = 0
-
+    logger.info('Entering main polling loop')
     while True:
         if EXIT_NOW:
             logger.info('Exiting')
-            exit(0)
+            sys.exit(0)
  
         db = database.get_db()
         if db.connect():
-            find_new_infra_for_deletion(db, batch_client, executor_deployers)
-            find_new_infra_for_creation(db, batch_client, executor_deleters)
-            if time.time() - batch_check_time > 7200:
-                logger.info('Checking if any batch resource contexts can be closed')
-                batch_client.cleanup()
-                batch_check_time = time.time()
+            find_new_infra_for_deletion(db, executor_deployers)
+            find_new_infra_for_creation(db, executor_deleters)
             db.close()
 
         time.sleep(30)

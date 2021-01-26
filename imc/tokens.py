@@ -1,5 +1,4 @@
 """Functions for handling tokens"""
-
 import json
 import logging
 import os
@@ -24,26 +23,47 @@ def get_token(cloud, identity, db, config):
     """
     Get a token for a cloud
     """
-    logger.info('Checking if we need a token for cloud %s', cloud)
-
-    # Get config for the required cloud
     data = {}
-    for cloud_info in config:
-        if cloud_info['name'] == cloud:
-            data = cloud_info
+    if cloud:
+        logger.info('Checking if we need a token for cloud %s', cloud)
 
-    if not data:
-        logger.critical('Unable to find info for cloud %s in JSON config', cloud)
-        return None
+        # Get config for the required cloud
+        is_fed_cloud = False
+        for cloud_info in config:
+            if cloud_info['name'] == cloud:
+                data = cloud_info
+                if cloud_info['region'] == 'FedCloud':
+                    is_fed_cloud = True
 
-    # Get details required for generating a new token
-    (user_token, client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, data)
-    if not client_id or not client_secret or not scope or not url:
-        logger.info('A token is not required for cloud %s', cloud)
-        return None
+        if not data:
+            logger.critical('Unable to find info for cloud %s in JSON config', cloud)
+            return None
 
-    if user_token:
-        logger.info('Cloud %s requires user tokens', cloud)
+        # Get details required for generating a new token
+        if not is_fed_cloud:
+            (user_token, client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, data)
+            if not client_id or not client_secret or not scope or not url:
+                logger.info('A token is not required for cloud %s', cloud)
+                return None
+
+            if user_token:
+                logger.info('Cloud %s requires user tokens', cloud)
+
+        else:
+            logger.info('Getting EGI Federated Cloud credentials for cloud %s', cloud)
+            user_token = True
+            client_id = CONFIG.get('egi.credentials', 'client_id')
+            client_secret = CONFIG.get('egi.credentials', 'client_secret')
+            scope = CONFIG.get('egi.credentials', 'scope')
+            url = CONFIG.get('egi.credentials', 'url')
+
+    else:
+        logger.info('Getting EGI Federated Cloud credentials')
+        user_token = True
+        client_id = CONFIG.get('egi.credentials', 'client_id')
+        client_secret = CONFIG.get('egi.credentials', 'client_secret')
+        scope = CONFIG.get('egi.credentials', 'scope')
+        url = CONFIG.get('egi.credentials', 'url')
 
     # Try to obtain an existing token from the DB
     logger.info('Try to get an existing token from the DB')
@@ -58,7 +78,7 @@ def get_token(cloud, identity, db, config):
         if check_rt != 0:
             logger.info('Check token failed for cloud %s', cloud)
     else:
-        logger.info('No token could be obtained from the DB for cloud %s', cloud)
+        logger.info('No token could be obtained from the DB for identity %s for cloud %s', identity, cloud)
         check_rt = -1
 
     logger.info('Token expiry time: %d, current time: %d', expiry, time.time())
@@ -66,27 +86,37 @@ def get_token(cloud, identity, db, config):
         logger.info('Token has or is about to expire')
 
     if not token or expiry - time.time() < 600 or (check_rt != 0 and time.time() - creation > 600):
-        logger.info('Getting a new token for cloud %s', cloud)
+        if cloud:
+            logger.info('Getting a new token for cloud %s', cloud)
+        else:
+            logger.info('Getting a new EGI Check-in access token')
+
         # Get new token
-        (token, expiry, creation, _) = get_new_token(client_id, client_secret, refresh_token, scope, url)
+        (token, expiry, creation, reason) = get_new_token(client_id, client_secret, refresh_token, scope, url)
 
         if not token:
-            logger.critical('Unable to get a new access token')
-
-        # Update token in DB
-        success = False
-        if user_token:
-            success = db.update_user_access_token(identity, token, expiry, creation)
+            if cloud:
+                logger.critical('Unable to get a new access token for cloud %s due to: %s', cloud, reason)
+            else:
+                logger.critical('Unable to get a new EGI Checkin access token due to: %s', reason)
         else:
-            success = db.update_token(cloud, token, expiry, creation)
+            # Update token in DB
+            success = False
+            if user_token:
+                success = db.update_user_access_token(identity, token, expiry, creation)
+            else:
+                success = db.update_token(cloud, token, expiry, creation)
 
-        if success:
-            logger.info('Successfully wrote new token into database')
-        else:
-            logger.info('Unable to write new token into database')
+            if success:
+                logger.info('Successfully wrote new token into database')
+            else:
+                logger.info('Unable to write new token into database')
 
     else:
-        logger.info('Using token from DB for cloud %s', cloud)
+        if cloud:
+            logger.info('Using token from DB for cloud %s', cloud)
+        else:
+            logger.info('Using EGI Checkin access token from DB for identity %s', identity)
 
     return token
 
@@ -101,7 +131,10 @@ def get_new_token(client_id, client_secret, refresh_token, scope, url):
             'refresh_token':refresh_token,
             'scope':scope}
     try:
-        response = requests.post(url + '/token', auth=(client_id, client_secret), timeout=10, data=data)
+        response = requests.post(url + '/token',
+                                 auth=(client_id, client_secret),
+                                 timeout=10,
+                                 data=data)
     except requests.exceptions.Timeout:
         return (None, 0, 0, 'timed out')
     except requests.exceptions.RequestException as ex:
@@ -111,6 +144,7 @@ def get_new_token(client_id, client_secret, refresh_token, scope, url):
         access_token = response.json()['access_token']
         expires_at = int(response.json()['expires_in'] + creation)
         return (access_token, expires_at, creation, '')
+    
     return (None, 0, 0, response.text)
 
 def check_token(token, url):
