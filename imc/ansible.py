@@ -16,7 +16,7 @@ from imc import tokens
 from imc import im_utils
 from imc import cloud_utils
 from imc import utilities
-from imc import opaclient
+from imc import policies
 
 # Configuration
 CONFIG = config.get_config()
@@ -119,7 +119,7 @@ def setup_ansible_node(cloud, identity, db):
     logger.info('No functional dynamic Ansible node found for cloud %s', cloud)
 
     # Try to create a dynamic Ansible node
-    infrastructure_id = deploy_ansible_node(cloud, db)
+    infrastructure_id = deploy_ansible_node(cloud, identity, db)
 
     if not infrastructure_id:
         logger.critical('Unable to create Ansible node on cloud "%s"', cloud)
@@ -181,7 +181,7 @@ def get_public_ip(infrastructure_id, identity, db):
 
     return public_ip
 
-def deploy_ansible_node(cloud, db):
+def deploy_ansible_node(cloud, identity, db):
     """
     Deploy an Ansible node with a public IP address
     """
@@ -207,24 +207,29 @@ def deploy_ansible_node(cloud, db):
     requirements['image']['type'] = CONFIG.get('ansible', 'type')
     requirements['image']['version'] = CONFIG.get('ansible', 'version')
 
-    # Generate JSON to be given to Open Policy Agent
+    # Generate JSON to be given to the policy engine
     userdata = {'requirements':requirements, 'preferences':{}}
 
-    # Setup Open Policy Agent client
-    opa_client = opaclient.OPAClient(url=CONFIG.get('opa', 'url'), timeout=int(CONFIG.get('opa', 'timeout')))
+    # Get full list of cloud info
+    logger.info('Getting list of clouds from DB')
+    clouds_info_list = cloud_utils.create_clouds_list(db, identity)
+
+    # Setup policy engine
+    logger.info('Setting up policies')
+    policy = policies.PolicyEngine(clouds_info_list, userdata, db, identity)
 
     # Get the image & flavour
     try:
-        image = opa_client.get_image(userdata, cloud)
+        (_, image) = policy.get_image(cloud)
     except Exception as err:
-        logger.critical('Unable to get image due to:', err)
-        return None
+        logger.critical('Unable to get image due to %s', err)
+        return False
 
     try:
-        flavour = opa_client.get_flavour(userdata, cloud)
+        flavour = policy.get_flavour(cloud)
     except Exception as err:
-        logger.critical('Unable to get flavour due to:', err)
-        return None
+        logger.critical('Unable to get flavour due to %s', err)
+        return False
 
     if not image:
         logger.critical('Unable to deploy Ansible node because no acceptable image is available')

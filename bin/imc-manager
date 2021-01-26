@@ -15,7 +15,6 @@ from imc import utilities
 from imc import deployer
 from imc import destroyer
 from imc import cloud_updates
-from imc import opaclient
 
 # Configuration
 CONFIG = config.get_config()
