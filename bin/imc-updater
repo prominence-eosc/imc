@@ -70,7 +70,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_signal)
 
     logger.info('Creating thread pool')
-    executors = ThreadPoolExecutor(int(CONFIG.get('pool', 'updates'))
+    executors = ThreadPoolExecutor(int(CONFIG.get('pool', 'updaters')))
 
     logger.info('Entering main polling loop')
     while True:
