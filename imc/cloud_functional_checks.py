@@ -108,7 +108,7 @@ def check_cloud(cloud, config, token):
     if not conn:
         return False
 
-    # List locations
+    # List locations (it's quick!)
     try:
         conn.list_locations()
     except Exception as ex:

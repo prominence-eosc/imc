@@ -51,16 +51,13 @@ def deploy_job(db, unique_id):
     logger.info('Found %d instances to deploy', instances)
     requirements['resources']['instances'] = instances
 
-    # Generate JSON to be used to determining policies
-    userdata = {'requirements':requirements, 'preferences':preferences}
-
     # Get full list of cloud info
     logger.info('Getting list of clouds from DB')
     clouds_info_list = cloud_utils.create_clouds_list(db, identity)
 
     # Setup policy engine
     logger.info('Setting up policies')
-    policy = policies.PolicyEngine(clouds_info_list, userdata, db, identity)
+    policy = policies.PolicyEngine(clouds_info_list, requirements, preferences, db, identity)
 
     # Check if deployment could be possible, ignoring current quotas/usage
     logger.info('Checking if job requirements will match any clouds')
@@ -130,10 +127,14 @@ def deploy_job(db, unique_id):
                 return False
 
             try:
-                flavour = policy.get_flavour(cloud)
+                (flavour, flavour_cpus, flavour_memory, _) = policy.get_flavour(cloud)
             except Exception as err:
                 logger.critical('Unable to get flavour due to %s', err)
                 return False
+
+            # Set total resources used
+            cpus_used = flavour_cpus*int(requirements['resources']['instances'])
+            memory_used = flavour_memory*int(requirements['resources']['instances'])
 
             # If no flavour meets the requirements we should skip the current cloud
             if not flavour:
@@ -188,8 +189,9 @@ def deploy_job(db, unique_id):
             return False
 
         # Deploy infrastructure
+        reason = None
         if resource_type == 'cloud':
-            infra_id = cloud_deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
+            (infra_id, reason) = cloud_deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
 
         if infra_id:
             success = True
@@ -205,14 +207,16 @@ def deploy_job(db, unique_id):
                 else:
                     # Set status
                     db.deployment_update_status(unique_id, 'configured')
+                    db.deployment_update_resources(unique_id, int(requirements['resources']['instances']), cpus_used, memory_used)
             break
 
     if unique_id and not infra_id:
         logger.info('Setting status to waiting with reason DeploymentFailed')
         db.deployment_update_status(unique_id, 'waiting')
-        # TODO: not sure why the next line was here, but it will only cause problems!
-        #db.deployment_update_status(unique_id, None, 'none', 'none')
-        db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
+        if reason:
+            db.deployment_update_status_reason(unique_id, 'DeploymentFailed_%s' % reason)
+        else:
+            db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
 
     return success
 

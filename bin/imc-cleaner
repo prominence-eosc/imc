@@ -166,7 +166,7 @@ def retry_incomplete_deletions(db, state):
     infras = db.deployment_get_infra_in_state_cloud(state) 
     logger.info('Found %d infrastructures in state %s', len(infras), state)
     for infra in infras:
-        if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'retry_failed_deletes_after')):
+        if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'retry_failed_deletes_after')) or 1 == 1:
             logger.info('Attempting to delete infra with ID %s', infra['id'])
             if destroy.delete(infra['id']):
                 logger.info('Successfully deleted infrastructure with ID %s', infra['id'])

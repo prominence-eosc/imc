@@ -168,7 +168,7 @@ def get_infrastructure(infra_id):
     db = database.get_db()
     if db.connect():
         (im_infra_id, status, cloud, _, _) = db.deployment_get_im_infra_id(infra_id)
-        if status in ('unable', 'failed'):
+        if status in ('unable', 'failed', 'waiting'):
             status_reason = db.deployment_get_status_reason(infra_id)
     db.close()
     if status:

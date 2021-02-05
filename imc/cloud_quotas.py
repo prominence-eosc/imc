@@ -163,6 +163,15 @@ def set_quotas(requirements, db, identity, config):
                     db.set_cloud_static_quotas(name, identity, cores_limit, memory_limit, instances_limit)
                     db.set_cloud_updated_quotas(name, identity)
 
+                # If we can't get the used resources from the cloud (many OpenStack clouds have a policy of
+                # preventing users from getting resource usage info from the API), we estimate the usage
+                if 'cpu-used' not in quotas:
+                    logger.info('Unable to get used resources from API, will use our own estimate instead')
+                    (used_instances, used_cpus, used_memory) = db.get_used_resources(identity, name)
+                    quotas['instances-used'] = used_instances
+                    quotas['cpu-used'] = used_cpus
+                    quotas['memory-used'] = used_memory
+                    
                 if 'cpu-limit' in quotas and 'cpu-used' in quotas:
                     (instances, cores, memory) = (quotas['instances-limit'] - quotas['instances-used'],
                                                   quotas['cpu-limit'] - quotas['cpu-used'],

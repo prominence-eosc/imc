@@ -71,7 +71,9 @@ class Database(object):
                             deployment_update_status_reason, \
                             set_deployment_failure, \
                             create_im_deployment, \
-                            get_im_deployments
+                            get_im_deployments, \
+                            deployment_update_resources, \
+                            get_used_resources
 
     from .egi import set_egi_cloud, \
                      get_egi_clouds, \
@@ -152,7 +154,9 @@ class Database(object):
                                           identity TEXT,
                                           identifier TEXT,
                                           creation INT NOT NULL,
-                                          updated INT NOT NULL
+                                          updated INT NOT NULL,
+                                          used_cpus INT NOT NULL DEFAULT 0,
+                                          used_memory INT NOT NULL DEFAULT 0
                                           )''')
 
             # Create deployments log table

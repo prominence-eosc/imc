@@ -27,17 +27,23 @@ def get_flavour(self, identity, cloud, cpus, memory, disk):
     """
     """
     name = None
+    cpus_used = -1
+    memory_used = -1
+    disk_used = -1
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT name FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND cpus>=%s AND memory>=%s AND disk>=%s ORDER BY cpus*memory DESC" % (identity, cloud, cpus, memory, disk))
+        cursor.execute("SELECT name, cpus, memory, disk FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND cpus>=%s AND memory>=%s AND disk>=%s ORDER BY cpus*memory ASC LIMIT 1" % (identity, cloud, cpus, memory, disk))
         for row in cursor:
             name = row[0]
+            cpus_used = int(row[1])
+            memory_used = int(row[2])
+            disk_used = int(row[3])
         cursor.close()
     except Exception as error:
         logger.critical('[get_flavour] unable to execute SELECT query due to: %s', error)
 
-    return name
+    return (name, cpus_used, memory_used, disk_used)
 
 def set_flavour(self, identity, cloud, name, cpus, memory, disk): #TODO: do as single SQL statement
     """

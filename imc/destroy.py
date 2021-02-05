@@ -78,6 +78,10 @@ def delete(unique_id):
                 # Setup Infrastructure Manager client
                 im_auth = im_utils.create_im_auth(cloud, token, clouds_info_list)
                 client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
+                if not im_auth:
+                    logger.critical('Not IM auth for cloud %s', cloud)
+                    db.close()
+                    return False
                 (status, msg) = client.getauth()
                 if status != 0:
                     logger.critical('Error reading IM auth file: %s', msg)

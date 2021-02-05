@@ -43,7 +43,7 @@ def handle_signal(signum, frame):
     EXIT_NOW = True
     logger.info('Received signal %d, shutting down...', signum)
 
-def updater(db, executors):
+def updater(db, executors, last_fast_update_time):
     """
     Find identities which need checking
     """
@@ -65,6 +65,10 @@ def updater(db, executors):
            time.time() - last_update_start > int(CONFIG.get('updates', 'deadline')):
             logger.info('Submitting updater for identity %s', identity)
             executors.submit(cloud_updates.update, identity)
+        elif time.time() - last_fast_update_time > 30*60:
+            last_fast_update_time = time.time()
+            logger.info('Submitting fast updater for identity %s', identity)
+            executors.submit(cloud_updates.update, identity, 1)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_signal)
@@ -73,6 +77,8 @@ if __name__ == "__main__":
     executors = ThreadPoolExecutor(int(CONFIG.get('pool', 'updaters')))
 
     logger.info('Entering main polling loop')
+    last_fast_update_time = 0
+
     while True:
         if EXIT_NOW:
             logger.info('Exiting')
@@ -80,7 +86,7 @@ if __name__ == "__main__":
  
         db = database.get_db()
         if db.connect():
-            updater(db, executors)
+            last_fast_update_time = updater(db, executors, last_fast_update_time)
             db.close()
 
         time.sleep(30)

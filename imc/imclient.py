@@ -11,11 +11,13 @@ class IMClient(object):
         self._data = data
         self._headers = None
 
-    def getauth(self):
+    def getauth(self, data=None):
         """
         Generate auth header
         """
-        if not self._auth and self._data:
+        if data:
+            content = data
+        elif not self._auth and self._data:
             content = self._data
         else:
             try:

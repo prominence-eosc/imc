@@ -24,6 +24,19 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
+def update_im_client(client, cloud, identity, db, clouds_info_list):
+    """
+    Setup IM client ready to access the specified cloud
+    """
+    # Check & get auth token if necessary
+    token = tokens.get_token(cloud, identity, db, clouds_info_list)
+
+    # Create auth for IM and update client
+    im_auth = im_utils.create_im_auth(cloud, token, clouds_info_list)
+    (status, msg) = client.getauth(im_auth)
+    if status != 0:
+        logger.critical('Error reading IM auth file in update_im_client: %s', msg)
+
 def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     """
     Deploy infrastructure from a specified RADL file
@@ -31,16 +44,8 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
     # Get full list of cloud info
     clouds_info_list = cloud_utils.create_clouds_list(db, identity)
 
-    # Check & get auth token if necessary
-    token = tokens.get_token(cloud, identity, db, clouds_info_list)
-
     # Setup Infrastructure Manager client
-    im_auth = im_utils.create_im_auth(cloud, token, clouds_info_list)
-    client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
-    (status, msg) = client.getauth()
-    if status != 0:
-        logger.critical('Error reading IM auth file: %s', msg)
-        return None
+    client = imclient.IMClient(url=CONFIG.get('im', 'url'))
 
     # Create RADL content for initial deployment: for multiple nodes we strip out all configure/contextualize
     # blocks and will add this back in once we have successfully deployed all required VMs
@@ -74,9 +79,10 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
         (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
             logger.info('Deletion requested of infrastructure, aborting deployment')
-            return None
+            return (None, None)
 
         # Create infrastructure
+        update_im_client(client, cloud, identity, db, clouds_info_list)
         (infrastructure_id, msg) = client.create(radl_base, int(CONFIG.get('timeouts', 'creation')))
 
         if infrastructure_id:
@@ -103,17 +109,20 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                 (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
                 if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
                     logger.info('Deletion requested of infrastructure so aborting deployment')
-                    return None
+                    return (None, None)
 
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
                     logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with IM id %s', infrastructure_id)
                     db.set_deployment_failure(cloud, identity, 5, time.time()-time_begin)
+                    update_im_client(client, cloud, identity, db, clouds_info_list)
                     destroy.destroy(client, infrastructure_id)
-                    return None
+                    return (None, None)
 
                 # Get the current overall state & states of all VMs in the infrastructure
+                update_im_client(client, cloud, identity, db, clouds_info_list)
                 (states, msg) = client.getstates(infrastructure_id, int(CONFIG.get('timeouts', 'status')))
+                logger.info('InfraID=%s IM_ID=%s has state: %s', unique_id, infrastructure_id, msg)
 
                 # If state is not known, wait
                 if not states:
@@ -148,7 +157,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                         logger.info('Successfully configured infrastructure on cloud %s, took %d secs', cloud, time.time() - time_begin_this_cloud)
                         db.set_deployment_failure(cloud, identity, 0, time.time()-time_begin_this_cloud)
                         success = True
-                        return infrastructure_id
+                        return (infrastructure_id, None)
 
                     # Configured state for initial step of multi-node infrastructure
                     if num_nodes > 1 and have_nodes == num_nodes and not initial_step_complete:
@@ -161,12 +170,14 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                             if line.startswith('deploy'):
                                 line = ''
                             radl_final += '%s\n' % line
+                        update_im_client(client, cloud, identity, db, clouds_info_list)
                         (exit_code, msg) = client.reconfigure_new(infrastructure_id, radl_final, int(CONFIG.get('timeouts', 'reconfigure')))
 
                     # Configured state but some nodes failed and were deleted
                     if num_nodes > 1 and have_nodes < num_nodes and not initial_step_complete:
                         logger.info('Infrastructure is now in the configured state but need to re-create failed VMs')
-
+                        update_im_client(client, cloud, identity, db, clouds_info_list)                        
+ 
                         if fnodes_to_be_replaced > 0:
                             logger.info('Creating %d fnodes', fnodes_to_be_replaced)
                             radl_new = ''
@@ -195,6 +206,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'configured')):
                     logger.warning('Waiting too long for infrastructure to be configured, so destroying')
                     db.set_deployment_failure(cloud, identity, 3, time.time()-time_created)
+                    update_im_client(client, cloud, identity, db, clouds_info_list)
                     destroy.destroy(client, infrastructure_id)
                     break
 
@@ -202,6 +214,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes == 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
                     db.set_deployment_failure(cloud, identity, 2, time.time()-time_created)
+                    update_im_client(client, cloud, identity, db, clouds_info_list)
                     destroy.destroy(client, infrastructure_id)
                     break
 
@@ -209,6 +222,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                 if time.time() - time_created > 3*int(CONFIG.get('timeouts', 'notrunning')) and state != 'running' and state != 'unconfigured' and num_nodes > 1:
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
                     db.set_deployment_failure(cloud, identity, 2, time.time()-time_created)
+                    update_im_client(client, cloud, identity, db, clouds_info_list)
                     destroy.destroy(client, infrastructure_id)
                     break
 
@@ -222,6 +236,8 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                             if states['state']['vm_states'][vm_id] == 'failed':
                                 logger.info('Deleting VM with id %d', int(vm_id))
                                 failed_vms += 1
+
+                                update_im_client(client, cloud, identity, db, clouds_info_list)
 
                                 # Determine what type of node (fnode or wnode)
                                 (exit_code, vm_info) = client.get_vm_info(infrastructure_id,
@@ -252,6 +268,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                         if failed_vms == num_nodes:
                             logger.warning('All VMs failed and deleted, so destroying infrastructure')
                             db.set_deployment_failure(cloud, identity, 1, time.time()-time_created) # TODO 1 might not be correct
+                            update_im_client(client, cloud, identity, db, clouds_info_list)
                             destroy.destroy(client, infrastructure_id) 
                             break
 
@@ -259,8 +276,33 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
 
                     else:
                         logger.warning('Infrastructure creation failed on cloud %s, so destroying', cloud)
-                        db.set_deployment_failure(cloud, identity, 1, time.time()-time_created)
+
+                        # Get the full data about the infrastructure from IM, as we can use it to determine what
+                        # caused some failures
+                        (_, msg) = client.getdata(infrastructure_id, int(CONFIG.get('timeouts', 'status')))
+                        fatal_failure = False
+                        reason = None
+
+                        if '403 Forbidden Quota' in msg:
+                            logger.info('Infrastructure creation failed due to quota exceeded on cloud %s, our id=%s, IM id=%s', cloud, unique_id, infrastructure_id)
+                            db.set_deployment_failure(cloud, identity, 6, time.time()-time_created)
+                            fatal_failure = True
+                            reason = 'QuotaExceeded'
+                        elif 'No image found with ID' in msg:
+                            logger.info('Infrastructure creation failed due to image not found on cloud %s, our id=%s, IM id=%s', cloud, unique_id, infrastructure_id)
+                            db.set_deployment_failure(cloud, identity, 7, time.time()-time_created)
+                            fatal_failure = True
+                            reason = 'ImageNotFound'
+                        else:
+                            db.set_deployment_failure(cloud, identity, 1, time.time()-time_created)
+
+                        update_im_client(client, cloud, identity, db, clouds_info_list)
                         destroy.destroy(client, infrastructure_id)
+
+                        # In the event of a fatal failure there's no reason to try again
+                        if fatal_failure:
+                            return (None, reason)
+
                         break
 
                 # Handle unconfigured infrastructure
@@ -275,6 +317,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                                 unconf.write(contmsg)
                         except Exception as error:
                             logger.warning('Unable to write contmsg to file')
+                        update_im_client(client, cloud, identity, db, clouds_info_list)
                         client.reconfigure(infrastructure_id, int(CONFIG.get('timeouts', 'reconfigure')))
                     else:
                         logger.warning('Infrastructure has been unconfigured too many times, so destroying after writing contmsg to a file')
@@ -284,6 +327,7 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                                 unconf.write(contmsg)
                         except Exception as error:
                             logger.warning('Unable to write contmsg to file')
+                        update_im_client(client, cloud, identity, db, clouds_info_list)
                         destroy.destroy(client, infrastructure_id)
                         break
         else:
@@ -301,5 +345,5 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
                 except Exception as error:
                     logger.warning('Unable to write contmsg to file')
 
-    return None
+    return (None, None)
 

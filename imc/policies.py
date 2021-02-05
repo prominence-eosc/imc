@@ -8,9 +8,10 @@ class PolicyEngine():
     """
     Policy engine
     """
-    def __init__(self, config, job, db, identity):
+    def __init__(self, config, requirements, preferences, db, identity):
         self._config = {}
-        self._job = job
+        self._requirements = requirements
+        self._preferences = preferences
         self._db = db
         self._identity = identity
 
@@ -28,15 +29,18 @@ class PolicyEngine():
         required_memory = 0
         required_disk = 0
 
-        if 'resources' not in self._job['requirements']:
+        if not self._requirements:
             return flavour_name
 
-        if 'cores' in self._job['requirements']['resources']:
-            required_cores = self._job['requirements']['resources']['cores']
-        if 'memory' in self._job['requirements']['resources']:
-            required_memory = self._job['requirements']['resources']['memory']
-        if 'disk' in self._job['requirements']['resources']:
-            required_disk = self._job['requirements']['resources']['disk']
+        if 'resources' not in self._requirements:
+            return flavour_name
+
+        if 'cores' in self._requirements['resources']:
+            required_cores = self._requirements['resources']['cores']
+        if 'memory' in self._requirements['resources']:
+            required_memory = self._requirements['resources']['memory']
+        if 'disk' in self._requirements['resources']:
+            required_disk = self._requirements['resources']['disk']
 
         return self._db.get_flavour(self._identity, cloud, required_cores, required_memory, required_disk)
 
@@ -50,21 +54,23 @@ class PolicyEngine():
         required_image_type = None
         required_image_architecture = None
 
-        if 'requirements' not in self._job:
+        if not self._requirements:
             return image_name
 
-        if 'image' in self._job['requirements']:
-            if 'distribution' in self._job['requirements']['image']:
-                required_image_distribution = self._job['requirements']['image']['distribution']
+        if 'image' not in self._requirements:
+            return image_name
 
-            if 'version' in self._job['requirements']['image']:
-                required_image_version = self._job['requirements']['image']['version']
+        if 'distribution' in self._requirements['image']:
+            required_image_distribution = self._requirements['image']['distribution']
 
-            if 'type' in self._job['requirements']['image']:
-                required_image_type = self._job['requirements']['image']['type']
+        if 'version' in self._requirements['image']:
+            required_image_version = self._requirements['image']['version']
 
-            if 'architecture' in self._job['requirements']['image']:
-                required_image_architecture = self._job['requirements']['image']['architecture']
+        if 'type' in self._requirements['image']:
+            required_image_type = self._requirements['image']['type']
+
+        if 'architecture' in self._requirements['image']:
+            required_image_architecture = self._requirements['image']['architecture']
 
         return self._db.get_image(self._identity,
                                   cloud,
@@ -79,12 +85,12 @@ class PolicyEngine():
         """
         clouds_out = self._clouds.copy()
 
-        if 'requirements' not in self._job:
+        if not self._requirements:
             return clouds_out
 
-        if 'sites' in self._job['requirements']:
+        if 'sites' in self._requirements:
             for cloud in self._clouds:
-                if cloud not in self._job['requirements']['sites']:
+                if cloud not in self._requirements['sites']:
                     clouds_out.remove(cloud)
 
         return clouds_out
@@ -95,18 +101,18 @@ class PolicyEngine():
         """
         clouds_out = self._clouds.copy()
 
-        if 'requirements' not in self._job:
+        if not self._requirements:
             return clouds_out
 
-        if 'regions' not in self._job['requirements']:
+        if 'regions' not in self._requirements:
             return clouds_out
 
-        if not self._job['requirements']['regions']:
+        if not self._requirements['regions']:
             return clouds_out
 
-        if 'regions' in self._job['requirements']:
+        if 'regions' in self._requirements:
             for cloud in self._clouds:
-                if self._config[cloud]['region'] not in self._job['requirements']['regions']:
+                if self._config[cloud]['region'] not in self._requirements['regions']:
                     clouds_out.remove(cloud)
 
         return clouds_out
@@ -148,9 +154,9 @@ class PolicyEngine():
                     found = True
 
                 for group in self._config[cloud]['supported_groups']:
-                    if 'requirements' in self._job:
-                        if 'groups' in self._job['requirements']:
-                            for mygroup in self._job['requirements']['groups']:
+                    if self._requirements:
+                        if 'groups' in self._requirements:
+                            for mygroup in self._requirements['groups']:
                                 if mygroup == group:
                                     found = True
 
@@ -170,15 +176,15 @@ class PolicyEngine():
 
         for cloud in self._clouds:
             (_, _, _, _, _, remaining_cpus, remaining_memory, remaining_instances) = self._db.get_cloud_info(cloud, self._identity)
-            instances = self._job['requirements']['resources']['instances']
+            instances = self._requirements['resources']['instances']
 
-            if remaining_instances != -1 and self._job['requirements']['resources']['instances'] > remaining_instances:
+            if remaining_instances != -1 and self._requirements['resources']['instances'] > remaining_instances:
                 clouds_out.remove(cloud)
 
-            if remaining_cpus != -1 and self._job['requirements']['resources']['cores']*instances > remaining_cpus:
+            if remaining_cpus != -1 and self._requirements['resources']['cores']*instances > remaining_cpus:
                 clouds_out.remove(cloud)
 
-            if remaining_memory != -1 and self._job['requirements']['resources']['memory']*instances > remaining_memory:
+            if remaining_memory != -1 and self._requirements['resources']['memory']*instances > remaining_memory:
                 clouds_out.remove(cloud)
 
         return clouds_out
@@ -204,12 +210,12 @@ class PolicyEngine():
 
         for cloud in self._clouds:
             (_, _, limit_cpus, limit_memory, limit_instances, _, _, _) = self._db.get_cloud_info(cloud, self._identity)
-            instances = self._job['requirements']['resources']['instances']
+            instances = self._requirements['resources']['instances']
 
-            if limit_cpus != -1 and self._job['requirements']['resources']['cores']*instances > limit_cpus:
+            if limit_cpus != -1 and self._requirements['resources']['cores']*instances > limit_cpus:
                 clouds_out.remove(cloud)
 
-            if limit_memory != -1 and self._job['requirements']['resources']['memory']*instances > limit_memory:
+            if limit_memory != -1 and self._requirements['resources']['memory']*instances > limit_memory:
                 clouds_out.remove(cloud)
 
             if limit_instances != -1 and instances > limit_instances:
@@ -252,7 +258,7 @@ class PolicyEngine():
         """
         Returns ranked list of clouds
         """
-        if 'preferences' not in self._job:
+        if not self._preferences:
             return clouds
 
         ranking_sites = {}
@@ -262,17 +268,17 @@ class PolicyEngine():
             ranking_sites[cloud] = 0
             ranking_regions[cloud] = 0
 
-        if 'regions' in self._job['preferences']:
-            for count in range(0, len(self._job['preferences']['regions'])):
+        if 'regions' in self._preferences:
+            for count in range(0, len(self._preferences['regions'])):
                 for cloud in clouds:
-                    if self._config[cloud]['region'] == self._job['preferences']['regions'][count]:
-                        ranking_regions[cloud] = len(self._job['preferences']['regions']) - count
+                    if self._config[cloud]['region'] == self._preferences['regions'][count]:
+                        ranking_regions[cloud] = len(self._preferences['regions']) - count
 
-        if 'sites' in self._job['preferences']:
-            for count in range(0, len(self._job['preferences']['sites'])):
+        if 'sites' in self._preferences:
+            for count in range(0, len(self._preferences['sites'])):
                 for cloud in clouds:
-                    if cloud == self._job['preferences']['sites'][count]:
-                        ranking_sites[cloud] = len(self._job['preferences']['sites']) - count
+                    if cloud == self._preferences['sites'][count]:
+                        ranking_sites[cloud] = len(self._preferences['sites']) - count
 
         # Get list of clouds with numbers of successful and failed deployments
         failures = self._db.get_deployment_failures(self._identity, 2*60*60)

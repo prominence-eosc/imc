@@ -282,6 +282,33 @@ def deployment_update_status_reason(self, infra_id, status_reason):
     """
     return self.execute("UPDATE deployments SET status_reason='%s' WHERE id='%s'" % (status_reason, infra_id))
 
+def deployment_update_resources(self, infra_id, used_instances, used_cpus, used_memory):
+    """
+    Update resources used by infra
+    """
+    return self.execute("UPDATE deployments SET used_instances=%s, used_cpus=%s, used_memory=%s WHERE id='%s'" % (used_instances, used_cpus, used_memory, infra_id))
+
+def get_used_resources(self, identity, cloud):
+    """
+    Get the total resources used on a particular cloud
+    """
+    used_instances = 0
+    used_cpus = 0
+    used_memory = 0
+
+    try:
+        cursor = self._connection.cursor()
+        cursor.execute("SELECT SUM(used_instances), SUM(used_cpus), SUM(used_memory) FROM deployments WHERE status='configured' AND identity='%s' AND cloud='%s'" % (identity, cloud))
+        for row in cursor:
+            if row[0] and row[1] and row[2]:
+                used_instances = int(row[0])
+                used_cpus = int(row[1])
+                used_memory = int(row[2])
+        cursor.close()
+    except Exception as error:
+        logger.critical('[get_used_resources] Unable to execute query due to: %s', error)
+    return (used_instances, used_cpus, used_memory)
+
 def set_deployment_failure(self, cloud, identity, reason, duration=-1):
     """
     Set deployment failure reason
