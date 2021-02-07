@@ -104,6 +104,7 @@ def deploy_job(db, unique_id):
     # Try to create infrastructure, exiting on the first successful attempt
     time_begin = time.time()
     success = False
+    reason = None
 
     for cloud in clouds_ranked:
         infra_id = None
