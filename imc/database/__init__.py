@@ -156,7 +156,8 @@ class Database(object):
                                           creation INT NOT NULL,
                                           updated INT NOT NULL,
                                           used_cpus INT NOT NULL DEFAULT 0,
-                                          used_memory INT NOT NULL DEFAULT 0
+                                          used_memory INT NOT NULL DEFAULT 0,
+                                          used_instances INT NOT NULL DEFAULT 0
                                           )''')
 
             # Create deployments log table
@@ -174,7 +175,8 @@ class Database(object):
                               deployment_failures(cloud TEXT NOT NULL,
                                                   identity TEXT NOT NULL,
                                                   reason INT NOT NULL,
-                                                  time INT NOT NULL
+                                                  time INT NOT NULL,
+                                                  duration INT DEFAULT -1
                                                   )''')
 
             # Create cloud updates table
