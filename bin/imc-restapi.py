@@ -21,7 +21,7 @@ from imc import utilities
 CONFIG = config.get_config()
 
 # Setup handlers for the root logger
-handler = RotatingFileHandler(CONFIG.get('logs', 'filename'),
+handler = RotatingFileHandler(CONFIG.get('logs', 'filename').replace('.log', '-restapi.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
