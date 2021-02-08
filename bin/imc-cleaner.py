@@ -247,6 +247,7 @@ if __name__ == "__main__":
             retry_incomplete_deletions(db, 'deletion-requested')
 
             db.close()
+        else:
+            logger.critical('Unable to connect to database')
 
-        exit(0)
-        #time.sleep(int(CONFIG.get('polling', 'cleaning')))
+        time.sleep(int(CONFIG.get('polling', 'cleaning')))
