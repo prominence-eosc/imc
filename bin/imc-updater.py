@@ -88,6 +88,8 @@ if __name__ == "__main__":
         if db.connect():
             last_fast_update_time = updater(db, executors, last_fast_update_time)
             db.close()
+        else:
+            logger.critical('Unable to connect to database')
 
         time.sleep(30)
 

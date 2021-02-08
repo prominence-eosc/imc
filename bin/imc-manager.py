@@ -117,6 +117,8 @@ if __name__ == "__main__":
             find_new_infra_for_deletion(db, executor_deployers)
             find_new_infra_for_creation(db, executor_deleters)
             db.close()
+        else:
+            logger.critical('Unable to connect to database')
 
         time.sleep(30)
 
