@@ -57,9 +57,9 @@ class IMClient(object):
             uris = []
             for uri in response.json()['uri-list']:
                 uris.append(uri['uri'])
-            return (None, uris)
+            return (True, uris)
 
-        return (None, None)
+        return (False, None)
 
     def getstate(self, infra_id, timeout):
         """
