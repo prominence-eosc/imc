@@ -58,17 +58,26 @@ def updater(db, executors, last_fast_update_time):
         if infra['identity'] not in identities:
             identities.append(infra['identity'])
 
+    # Check if we should run a fast check
+    if time.time() - last_fast_update_time > 30*60:
+        logger.info('Running fast checks...')
+        last_fast_update_time = time.time()
+        for identity in identities:
+            logger.info('Submitting fast updater for identity %s', identity)
+            executors.submit(cloud_updates.update, identity, 1)
+
     # Check which identities need checks
     for identity in identities:
         (last_update_start, last_update) = db.get_resources_update(identity)
-        if time.time() - last_update > int(CONFIG.get('updates', 'discover')) and \
-           time.time() - last_update_start > int(CONFIG.get('updates', 'deadline')):
+        if not last_update_start:
+            logger.info('Submitting updater for identity %s as it has not run before', identity)
+            executors.submit(cloud_updates.update, identity)
+        elif time.time() - last_update > int(CONFIG.get('updates', 'discover')) and \
+            time.time() - last_update_start > int(CONFIG.get('updates', 'deadline')):
             logger.info('Submitting updater for identity %s', identity)
             executors.submit(cloud_updates.update, identity)
-        elif time.time() - last_fast_update_time > 30*60:
-            last_fast_update_time = time.time()
-            logger.info('Submitting fast updater for identity %s', identity)
-            executors.submit(cloud_updates.update, identity, 1)
+
+    return last_fast_update_time
 
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_signal)
