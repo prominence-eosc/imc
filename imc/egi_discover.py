@@ -267,6 +267,7 @@ def egi_clouds_update_do(identity, db):
     logger.info('Added %d clouds to the database', count)
 
     # Disable any clouds if necessary, for example if a user has left a VO
-    db.disable_egi_clouds(identity, clouds_list)
+    if clouds_list:
+        db.disable_egi_clouds(identity, clouds_list)
 
     return
