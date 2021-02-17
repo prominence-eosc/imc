@@ -16,6 +16,7 @@ from imc import return_sites
 from imc import tokens
 from imc import cloud_utils
 from imc import utilities
+from imc import health
 
 # Configuration
 CONFIG = config.get_config()
@@ -150,6 +151,17 @@ def get_infrastructures():
                     return jsonify(im_list), 200
         
     return jsonify({}), 400
+
+@app.route('/health', methods=['GET'])
+def get_health():
+    """
+    Get the current health
+    """
+    (status, msg) = health()
+    if not status:
+        return jsonify({'error': msg}), 409
+
+    return jsonify({}), 204
 
 @app.route('/infrastructures/<string:infra_id>', methods=['GET'])
 @requires_auth
