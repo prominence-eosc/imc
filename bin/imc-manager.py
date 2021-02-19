@@ -56,7 +56,7 @@ def find_new_infra_for_creation(db, executor):
     infras_waiting = db.deployment_get_infra_in_state_cloud('waiting', order=True)
 
     for infra in infras_waiting:
-        if time.time() - infra['updated'] > int(CONFIG.get('updates', 'waiting')) + random.randint(-60, 60):
+        if time.time() - infra['updated'] > int(CONFIG.get('updates', 'waiting')) + random.randint(-200, 200):
             infras.append(infra)
             
     current_deployers = 0
