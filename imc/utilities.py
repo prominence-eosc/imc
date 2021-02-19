@@ -47,3 +47,33 @@ def get_reqs_and_prefs(description):
         requirements = {}
     
     return (requirements, preferences)
+
+def create_flavour_list(flavours):
+    """
+    Given a list of flavours, create a new list containing only those 
+    flavours with unique first characters
+    """
+    new_flavours = [flavours[0]]
+    new_flavours_names = [flavours[0][0]]
+    old_flavours_names = [flavours[0][0]]
+    first_chars = [flavours[0][0][0]]
+
+    for flavour in flavours:
+        if flavour in new_flavours:
+            continue
+
+        old_flavours_names.append(flavour[0])
+
+        found = False
+        for first_char in first_chars:
+            if flavour[0].startswith(first_char):
+                found = True
+
+        if not found:
+            new_flavours.append(flavour)
+            new_flavours_names.append(flavour[0])
+            first_chars.append(flavour[0][0])
+
+    logger.info('Flavours matching job from unique classes: %s', ','.join(new_flavours_names))
+
+    return new_flavours

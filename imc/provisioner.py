@@ -10,10 +10,8 @@ from imc import cloud_utils
 from imc import im_utils
 from imc import config
 from imc import utilities
-from imc import cloud_images_flavours
 from imc import cloud_quotas
 from imc import policies
-from imc import tokens
 
 # Configuration
 CONFIG = config.get_config()
@@ -127,10 +125,14 @@ def deploy_job(db, unique_id):
             logger.critical('Unable to get image due to %s', err)
             return False
 
+        # If no image meets the requirements we should skip the current cloud
+        if not image_name:
+            logger.info('Skipping because no image could be determined')
+            continue
+
         # Get flavours
         try:
             flavours = policy.get_flavours(cloud)
-            #(flavour, flavour_cpus, flavour_memory, _) = policy.get_flavour(cloud)
         except Exception as err:
             logger.critical('Unable to get flavours due to %s', err)
             return False
@@ -140,36 +142,9 @@ def deploy_job(db, unique_id):
             logger.info('Skipping because no flavour could be determined')
             continue
 
-        # Generate list of flavours of different classs - one class might have no
+        # Generate list of flavours with unique classs - one class might have no
         # more available hypervisors but another is fine
-        new_flavours = [flavours[0]]
-        new_flavours_names = [flavours[0][0]]
-        old_flavours_names = [flavours[0][0]]
-        first_chars = [flavours[0][0][0]]
-        for flavour in flavours:
-            if flavour in new_flavours:
-                continue
-
-            old_flavours_names.append(flavour[0])
-
-            found = False
-            for first_char in first_chars:
-                if flavour[0].startswith(first_char):
-                    found = True
-
-            if not found:
-                new_flavours.append(flavour)
-                new_flavours_names.append(flavour[0])
-                first_chars.append(flavour[0][0])
-
-        flavours = new_flavours
-        logger.info('All flavours matching job: %s', ','.join(old_flavours_names))
-        logger.info('Flavours matching job: %s', ','.join(new_flavours_names))
-
-        # If no image meets the requirements we should skip the current cloud
-        if not image_name:
-            logger.info('Skipping because no image could be determined')
-            continue
+        flavours = utilities.create_flavour_list(flavours)
 
         logger.info('Attempting to deploy on cloud %s', cloud)
  
@@ -221,10 +196,6 @@ def deploy_job(db, unique_id):
                 logger.critical('Error creating RADL from template due to %s', ex)
                 return False
 
-            # Set total resources used
-            cpus_used = flavour_cpus*int(requirements['resources']['instances'])
-            memory_used = flavour_memory*int(requirements['resources']['instances'])
-
             # Deploy infrastructure
             reason = None
             (infra_id, reason) = cloud_deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
@@ -242,6 +213,8 @@ def deploy_job(db, unique_id):
                 else:
                     # Set status
                     db.deployment_update_status(unique_id, 'configured')
+                    cpus_used = flavour_cpus*int(requirements['resources']['instances'])
+                    memory_used = flavour_memory*int(requirements['resources']['instances'])
                     db.deployment_update_resources(unique_id, int(requirements['resources']['instances']), cpus_used, memory_used)
                 break
 
