@@ -3,7 +3,7 @@ import logging
 # Logging
 logger = logging.getLogger(__name__)
 
-def get_flavours(self, identity, cloud):
+def get_all_flavours(self, identity, cloud):
     """
     """
     results = {}
@@ -22,6 +22,22 @@ def get_flavours(self, identity, cloud):
         logger.critical('[get_flavours] unable to execute SELECT query due to: %s', error)
 
     return results
+
+def get_flavours(self, identity, cloud, cpus, memory, disk):
+    """
+    """
+    flavours = []
+
+    try:
+        cursor = self._connection.cursor()
+        cursor.execute("SELECT name, cpus, memory, disk FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND cpus>=%s AND memory>=%s AND disk>=%s ORDER BY cpus*memory*disk ASC" % (identity, cloud, cpus, memory, disk))
+        for row in cursor:
+            flavours.append((row[0], int(row[1]), int(row[2]), int(row[3])))
+        cursor.close()
+    except Exception as error:
+        logger.critical('[get_flavours] unable to execute SELECT query due to: %s', error)
+
+    return flavours
 
 def get_flavour(self, identity, cloud, cpus, memory, disk):
     """

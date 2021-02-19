@@ -186,7 +186,7 @@ def update(db, identity, config):
     
         # Get existing images & flavours
         images_old = db.get_images(identity, name)
-        flavours_old = db.get_flavours(identity, name)
+        flavours_old = db.get_all_flavours(identity, name)
 
         updated = False
 

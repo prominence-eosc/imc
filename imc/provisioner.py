@@ -120,60 +120,98 @@ def deploy_job(db, unique_id):
             logger.info('Skipping because no resource type could be determined for resource %s', cloud)
             continue
         
-        if resource_type == 'cloud':
-            try:
-                (image_name, image_url) = policy.get_image(cloud)
-            except Exception as err:
-                logger.critical('Unable to get image due to %s', err)
-                return False
+        # Get image
+        try:
+            (image_name, image_url) = policy.get_image(cloud)
+        except Exception as err:
+            logger.critical('Unable to get image due to %s', err)
+            return False
 
-            try:
-                (flavour, flavour_cpus, flavour_memory, _) = policy.get_flavour(cloud)
-            except Exception as err:
-                logger.critical('Unable to get flavour due to %s', err)
-                return False
+        # Get flavours
+        try:
+            flavours = policy.get_flavours(cloud)
+            #(flavour, flavour_cpus, flavour_memory, _) = policy.get_flavour(cloud)
+        except Exception as err:
+            logger.critical('Unable to get flavours due to %s', err)
+            return False
 
-            # Set total resources used
-            cpus_used = flavour_cpus*int(requirements['resources']['instances'])
-            memory_used = flavour_memory*int(requirements['resources']['instances'])
+        # If no flavour meets the requirements we should skip the current cloud
+        if not flavours:
+            logger.info('Skipping because no flavour could be determined')
+            continue
 
-            # If no flavour meets the requirements we should skip the current cloud
-            if not flavour:
-                logger.info('Skipping because no flavour could be determined')
+        # Generate list of flavours of different classs - one class might have no
+        # more available hypervisors but another is fine
+        new_flavours = [flavours[0]]
+        new_flavours_names = [flavours[0][0]]
+        old_flavours_names = [flavours[0][0]]
+        first_chars = [flavours[0][0][0]]
+        for flavour in flavours:
+            if flavour in new_flavours:
                 continue
 
-            # If no image meets the requirements we should skip the current cloud
-            if not image_name:
-                logger.info('Skipping because no image could be determined')
-                continue
+            old_flavours_names.append(flavour[0])
 
-            logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image_url, flavour)
+            found = False
+            for first_char in first_chars:
+                if flavour[0].startswith(first_char):
+                    found = True
+
+            if not found:
+                new_flavours.append(flavour)
+                new_flavours_names.append(flavour[0])
+                first_chars.append(flavour[0][0])
+
+        flavours = new_flavours
+        logger.info('All flavours matching job: %s', ','.join(old_flavours_names))
+        logger.info('Flavours matching job: %s', ','.join(new_flavours_names))
+
+        # If no image meets the requirements we should skip the current cloud
+        if not image_name:
+            logger.info('Skipping because no image could be determined')
+            continue
+
+        logger.info('Attempting to deploy on cloud %s', cloud)
  
-            # Setup Ansible node if necessary
-            if requirements['resources']['instances'] > 1:
-                (ip_addr, username) = ansible.setup_ansible_node(cloud, identity, db)
-                if not ip_addr or not username:
-                    logger.critical('Unable to find existing or create an Ansible node in cloud %s because ip=%s,username=%s', cloud, ip_addr, username)
-                    continue
-                logger.info('Ansible node in cloud %s available, now will deploy infrastructure for the job', cloud)
-            else:
-                logger.info('Ansible node not required')
-                ip_addr = None
-                username = None
+        # Setup Ansible node if necessary
+        if requirements['resources']['instances'] > 1:
+            (ip_addr, username) = ansible.setup_ansible_node(cloud, identity, db)
+            if not ip_addr or not username:
+                logger.critical('Unable to find existing or create an Ansible node in cloud %s because ip=%s,username=%s', cloud, ip_addr, username)
+                continue
+            logger.info('Ansible node in cloud %s available, now will deploy infrastructure for the job', cloud)
+        else:
+            logger.info('Ansible node not required')
+            ip_addr = None
+            username = None
 
-            # Get the Ansible private key if necessary
-            private_key = None
-            if ip_addr and username:
-                try:
-                    with open(CONFIG.get('ansible', 'private_key')) as data:
-                        private_key = data.read()
-                except IOError:
-                    logger.critical('Unable to open private key for Ansible node from file "%s"', CONFIG.get('ansible', 'private_key'))
-                    return False
+        # Get the Ansible private key if necessary
+        private_key = None
+        if ip_addr and username:
+            try:
+                with open(CONFIG.get('ansible', 'private_key')) as data:
+                    private_key = data.read()
+            except IOError:
+                logger.critical('Unable to open private key for Ansible node from file "%s"', CONFIG.get('ansible', 'private_key'))
+                return False
+
+        # Check if we should stop
+        (_, infra_status_new, _, _, _) = db.deployment_get_im_infra_id(unique_id)
+        if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
+            logger.info('Deletion requested of infrastructure, aborting deployment')
+            return False
+
+        # Loop over flavours
+        for flavour in flavours:
+            flavour_name = flavour[0]
+            flavour_cpus = flavour[1]
+            flavour_memory = flavour[2]
+
+            logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image_url, flavour_name)
 
             # Create complete RADL content
             try:
-                radl = Template(str(radl_contents)).substitute(instance=flavour,
+                radl = Template(str(radl_contents)).substitute(instance=flavour_name,
                                                                image=image_url,
                                                                cloud=cloud,
                                                                ansible_ip=ip_addr,
@@ -183,20 +221,16 @@ def deploy_job(db, unique_id):
                 logger.critical('Error creating RADL from template due to %s', ex)
                 return False
 
-        # Check if we should stop
-        (_, infra_status_new, _, _, _) = db.deployment_get_im_infra_id(unique_id)
-        if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
-            logger.info('Deletion requested of infrastructure, aborting deployment')
-            return False
+            # Set total resources used
+            cpus_used = flavour_cpus*int(requirements['resources']['instances'])
+            memory_used = flavour_memory*int(requirements['resources']['instances'])
 
-        # Deploy infrastructure
-        reason = None
-        if resource_type == 'cloud':
+            # Deploy infrastructure
+            reason = None
             (infra_id, reason) = cloud_deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
 
-        if infra_id:
-            success = True
-            if unique_id:
+            if infra_id:
+                success = True
                 # Set cloud and IM infra id
                 db.deployment_update_status(unique_id, None, cloud, infra_id, resource_type)
 
@@ -209,7 +243,7 @@ def deploy_job(db, unique_id):
                     # Set status
                     db.deployment_update_status(unique_id, 'configured')
                     db.deployment_update_resources(unique_id, int(requirements['resources']['instances']), cpus_used, memory_used)
-            break
+                break
 
     if unique_id and not infra_id:
         logger.info('Setting status to waiting with reason DeploymentFailed')

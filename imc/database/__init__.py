@@ -34,7 +34,8 @@ class Database(object):
     """
     from .flavours import get_flavour, \
                           set_flavour, \
-                          get_flavours
+                          get_flavours, \
+                          get_all_flavours
 
     from .images import set_cloud_updated_images, \
                         get_cloud_updated_images, \

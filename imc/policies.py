@@ -20,7 +20,7 @@ class PolicyEngine():
             self._clouds.append(cloud['name'])
             self._config[cloud['name']] = cloud
 
-    def get_flavour(self, cloud):
+    def get_flavours(self, cloud):
         """
         Return the flavour matching the job
         """
@@ -42,7 +42,7 @@ class PolicyEngine():
         if 'disk' in self._requirements['resources']:
             required_disk = self._requirements['resources']['disk']
 
-        return self._db.get_flavour(self._identity, cloud, required_cores, required_memory, required_disk)
+        return self._db.get_flavours(self._identity, cloud, required_cores, required_memory, required_disk)
 
     def get_image(self, cloud):
         """
@@ -124,7 +124,7 @@ class PolicyEngine():
         clouds_out = self._clouds.copy()
 
         for cloud in self._clouds:
-            if not self.get_flavour(cloud):
+            if not self.get_flavours(cloud):
                 clouds_out.remove(cloud)
 
         return clouds_out
