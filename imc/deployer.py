@@ -1,4 +1,4 @@
-"""Deploy infrastructure on the specified cloud, with extensive error handling"""
+"""Wrapper for deploying infrastructure"""
 from __future__ import print_function
 import time
 import random
