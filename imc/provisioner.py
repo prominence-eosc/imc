@@ -198,7 +198,16 @@ def deploy_job(db, unique_id):
 
             # Deploy infrastructure
             reason = None
-            (infra_id, reason) = cloud_deploy.deploy(radl, cloud, time_begin, unique_id, identity, db, int(requirements['resources']['instances']))
+            (infra_id, reason) = cloud_deploy.deploy(radl,
+                                                     cloud,
+                                                     time_begin,
+                                                     unique_id,
+                                                     identity,
+                                                     db,
+                                                     int(requirements['resources']['instances']),
+                                                     flavour_cpus*int(requirements['resources']['instances']),
+                                                     flavour_memory*int(requirements['resources']['instances']))
+
 
             if infra_id:
                 success = True
@@ -213,9 +222,6 @@ def deploy_job(db, unique_id):
                 else:
                     # Set status
                     db.deployment_update_status(unique_id, 'configured')
-                    cpus_used = flavour_cpus*int(requirements['resources']['instances'])
-                    memory_used = flavour_memory*int(requirements['resources']['instances'])
-                    db.deployment_update_resources(unique_id, int(requirements['resources']['instances']), cpus_used, memory_used)
                 break
 
     if unique_id and not infra_id:

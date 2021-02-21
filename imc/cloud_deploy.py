@@ -37,7 +37,7 @@ def update_im_client(client, cloud, identity, db, clouds_info_list):
     if status != 0:
         logger.critical('Error reading IM auth file in update_im_client: %s', msg)
 
-def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
+def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1, used_cpus=1, used_memory=1):
     """
     Deploy infrastructure from a specified RADL file
     """
@@ -89,7 +89,15 @@ def deploy(radl, cloud, time_begin, unique_id, identity, db, num_nodes=1):
             logger.info('Created infrastructure on cloud %s with IM id %s and waiting for it to be configured', cloud, infrastructure_id)
             if not db.create_im_deployment(unique_id, infrastructure_id):
                 logger.critical('Unable to add IM infrastructure ID %s for infra with id %s to deployments log', infrastructure_id, unique_id)
+
+            # Set the cloud & IM infrastructure ID
             db.deployment_update_status(unique_id, None, cloud, infrastructure_id)
+
+            # Set the resources used by this infrastructure
+            db.deployment_update_resources(unique_id, num_nodes, used_cpus, used_memory)
+
+            # Change the status
+            db.deployment_update_status(unique_id, 'creating')
 
             time_created = time.time()
             count_unconfigured = 0
