@@ -298,7 +298,7 @@ def get_used_resources(self, identity, cloud):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT SUM(used_instances), SUM(used_cpus), SUM(used_memory) FROM deployments WHERE status='configured' AND identity='%s' AND cloud='%s'" % (identity, cloud))
+        cursor.execute("SELECT SUM(used_instances), SUM(used_cpus), SUM(used_memory) FROM deployments WHERE status IN ('configured', 'creating') AND identity='%s' AND cloud='%s'" % (identity, cloud))
         for row in cursor:
             if row[0] and row[1] and row[2]:
                 used_instances = int(row[0])
