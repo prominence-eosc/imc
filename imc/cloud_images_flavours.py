@@ -22,6 +22,19 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
+def add_defaults(data, config):
+    """
+    """
+    if 'default_images' in config:
+        for image in config['default_images']:
+            data['images'][image] = config['default_images'][image]
+
+    if 'default_flavours' in config:
+        for flavour in config['default_flavours']:
+            data['flavours'][flavour] = config['default_flavours'][flavour]
+
+    return data
+
 def update_images(db, cloud, identity, images):
     """
     """
@@ -171,6 +184,9 @@ def update(db, identity, config):
         except Exception as err:
             logger.critical('Got exception generating images and flavours: %s', err)
             new_data = {'images':{}, 'flavours':{}}
+
+        logger.info('Adding default images & flavours')
+        new_data = add_defaults(new_data, cloud)
 
         # Check if need to continue with this cloud
         if not new_data['images'] and not new_data['flavours']:
