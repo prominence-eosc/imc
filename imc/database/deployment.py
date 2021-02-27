@@ -288,7 +288,7 @@ def deployment_update_resources(self, infra_id, used_instances, used_cpus, used_
     """
     return self.execute("UPDATE deployments SET used_instances=%s, used_cpus=%s, used_memory=%s WHERE id='%s'" % (used_instances, used_cpus, used_memory, infra_id))
 
-def get_used_resources(self, identity, cloud):
+def get_used_resources(self, identity, cloud, creating=None):
     """
     Get the total resources used on a particular cloud
     """
@@ -296,9 +296,14 @@ def get_used_resources(self, identity, cloud):
     used_cpus = 0
     used_memory = 0
 
+    if creating:
+        states = "'configured', 'creating'"
+    else:
+        states = "'configured'"
+
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT SUM(used_instances), SUM(used_cpus), SUM(used_memory) FROM deployments WHERE status IN ('configured', 'creating') AND identity='%s' AND cloud='%s'" % (identity, cloud))
+        cursor.execute("SELECT SUM(used_instances), SUM(used_cpus), SUM(used_memory) FROM deployments WHERE status IN (%s) AND identity='%s' AND cloud='%s'" % (states, identity, cloud))
         for row in cursor:
             if row[0] and row[1] and row[2]:
                 used_instances = int(row[0])

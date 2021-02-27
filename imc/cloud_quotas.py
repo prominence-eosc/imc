@@ -139,6 +139,9 @@ def set_quotas(requirements, db, identity, config):
             # Check if the cloud hasn't been updated recently
             logger.info('Checking if we need to update cloud %s quotas', name)
             last_update = db.get_cloud_updated_quotas(name, identity)
+
+            if time.time() - last_update <= int(CONFIG.get('updates', 'quotas')):
+                logger.info('Quotas updatede too recetnly, will not update')
  
             if time.time() - last_update > int(CONFIG.get('updates', 'quotas')):
                 logger.info('Quotas for cloud %s have not been updated recently, so getting current values', name)
@@ -163,20 +166,33 @@ def set_quotas(requirements, db, identity, config):
                     db.set_cloud_static_quotas(name, identity, cores_limit, memory_limit, instances_limit)
                     db.set_cloud_updated_quotas(name, identity)
 
-                # If we can't get the used resources from the cloud (many OpenStack clouds have a policy of
-                # preventing users from getting resource usage info from the API), we estimate the usage
+                # For clouds which do not allow users to get the used resources of their own project (i.e. many
+                # OpenStack clouds in EGI FedCloud) we use our own estimate of the used resources. For other
+                # clouds we add our own estimate of the resource usage of infrastructure currently being
+                # provisioned to the cloud-provided usage
+                # TODO: don't store this in DB, but add to what's in DB?
                 if 'cpu-used' not in quotas:
                     logger.info('Unable to get used resources from API, will use our own estimate instead')
-                    (used_instances, used_cpus, used_memory) = db.get_used_resources(identity, name)
+                    (used_instances, used_cpus, used_memory) = db.get_used_resources(identity, name, True)
                     quotas['instances-used'] = used_instances
                     quotas['cpu-used'] = used_cpus
                     quotas['memory-used'] = used_memory
-                    
-                if 'cpu-limit' in quotas and 'cpu-used' in quotas:
-                    (instances, cores, memory) = (quotas['instances-limit'] - quotas['instances-used'],
-                                                  quotas['cpu-limit'] - quotas['cpu-used'],
-                                                  quotas['memory-limit'] - quotas['memory-used'])
+                else:
+                    logger.info('Including our own usage of resources currently being deployed')
+                    (used_instances, used_cpus, used_memory) = db.get_used_resources(identity, name)
+                    quotas['instances-used'] += used_instances
+                    quotas['cpu-used'] += used_cpus
+                    quotas['memory-used'] += used_memory
 
+                instances = quotas['instances-limit'] - quotas['instances-used']
+                cores = quotas['cpu-limit'] - quotas['cpu-used']
+                memory = quotas['memory-limit'] - quotas['memory-used']
+
+                if instances and cores and memory:
+                    logger.info('Got our own, resources valid')
+                else:
+                    logger.info('Got our own, resources not vslid')
+                    
         elif credentials['type'] != 'InfrastructureManager':
             logger.warning('Unable to determine quotas for cloud %s of type %s', name, credentials['type'])
 
