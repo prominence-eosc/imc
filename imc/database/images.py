@@ -53,7 +53,7 @@ def get_image(self, identity, cloud, os_type, os_arch, os_dist, os_vers):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT name, im_name FROM cloud_images WHERE identity='%s' AND cloud='%s' AND os_type='%s' AND os_arch='%s' AND os_dist='%s' AND os_vers='%s'" % (identity, cloud, os_type, os_arch, os_dist, os_vers))
+        cursor.execute("SELECT name, im_name FROM cloud_images WHERE identity='%s' AND cloud='%s' AND os_type='%s' AND os_arch='%s' AND os_dist='%s' AND os_vers='%s' ORDER BY name ASC" % (identity, cloud, os_type, os_arch, os_dist, os_vers))
         for row in cursor:
             name = row[0]
             im_name = row[1]
