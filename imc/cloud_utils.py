@@ -40,8 +40,13 @@ def create_clouds_list_egi(db, identity):
         cloud['ansible'] = {}
         cloud['quotas'] = {}
         cloud['supported_groups'] = []
-        cloud['image_prefix'] = ''
+        cloud['image_prefix'] = cloud['credentials']['host'].replace('https', 'ost')
         cloud['image_templates'] = {}
+        cloud['image_templates'][CONFIG.get('egi.image', 'image')] = {}
+        cloud['image_templates'][CONFIG.get('egi.image', 'image')]['architecture'] = CONFIG.get('egi.image', 'architecture')
+        cloud['image_templates'][CONFIG.get('egi.image', 'image')]['distribution'] = CONFIG.get('egi.image', 'distribution')
+        cloud['image_templates'][CONFIG.get('egi.image', 'image')]['type'] = CONFIG.get('egi.image', 'type')
+        cloud['image_templates'][CONFIG.get('egi.image', 'image')]['version'] = CONFIG.get('egi.image', 'version')
         cloud['default_flavours'] = {}
         cloud['flavour_filters'] = {}
         cloud['default_images'] = {}
