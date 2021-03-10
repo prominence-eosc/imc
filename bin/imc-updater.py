@@ -100,5 +100,5 @@ if __name__ == "__main__":
         else:
             logger.critical('Unable to connect to database')
 
-        time.sleep(30)
+        time.sleep(int(CONFIG.get('polling', 'updater')))
 
