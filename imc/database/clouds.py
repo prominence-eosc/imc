@@ -6,7 +6,8 @@ logger = logging.getLogger(__name__)
 
 def get_cloud_info(self, cloud, identity):
     """
-	"""
+    Get cloud status and quotas
+    """
     (status, mon_status, limit_cpus, limit_memory, limit_instances, remaining_cpus, remaining_memory, remaining_instances) = (-1, -1, -1, -1, -1, -1, -1, -1)
     try:
         cursor = self._connection.cursor()
@@ -28,26 +29,31 @@ def get_cloud_info(self, cloud, identity):
 
 def set_cloud_updated_quotas(self, cloud, identity):
     """
+    Set time that quotas where updated
     """
     return self.execute("UPDATE clouds_info SET updated_quotas=%s WHERE identity='%s' AND name='%s'" % (time.time(), identity, cloud))
 
 def set_cloud_mon_status(self, cloud, identity, status):
     """
+    Set time when monitoring info was updated
     """
     return self.execute("UPDATE clouds_info SET mon_status=%s WHERE identity='%s' AND name='%s'" % (status, identity, cloud))
 
 def set_cloud_status(self, cloud, identity, status):
     """
+    Set time when cloud status was updated
     """
     return self.execute("UPDATE clouds_info SET status=%s WHERE identity='%s' AND name='%s'" % (status, identity, cloud))
 
 def init_cloud_info(self, cloud, identity):
     """
+    Initialise a cloud name and user
     """
     return self.execute("INSERT INTO clouds_info (name, identity) SELECT '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM clouds_info WHERE name='%s' AND identity='%s')" % (cloud, identity, cloud, identity))
 
 def get_deployment_failures(self, identity, interval, successes=False):
     """
+    Get list of deployment failures
     """
     where = ''
     if successes:
@@ -74,18 +80,19 @@ def del_old_deployment_failures(self, interval):
 
 def set_resources_update(self, identity):
     """
-    Update
+    Update time when clouds were updated
     """
     return self.execute("INSERT INTO cloud_updates (identity, time) VALUES (%s, %s) ON CONFLICT (identity) DO UPDATE SET time=EXCLUDED.time", (identity, time.time()))
 
 def set_resources_update_start(self, identity):
     """
-    Update
+    Update time when clouds updated began
     """
     return self.execute("INSERT INTO cloud_updates (identity, start) VALUES (%s, %s) ON CONFLICT (identity) DO UPDATE SET start=EXCLUDED.start", (identity, time.time()))
 
 def get_resources_update(self, identity):
     """
+    Get time when clouds were updated for the specified user
     """
     update_start = 0
     updated = 0
