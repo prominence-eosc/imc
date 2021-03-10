@@ -1,0 +1,9 @@
+requests
+paramiko
+psycopg2-binary
+psutil
+flask
+xmltodict
+defusedxml
+apache-libcloud
+python-openstackclient
