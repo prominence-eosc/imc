@@ -157,7 +157,7 @@ def get_health():
     """
     Get the current health
     """
-    (status, msg) = health()
+    (status, msg) = health.health()
     if not status:
         return jsonify({'error': msg}), 409
 
