@@ -39,7 +39,8 @@ def update(identity, level=0):
         time.sleep(random.randint(1,5))
 
         # Update list of clouds if necessary
-        egi_discover.egi_clouds_update(identity, db)
+        if CONFIG.get('egi', 'enabled').lower() == 'true':
+            egi_discover.egi_clouds_update(identity, db)
 
     # Get full list of cloud info
     clouds_info_list = cloud_utils.create_clouds_list(db, identity)
