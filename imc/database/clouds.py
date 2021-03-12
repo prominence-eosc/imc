@@ -8,15 +8,18 @@ def get_cloud_info(self, cloud, identity):
     """
     Get cloud status and quotas
     """
-    (status, mon_status, limit_cpus, limit_memory, limit_instances, remaining_cpus, remaining_memory, remaining_instances) = (-1, -1, -1, -1, -1, -1, -1, -1)
+    status = None
+    mon_status = None
+    limit_cpus = None
+    limit_memory = None
+    limit_instances = None
+    remaining_cpus = None
+    remaining_memory = None
+    remaining_instances = None
 
-    use_identity = "identity='%s'"
-    if identity != 'static':
-        use_identity = "(identity='%s' OR identity='static')"
-  
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT status, mon_status, limit_cpus, limit_memory, limit_instances, remaining_cpus, remaining_memory, remaining_instances FROM clouds_info WHERE name='%s' AND %s" % (cloud, use_identity))
+        cursor.execute("SELECT status, mon_status, limit_cpus, limit_memory, limit_instances, remaining_cpus, remaining_memory, remaining_instances FROM clouds_info WHERE name='%s' AND (identity='%s' OR identity='static')" % (cloud, identity))
         for row in cursor:
             status = row[0]
             mon_status = row[1]

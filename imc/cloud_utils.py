@@ -186,9 +186,8 @@ def check_for_new_clouds(db, identity):
 
     for cloud in clouds_list:
         name = cloud['name']
-        flavours = db.get_flavours(identity, name, 0, 0, 0)
-        images = db.get_images(identity, name)
-        if len(flavours) == 0 or len(images) == 0:
+        (status, _, _, _, _, _, _, _) = db.get_cloud_info(name, identity)
+        if status is None:
             new_clouds = True
 
     return new_clouds
