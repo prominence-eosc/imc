@@ -52,30 +52,50 @@ def updater(db, executors, last_fast_update_time):
 
     # Get list of infrastructures waiting to be deployed
     infras = db.deployment_get_infra_in_state_cloud('accepted', order=True)
+    infras_waiting = db.deployment_get_infra_in_state_cloud('waiting', order=True)
 
     # Create full list of identities which potentially need their resources updated
     for infra in infras:
         if infra['identity'] not in identities:
             identities.append(infra['identity'])
 
-    # Check if we should run a fast check
+    for infra in infras_waiting:
+        if time.time() - infra['updated'] > int(CONFIG.get('updates', 'waiting')):
+            infras.append(infra)
+
+    # Check if we should run a fast check, per identity
     if time.time() - last_fast_update_time > 30*60:
         logger.info('Running fast checks...')
         last_fast_update_time = time.time()
         for identity in identities:
             logger.info('Submitting fast updater for identity %s', identity)
-            executors.submit(cloud_updates.update, identity, 1)
+            executors.submit(cloud_updates.update, identity, 1, False)
+        # Static resources
+        if len(identities) > 0:
+            logger.info('Submitting fast updater for static resources')
+            executors.submit(cloud_updates.update, 'static', 1, True)
 
     # Check which identities need checks
     for identity in identities:
         (last_update_start, last_update) = db.get_resources_update(identity)
         if not last_update_start:
             logger.info('Submitting updater for identity %s as it has not run before', identity)
-            executors.submit(cloud_updates.update, identity)
+            executors.submit(cloud_updates.update, identity, 0, False)
         elif time.time() - last_update > int(CONFIG.get('updates', 'discover')) and \
             time.time() - last_update_start > int(CONFIG.get('updates', 'deadline')):
             logger.info('Submitting updater for identity %s', identity)
-            executors.submit(cloud_updates.update, identity)
+            executors.submit(cloud_updates.update, identity, 0, False)
+        
+    # Check static resources
+    if len(identities) > 0:
+        (last_update_start, last_update) = db.get_resources_update('static')
+        if not last_update_start:
+            logger.info('Submitting updater for static resources')
+            executors.submit(cloud_updates.update, 'static', 0, True)
+        elif time.time() - last_update > int(CONFIG.get('updates', 'discover')) and \
+            time.time() - last_update_start > int(CONFIG.get('updates', 'deadline')):
+            logger.info('Submitting updater for static resources')
+            executors.submit(cloud_updates.update, 'static', 0, True)
 
     return last_fast_update_time
 

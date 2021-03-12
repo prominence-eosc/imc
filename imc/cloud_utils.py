@@ -34,6 +34,7 @@ def create_clouds_list_egi(db, identity):
         cloud['credentials']['token']['url'] = CONFIG.get('egi.credentials', 'url')
         cloud['type'] = 'cloud'
         cloud['enabled'] = True
+        cloud['source'] = 'egi'
         cloud['region'] = CONFIG.get('egi', 'region')
         cloud['tags'] = {}
         cloud['tags']['multi-node-jobs'] = 'false'
@@ -153,7 +154,7 @@ def create_clouds_list_static(path):
 
     return clouds
 
-def create_clouds_list(db, identity):
+def create_clouds_list(db, identity, static=True):
     """
     Generate full list of clouds
     """
@@ -163,8 +164,11 @@ def create_clouds_list(db, identity):
     else:
         list_egi = []
 
-    logger.info('Getting list of clouds from static JSON files')
-    list_static = create_clouds_list_static(CONFIG.get('clouds', 'path'))
+    if static:
+        logger.info('Getting list of clouds from static JSON files')
+        list_static = create_clouds_list_static(CONFIG.get('clouds', 'path'))
+    else:
+        list_static = []
 
     full_list = list_egi + list_static
 

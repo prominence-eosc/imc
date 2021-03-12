@@ -27,10 +27,13 @@ def get_flavours(self, identity, cloud, cpus, memory, disk):
     """
     """
     flavours = []
+    use_identity = "identity='%s'"
+    if identity != 'static':
+        use_identity = "(identity='%s' OR identity='static')"
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT name, cpus, memory, disk FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND cpus>=%s AND memory>=%s AND disk>=%s ORDER BY cpus*memory*disk ASC" % (identity, cloud, cpus, memory, disk))
+        cursor.execute("SELECT name, cpus, memory, disk FROM cloud_flavours WHERE %s AND cloud='%s' AND cpus>=%s AND memory>=%s AND disk>=%s ORDER BY cpus*memory*disk ASC" % (use_identity, cloud, cpus, memory, disk))
         for row in cursor:
             flavours.append((row[0], int(row[1]), int(row[2]), int(row[3])))
         cursor.close()

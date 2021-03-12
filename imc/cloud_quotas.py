@@ -138,7 +138,11 @@ def set_quotas(requirements, db, identity, config):
 
             # Check if the cloud hasn't been updated recently
             logger.info('Checking if we need to update cloud %s quotas', name)
-            last_update = db.get_cloud_updated_quotas(name, identity)
+            use_identity = identity
+            if cloud['source'] == 'static':
+                use_identity = 'static'
+
+            last_update = db.get_cloud_updated_quotas(name, use_identity)
 
             if time.time() - last_update <= int(CONFIG.get('updates', 'quotas')):
                 logger.info('Quotas updatede too recetnly, will not update')
@@ -163,8 +167,8 @@ def set_quotas(requirements, db, identity, config):
                     if instances_static < instances_limit:
                         instances_limit = instances_static
 
-                    db.set_cloud_static_quotas(name, identity, cores_limit, memory_limit, instances_limit)
-                    db.set_cloud_updated_quotas(name, identity)
+                    db.set_cloud_static_quotas(name, use_identity, cores_limit, memory_limit, instances_limit)
+                    db.set_cloud_updated_quotas(name, use_identity)
 
                 # For clouds which do not allow users to get the used resources of their own project (i.e. many
                 # OpenStack clouds in EGI FedCloud) we use our own estimate of the used resources. For other
@@ -173,13 +177,13 @@ def set_quotas(requirements, db, identity, config):
                 # TODO: don't store this in DB, but add to what's in DB?
                 if 'cpu-used' not in quotas:
                     logger.info('Unable to get used resources from API, will use our own estimate instead')
-                    (used_instances, used_cpus, used_memory) = db.get_used_resources(identity, name, True)
+                    (used_instances, used_cpus, used_memory) = db.get_used_resources(use_identity, name, True)
                     quotas['instances-used'] = used_instances
                     quotas['cpu-used'] = used_cpus
                     quotas['memory-used'] = used_memory
                 else:
                     logger.info('Including our own usage of resources currently being deployed')
-                    (used_instances, used_cpus, used_memory) = db.get_used_resources(identity, name)
+                    (used_instances, used_cpus, used_memory) = db.get_used_resources(use_identity, name)
                     quotas['instances-used'] += used_instances
                     quotas['cpu-used'] += used_cpus
                     quotas['memory-used'] += used_memory
@@ -198,7 +202,7 @@ def set_quotas(requirements, db, identity, config):
 
         if instances and cores and memory:
             logger.info('Setting updated quotas for cloud %s: instances %d, cpus %d, memory %d', name, instances, cores, memory)
-            db.set_cloud_dynamic_quotas(name, identity, cores, memory, instances)
+            db.set_cloud_dynamic_quotas(name, use_identity, cores, memory, instances)
         else:
             logger.info('Not setting updated quotas for cloud %s', name)
 
