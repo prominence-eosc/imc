@@ -177,3 +177,18 @@ def create_clouds_list(db, identity, static=True):
             full_list.remove(site)
 
     return full_list
+
+def check_for_new_clouds(db, identity):
+    """
+    """
+    clouds_list = create_clouds_list(db, identity)
+    new_clouds = False
+
+    for cloud in clouds_list:
+        name = cloud['name']
+        flavours = db.get_flavours(identity, name, 0, 0, 0)
+        images = db.get_images(identity, name)
+        if len(flavours) == 0 or len(images) == 0:
+            new_clouds = True
+
+    return new_clouds

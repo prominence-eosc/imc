@@ -15,6 +15,7 @@ from imc import utilities
 from imc import deployer
 from imc import destroyer
 from imc import cloud_updates
+from imc import cloud_utils
 
 # Configuration
 CONFIG = config.get_config()
@@ -85,17 +86,25 @@ def updater(db, executors, last_fast_update_time):
             time.time() - last_update_start > int(CONFIG.get('updates', 'deadline')):
             logger.info('Submitting updater for identity %s', identity)
             executors.submit(cloud_updates.update, identity, 0, False)
-        
+
     # Check static resources
+    checked_static = False
     if len(identities) > 0:
         (last_update_start, last_update) = db.get_resources_update('static')
         if not last_update_start:
             logger.info('Submitting updater for static resources')
             executors.submit(cloud_updates.update, 'static', 0, True)
+            checked_static = True
         elif time.time() - last_update > int(CONFIG.get('updates', 'discover')) and \
             time.time() - last_update_start > int(CONFIG.get('updates', 'deadline')):
             logger.info('Submitting updater for static resources')
             executors.submit(cloud_updates.update, 'static', 0, True)
+            checked_static = True
+
+    # Check for any new static or user-defined resources
+    if cloud_utils.check_for_new_clouds(db, 'static') and not checked_static:
+        logger.info('Running updates due to new clouds')
+        executors.submit(cloud_updates.update, 'static', 0, True)
 
     return last_fast_update_time
 
