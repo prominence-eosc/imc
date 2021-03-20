@@ -7,3 +7,4 @@ xmltodict
 defusedxml
 apache-libcloud
 python-openstackclient
+uwsgi
