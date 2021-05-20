@@ -80,3 +80,17 @@ def set_image(self, identity, cloud, name, im_name, os_type, os_arch, os_dist, o
         return False
 
     return True
+
+def delete_image(self, identity, cloud, name):
+    """
+    """
+    try:
+        cursor = self._connection.cursor()
+        cursor.execute("DELETE FROM cloud_images WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
+        self._connection.commit()
+        cursor.close()
+    except Exception as error:
+        logger.critical('[delete_image] unable to execute DELETE query due to: %s', error)
+        return False
+
+    return True
