@@ -41,7 +41,8 @@ class Database(object):
                         get_cloud_updated_images, \
                         get_images, \
                         get_image, \
-                        set_image
+                        set_image, \
+                        delete_image
 
     from .tokens import update_token, \
                         set_token, \
