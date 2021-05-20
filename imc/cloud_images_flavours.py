@@ -24,14 +24,21 @@ logger = logging.getLogger(__name__)
 
 def add_defaults(data, config):
     """
+    Add any default images/flavours if they do not already exist in data retrieved from the cloud
     """
     if 'default_images' in config:
-        for image in config['default_images']:
-            data['images'][image] = config['default_images'][image]
+        if config['default_images']:
+            for image in config['default_images']:
+                if image:
+                    if image not in data['images']:
+                        data['images'][image] = config['default_images'][image]
 
     if 'default_flavours' in config:
-        for flavour in config['default_flavours']:
-            data['flavours'][flavour] = config['default_flavours'][flavour]
+        if config['default_flavours']:
+            for flavour in config['default_flavours']:
+                if flavour:
+                    if flavour not in data['flavours']:
+                        data['flavours'][flavour] = config['default_flavours'][flavour]
 
     return data
 
@@ -40,6 +47,7 @@ def update_images(db, cloud, identity, images):
     """
     for image_name in images:
         image = images[image_name]
+        logger.info('Setting image in DB: name=%s, im=%s', image_name, image['name'])
         db.set_image(identity,
                      cloud,
                      image_name,
@@ -48,6 +56,20 @@ def update_images(db, cloud, identity, images):
                      image['architecture'],
                      image['distribution'],
                      image['version'])
+
+def delete_images(db, cloud, identity, old, new):
+    """
+    """
+    print('[delete_images] START, old=', old, 'new=', new)
+    for image_old in old:
+        name_old = old[image_old]['name']
+        found = False
+        for image_new in new:
+            name_new = new[image_new]['name']
+            if name_old == name_new:
+                return True
+        if not found:
+            db.delete_image(identity, cloud, name_old)
 
 def update_flavours(db, cloud, identity, flavours):
     """
@@ -199,7 +221,7 @@ def update(db, identity, config):
         if time.time() - last_update > int(CONFIG.get('updates', 'vms')):
             logger.info('Images and flavours for cloud %s have not been updated recently', name)
             requires_update = True
-    
+
         # Get existing images & flavours
         images_old = db.get_images(identity, name)
         flavours_old = db.get_all_flavours(identity, name)
@@ -210,6 +232,7 @@ def update(db, identity, config):
         if (not images_old or requires_update or not compare_dicts(images_old, new_data['images'])) and new_data['images']:
             if not compare_dicts(images_old, new_data['images']):
                 logger.info('Updating images in DB for cloud %s', name)
+                delete_images(db, name, identity, images_old, new_data['images'])
                 update_images(db, name, identity, new_data['images'])
                 updated = True
             else:
