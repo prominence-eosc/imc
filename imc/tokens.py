@@ -78,7 +78,10 @@ def get_token(cloud, identity, db, config):
         if check_rt != 0:
             logger.info('Check token failed for cloud %s', cloud)
     else:
-        logger.info('No token could be obtained from the DB for identity %s for cloud %s', identity, cloud)
+        if user_token:
+            logger.info('No token could be obtained from the DB for identity %s for cloud %s', identity, cloud)
+        else:
+            logger.info('No token could be obtained from the DB for cloud %s', cloud)
         check_rt = -1
 
     logger.info('Token expiry time: %d, current time: %d', expiry, time.time())
@@ -105,6 +108,8 @@ def get_token(cloud, identity, db, config):
             if user_token:
                 success = db.update_user_access_token(identity, token, expiry, creation)
             else:
+                # FIXME: need to do better than this
+                success = db.set_token(cloud, token, expiry, creation)
                 success = db.update_token(cloud, token, expiry, creation)
 
             if success:
@@ -124,7 +129,7 @@ def get_new_token(client_id, client_secret, refresh_token, scope, url):
     """
     Get a new access token using a refresh token
     """
-    creation = time.time()
+    creation = int(time.time())
     data = {'client_id':client_id,
             'client_secret':client_secret,
             'grant_type':'refresh_token',
