@@ -7,13 +7,17 @@ def update_token(self, cloud, token, expiry, creation):
     """
     Update token in the DB
     """
-    return self.execute("UPDATE credentials SET token='%s',expiry=%d,creation=%d WHERE cloud='%s'" % (token, expiry, creation, cloud))
+    try:
+        cursor = self._connection.cursor()
+        cursor.execute("UPDATE credentials SET token='%s',expiry=%d,creation=%d WHERE cloud='%s'" % (token, expiry, creation, cloud))
+        cursor.execute("INSERT INTO credentials (cloud, token, expiry, creation) SELECT '%s', '%s', '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM credentials WHERE cloud='%s')" % (cloud, token, expiry, creation, cloud))
+        self._connection.commit()
+        cursor.close()
+    except Exception as error:
+        logger.critical('[update_token] Unable to execute UPDATE or INSERT query due to: %s', error)
+        return False
 
-def set_token(self, cloud, token, expiry, creation):
-    """
-    Write token to the DB
-    """
-    return self.execute("INSERT INTO credentials (cloud, token, expiry, creation) SELECT '%s', '%s', '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM credentials WHERE cloud='%s')" % (cloud, token, expiry, creation, cloud))
+    return True
 
 def set_user_credentials(self, identity, refresh_token):
     """
