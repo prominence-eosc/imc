@@ -45,7 +45,6 @@ class Database(object):
                         delete_image
 
     from .tokens import update_token, \
-                        set_token, \
                         set_user_credentials, \
                         update_user_access_token, \
                         get_user_credentials, \
