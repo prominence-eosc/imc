@@ -108,8 +108,6 @@ def get_token(cloud, identity, db, config):
             if user_token:
                 success = db.update_user_access_token(identity, token, expiry, creation)
             else:
-                # FIXME: need to do better than this
-                success = db.set_token(cloud, token, expiry, creation)
                 success = db.update_token(cloud, token, expiry, creation)
 
             if success:
