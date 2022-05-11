@@ -101,6 +101,10 @@ def connect_to_cloud(cloud, config, token):
                 details['ex_domain_name'] = config['credentials']['domain']
             if 'service_region' in config['credentials']:
                 details['ex_force_service_region'] = config['credentials']['service_region']
+            if 'project_domain_id' in config['credentials']:
+                details['ex_tenant_domain_id'] = config['credentials']['project_domain_id']
+            if 'ex_force_base_url' in config['credentials']:
+                details['ex_force_base_url'] = config['credentials']['ex_force_base_url']
 
             provider = get_driver(Provider.OPENSTACK)
             try:
