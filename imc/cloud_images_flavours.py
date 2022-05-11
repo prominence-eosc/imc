@@ -48,11 +48,11 @@ def update_images(db, cloud, identity, images):
     """
     for image_name in images:
         image = images[image_name]
-        logger.info('Setting image in DB: name=%s, im=%s', image_name, image['name'])
+        logger.info('Setting image in DB: name=%s, im=%s', image_name, image['im_name'])
         db.set_image(identity,
                      cloud,
                      image_name,
-                     image['name'],
+                     image['im_name'],
                      image['type'],
                      image['architecture'],
                      image['distribution'],
