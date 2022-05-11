@@ -22,7 +22,7 @@ def get_cloud_updated_images(self, cloud, identity):
     except Exception as error:
         logger.critical('[get_cloud_updated_images] Unable to execute SELECT query due to: %s', error)
 
-    return 0
+    return updated
 
 def get_images(self, identity, cloud):
     """
@@ -35,9 +35,10 @@ def get_images(self, identity, cloud):
         for row in cursor:
             data = {"name": row[0],
                     "im_name": row[1],
-                    "os_type": row[2],
-                    "os_arch": row[3],
-                    "os_vers": row[4]}
+                    "type": row[2],
+                    "architecture": row[3],
+                    "distribution": row[4],
+                    "version": row[5]}
             results[row[0]] = data
         cursor.close()
     except Exception as error:
