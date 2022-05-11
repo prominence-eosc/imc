@@ -89,9 +89,10 @@ class PolicyEngine():
             return clouds_out
 
         if 'sites' in self._requirements:
-            for cloud in self._clouds:
-                if cloud not in self._requirements['sites']:
-                    clouds_out.remove(cloud)
+            if self._requirements['sites']:
+                for cloud in self._clouds:
+                    if cloud not in self._requirements['sites']:
+                        clouds_out.remove(cloud)
 
         return clouds_out
 
@@ -111,9 +112,10 @@ class PolicyEngine():
             return clouds_out
 
         if 'regions' in self._requirements:
-            for cloud in self._clouds:
-                if self._config[cloud]['region'] not in self._requirements['regions']:
-                    clouds_out.remove(cloud)
+            if self._requirements['regions']:
+                for cloud in self._clouds:
+                    if self._config[cloud]['region'] not in self._requirements['regions']:
+                        clouds_out.remove(cloud)
 
         return clouds_out
 
