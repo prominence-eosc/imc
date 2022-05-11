@@ -109,11 +109,15 @@ def check_cloud(cloud, config, token):
         return False
 
     # List locations (it's quick!)
+    images = None
     try:
-        conn.list_locations()
+        images = conn.list_images()
     except Exception as ex:
         logger.warning('Unable to list locations on cloud %s due to %s', cloud, ex)
         return False
+
+    if not images:
+        logger.warning('Unable to list images on cloud %s', cloud)
 
     return True
 
