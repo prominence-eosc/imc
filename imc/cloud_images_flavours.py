@@ -44,6 +44,7 @@ def add_defaults(data, config):
 
 def update_images(db, cloud, identity, images):
     """
+    Update images in the database
     """
     for image_name in images:
         image = images[image_name]
@@ -59,8 +60,8 @@ def update_images(db, cloud, identity, images):
 
 def delete_images(db, cloud, identity, old, new):
     """
+    Delete images which no longer exist from the database
     """
-    print('[delete_images] START, old=', old, 'new=', new)
     for image_old in old:
         name_old = old[image_old]['name']
         found = False
@@ -73,13 +74,14 @@ def delete_images(db, cloud, identity, old, new):
 
 def update_flavours(db, cloud, identity, flavours):
     """
+    Update flavours in database
     """
     for flavour_name in flavours:
         flavour = flavours[flavour_name]
         db.set_flavour(identity,
                        cloud,
                        flavour['name'],
-                       flavour['cores'],
+                       flavour['cpus'],
                        flavour['memory'],
                        flavour['disk'])
 
@@ -147,7 +149,8 @@ def generate_images_and_flavours(config, cloud, token):
                     image_identifier = image.id
 
                 data = config['image_templates'][image_t]
-                data['name'] = '%s/%s' % (config['image_prefix'], image_identifier)
+                data['im_name'] = '%s/%s' % (config['image_prefix'], image_identifier)
+                data['name'] = image.name
                 output_images[image.name] = data
 
     output['images'] = output_images
@@ -171,7 +174,7 @@ def generate_images_and_flavours(config, cloud, token):
         if not match_obj_name or use:
             try:
                 data = {"name":flavour.name,
-                        "cores":flavour.vcpus,
+                        "cpus":flavour.vcpus,
                         "memory":memory_convert(flavour.ram),
                         "disk":flavour.disk}
                 output_flavours[flavour.name] = data
