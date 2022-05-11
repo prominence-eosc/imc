@@ -51,7 +51,7 @@ def deploy_job(db, unique_id):
 
     # Get full list of cloud info
     logger.info('Getting list of clouds from DB')
-    clouds_info_list = cloud_utils.create_clouds_list(db, identity) + cloud_utils.create_clouds_list(db, 'static')
+    clouds_info_list = cloud_utils.create_clouds_list(db, identity)
 
     # Setup policy engine
     logger.info('Setting up policies')
