@@ -104,7 +104,7 @@ def set_quotas(requirements, db, identity, config):
 
         # Check if we need to consider this cloud at all
         if 'sites' in requirements:
-            if name not in requirements['sites']:
+            if name not in requirements['sites'] and requirements['sites']:
                 continue
 
         if cloud['type'] != 'cloud':
