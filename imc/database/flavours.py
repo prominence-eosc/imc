@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 def get_all_flavours(self, identity, cloud):
     """
+    Return all flavours for a specific cloud
     """
     results = {}
 
@@ -25,6 +26,7 @@ def get_all_flavours(self, identity, cloud):
 
 def get_flavours(self, identity, cloud, cpus, memory, disk):
     """
+    Return all flavours which can provide the specified resources
     """
     flavours = []
     use_identity = "identity='%s'"
@@ -44,6 +46,7 @@ def get_flavours(self, identity, cloud, cpus, memory, disk):
 
 def get_flavour(self, identity, cloud, cpus, memory, disk):
     """
+    Return a single flavour of smallest size which can provide the specified resources
     """
     name = None
     cpus_used = -1
@@ -64,8 +67,9 @@ def get_flavour(self, identity, cloud, cpus, memory, disk):
 
     return (name, cpus_used, memory_used, disk_used)
 
-def set_flavour(self, identity, cloud, name, cpus, memory, disk): #TODO: do as single SQL statement
+def set_flavour(self, identity, cloud, name, cpus, memory, disk):
     """
+    Add a new flavour
     """
     try:
         cursor = self._connection.cursor()
