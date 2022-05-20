@@ -6,11 +6,13 @@ logger = logging.getLogger(__name__)
 
 def set_cloud_updated_images(self, cloud, identity):
     """
+    Set time when images updated
     """
     return self.execute("UPDATE clouds_info SET updated_images=%s WHERE identity='%s' AND name='%s'" % (time.time(), identity, cloud))
 
 def get_cloud_updated_images(self, cloud, identity):
     """
+    Get time when images were last updated
     """
     updated = 0
     try:
@@ -26,6 +28,7 @@ def get_cloud_updated_images(self, cloud, identity):
 
 def get_images(self, identity, cloud):
     """
+    Return all images associated with the specified cloud
     """
     results = {}
 
@@ -48,6 +51,7 @@ def get_images(self, identity, cloud):
 
 def get_image(self, identity, cloud, os_type, os_arch, os_dist, os_vers):
     """
+    Get an image from the specified cloud and requirements
     """
     name = None
     im_name = None
@@ -69,6 +73,7 @@ def get_image(self, identity, cloud, os_type, os_arch, os_dist, os_vers):
 
 def set_image(self, identity, cloud, name, im_name, os_type, os_arch, os_dist, os_vers):
     """
+    Set an image
     """
     try:
         cursor = self._connection.cursor()
@@ -84,6 +89,7 @@ def set_image(self, identity, cloud, name, im_name, os_type, os_arch, os_dist, o
 
 def delete_image(self, identity, cloud, name):
     """
+    Delete an image
     """
     try:
         cursor = self._connection.cursor()
