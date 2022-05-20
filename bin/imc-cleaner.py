@@ -106,11 +106,11 @@ def find_unexpected_im_infras(db):
         logger.info('Found unknown infrastructure with IM ID %s', im_id)
 
         # Check the deployment log, otherwise search the RADL for PROMINENCE_INFRASTRUCTURE_ID
-        infra_id = db.check_im_deployment(im_id)
+        infra_id, cloud = db.check_im_deployment(im_id)
         cloud_from_data = None
 
         if infra_id:
-            logger.info('From log found that IM id %s is associated with infra id %s', im_id, infra_id)
+            logger.info('From log found that IM id %s is associated with infra id %s and cloud %s', im_id, infra_id, cloud)
         else:
             (data, _) = client.getdata(im_id, 10)
             if not data:
@@ -129,7 +129,7 @@ def find_unexpected_im_infras(db):
                 cloud_from_data = match.group(1)
                 logger.info('found cloud %s from data', cloud_from_data)
 
-        (_, my_infra_status, cloud, _, _) = db.deployment_get_im_infra_id(infra_id)
+        (_, my_infra_status, _, _, _) = db.deployment_get_im_infra_id(infra_id)
         identity = db.deployment_get_identity(infra_id)
         logger.info('- this IM infrastructure is associated with my infrastructure id %s which has status %s identity %s', infra_id, my_infra_status, identity)
 
@@ -142,10 +142,10 @@ def find_unexpected_im_infras(db):
             logger.info(' - this IM infrastructure %s has no known cloud or identity associated with it', infra_id)
         else:
             if my_infra_status in ('deleted', 'deleting', 'deletion-failed', 'deletion-required', 'unable'):
-                im_infras_to_delete[my_infra_id] = {}
-                im_infras_to_delete[my_infra_id]['identity'] = identity
-                im_infras_to_delete[my_infra_id]['im_id'] = im_id
-                im_infras_to_delete[my_infra_id]['cloud'] = cloud
+                im_infras_to_delete[infra_id] = {}
+                im_infras_to_delete[infra_id]['identity'] = identity
+                im_infras_to_delete[infra_id]['im_id'] = im_id
+                im_infras_to_delete[infra_id]['cloud'] = cloud
 
     # Delete any infras
     if len(im_infras_to_delete) > 0:
