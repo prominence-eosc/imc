@@ -105,12 +105,20 @@ def deploy_job(db, unique_id):
     reason = None
 
     for cloud in clouds_ranked:
-        infra_id = None
+        # If we have already successfully deployed infrastructure we don't need to continue
+        if success:
+            break
 
+        infra_id = None
         resource_type = None
+        region = None
+        groups = []
         for cloud_info in clouds_info_list:
             if cloud_info['name'] == cloud:
                 resource_type = cloud_info['type']
+                region = cloud_info['region']
+                if 'supported_groups' in cloud_info:
+                    groups = cloud_info['supported_groups']
 
         if resource_type:
             logger.info('Resource %s is of type %s', cloud, resource_type)
@@ -143,8 +151,9 @@ def deploy_job(db, unique_id):
             continue
 
         # Generate list of flavours with unique classs - one class might have no
-        # more available hypervisors but another is fine
-        flavours = utilities.create_flavour_list(flavours)
+        # more available hypervisors but another is fine. When maximum resources
+        # are specified all flavours will be considered.
+        flavours = utilities.create_flavour_list(flavours, requirements)
 
         logger.info('Attempting to deploy on cloud %s', cloud)
  
@@ -189,6 +198,8 @@ def deploy_job(db, unique_id):
                 radl = Template(str(radl_contents)).substitute(instance=flavour_name,
                                                                image=image_url,
                                                                cloud=cloud,
+                                                               allow_groups=utilities.groups_start_expr(groups),
+                                                               region=region,
                                                                ansible_ip=ip_addr,
                                                                ansible_username=username,
                                                                ansible_private_key=private_key)
@@ -222,7 +233,7 @@ def deploy_job(db, unique_id):
                 else:
                     # Set status
                     db.deployment_update_status(unique_id, 'configured')
-                break
+                break # Leave loop over flavours
 
     if unique_id and not infra_id:
         logger.info('Setting status to waiting with reason DeploymentFailed')
