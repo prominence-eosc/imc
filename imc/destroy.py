@@ -107,9 +107,9 @@ def delete(unique_id):
     # Check for any remaining infrastructures in IM
     logger.info('Checking any remaining infrastructures in IM...')
     for infra in db.get_im_deployments(unique_id):
-        if infra != im_infra_id and im_infra_id:
-            logger.info('- will try to destroy %s', infra)
-            destroy(client, infra)
+        if infra['id'] != im_infra_id and im_infra_id:
+            logger.info('- will try to destroy %s', infra['id'])
+            destroy(client, infra['id'])
 
     db.close()
     return True
