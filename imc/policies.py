@@ -28,6 +28,9 @@ class PolicyEngine():
         required_cores = 0
         required_memory = 0
         required_disk = 0
+        required_memory_max = None
+        required_cores_max = None
+        required_disk_max = None
 
         if not self._requirements:
             return flavour_name
@@ -42,7 +45,27 @@ class PolicyEngine():
         if 'disk' in self._requirements['resources']:
             required_disk = self._requirements['resources']['disk']
 
-        return self._db.get_flavours(self._identity, cloud, required_cores, required_memory, required_disk)
+        if 'memoryMax' in self._requirements['resources']:
+            required_memory_max = self._requirements['resources']['memoryMax']
+        if 'coresMax' in self._requirements['resources']:
+            required_cores_max = self._requirements['resources']['coresMax']
+        if 'diskMax' in self._requirements['resources']:
+            required_disk_max = self._requirements['resources']['diskMax']
+
+        flavours = self._db.get_flavours(self._identity, cloud, required_cores, required_memory, required_disk)
+        logger.info('Found %d flavours from database', len(flavours))
+
+        if not required_cores_max:
+            return flavours
+
+        new_flavours = []
+        for flavour in flavours:
+            if flavour[1] <= required_cores_max and flavour[2] >= required_memory_max and flavour[3] >= required_disk_max:
+                new_flavours.append(flavour)
+
+        logger.info('Found %d flavours from database after taking into account max', len(new_flavours))
+
+        return list(reversed(new_flavours))
 
     def get_image(self, cloud):
         """
@@ -188,6 +211,8 @@ class PolicyEngine():
 
             if remaining_memory != -1 and self._requirements['resources']['memory']*instances > remaining_memory:
                 clouds_out.remove(cloud)
+
+        # Filter any flavours which wouldn't fit
 
         return clouds_out
 
