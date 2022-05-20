@@ -28,12 +28,14 @@ def return_sites(description):
     logger.info('Found %d instances to deploy', instances)
     requirements['resources']['instances'] = instances
 
-    # Generate JSON to be given to Open Policy Agent
-    userdata = {'requirements':requirements, 'preferences':preferences, 'ignore_usage': True}
-
     # Setup policy engine
     logger.info('Setting up policies')
-    policy = policies.PolicyEngine(clouds_info_list, userdata, db, identity)
+    policy = policies.PolicyEngine(clouds_info_list,
+                                   {'requirements':requirements,
+                                    'preferences':preferences,
+                                    'ignore_usage': True},
+                                   db,
+                                   identity)
 
     # Check if deployment could be possible, ignoring current quotas/usage
     logger.info('Checking if job requirements will match any clouds')
