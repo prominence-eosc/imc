@@ -29,7 +29,7 @@ def get_flavours(self, identity, cloud, cpus, memory, disk):
     flavours = []
     use_identity = "identity='%s'"
     if identity != 'static':
-        use_identity = "(identity='%s' OR identity='static')"
+        use_identity = "(identity='%s' OR identity='static')" % identity
 
     try:
         cursor = self._connection.cursor()
