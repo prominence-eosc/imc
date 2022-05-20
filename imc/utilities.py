@@ -48,11 +48,15 @@ def get_reqs_and_prefs(description):
     
     return (requirements, preferences)
 
-def create_flavour_list(flavours):
+def create_flavour_list(flavours, requirements):
     """
     Given a list of flavours, create a new list containing only those 
     flavours with unique first characters
     """
+    if 'coresMax' in requirements['resources'] and 'memoryMax' in requirements['resources'] and 'diskMax' in requirements['resources']:
+        logger.info('Fully constrained resources specified, will consider all matching flavours')
+        return flavours
+
     new_flavours = [flavours[0]]
     new_flavours_names = [flavours[0][0]]
     old_flavours_names = [flavours[0][0]]
