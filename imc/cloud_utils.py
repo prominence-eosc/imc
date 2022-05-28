@@ -38,7 +38,6 @@ def create_clouds_list_egi(db, identity):
         cloud['region'] = CONFIG.get('egi', 'region')
         cloud['tags'] = {}
         cloud['tags']['multi-node-jobs'] = 'false'
-        cloud['ansible'] = {}
         cloud['quotas'] = {}
         cloud['supported_groups'] = []
         cloud['image_prefix'] = cloud['credentials']['host'].replace('https', 'ost')

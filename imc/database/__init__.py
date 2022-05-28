@@ -50,10 +50,6 @@ class Database(object):
                         get_user_credentials, \
                         get_token, delete_token
 
-    from .ansible import set_ansible_node, \
-                         get_ansible_node, \
-                         delete_ansible_node
-
     from .deployment import deployment_get_infra_in_state_cloud, \
                             deployment_check_infra_id, \
                             deployment_get_resource_type, \
@@ -116,16 +112,6 @@ class Database(object):
         # Setup tables if necessary
         try:
             cursor = self._connection.cursor()
-
-            # Create Ansible nodes table
-            cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              ansible_nodes(cloud TEXT NOT NULL PRIMARY KEY,
-                                            infrastructure_id TEXT NOT NULL,
-                                            public_ip TEXT NOT NULL,
-                                            username TEXT NOT NULL,
-                                            creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                                            )''')
 
             # Create user credentials table
             cursor.execute('''CREATE TABLE IF NOT EXISTS

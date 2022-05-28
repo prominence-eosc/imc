@@ -4,7 +4,6 @@ import time
 from random import shuffle
 import logging
 
-from imc import ansible
 from imc import cloud_deploy
 from imc import cloud_utils
 from imc import im_utils
@@ -157,28 +156,6 @@ def deploy_job(db, unique_id):
 
         logger.info('Attempting to deploy on cloud %s', cloud)
  
-        # Setup Ansible node if necessary
-        if requirements['resources']['instances'] > 1:
-            (ip_addr, username) = ansible.setup_ansible_node(cloud, identity, db)
-            if not ip_addr or not username:
-                logger.critical('Unable to find existing or create an Ansible node in cloud %s because ip=%s,username=%s', cloud, ip_addr, username)
-                continue
-            logger.info('Ansible node in cloud %s available, now will deploy infrastructure for the job', cloud)
-        else:
-            logger.info('Ansible node not required')
-            ip_addr = None
-            username = None
-
-        # Get the Ansible private key if necessary
-        private_key = None
-        if ip_addr and username:
-            try:
-                with open(CONFIG.get('ansible', 'private_key')) as data:
-                    private_key = data.read()
-            except IOError:
-                logger.critical('Unable to open private key for Ansible node from file "%s"', CONFIG.get('ansible', 'private_key'))
-                return False
-
         # Check if we should stop
         (_, infra_status_new, _, _, _) = db.deployment_get_im_infra_id(unique_id)
         if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
@@ -199,10 +176,7 @@ def deploy_job(db, unique_id):
                                                                image=image_url,
                                                                cloud=cloud,
                                                                allow_groups=utilities.groups_start_expr(groups),
-                                                               region=region,
-                                                               ansible_ip=ip_addr,
-                                                               ansible_username=username,
-                                                               ansible_private_key=private_key)
+                                                               region=region)
             except Exception as ex:
                 logger.critical('Error creating RADL from template due to %s', ex)
                 return False
