@@ -105,17 +105,19 @@ def find_unexpected_im_infras(db):
 
         logger.info('Found unknown infrastructure with IM ID %s', im_id)
 
-        # Check the deployment log, otherwise search the RADL for PROMINENCE_INFRASTRUCTURE_ID
+        # Check the deployment log, otherwise search the RADL for PROMINENCE_INFRASTRUCTURE_ID and/or the cloud name
         infra_id, cloud = db.check_im_deployment(im_id)
         cloud_from_data = None
 
         if infra_id:
             logger.info('From log found that IM id %s is associated with infra id %s and cloud %s', im_id, infra_id, cloud)
-        else:
-            (data, _) = client.getdata(im_id, 10)
-            if not data:
-                continue
 
+
+        (data, _) = client.getdata(im_id, 10)
+        if not data:
+            continue
+
+        if not infra_id:
             match = re.search("PROMINENCE_INFRASTRUCTURE_ID=([0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})", data['data'])
             if not match:
                 logger.info('- could not get my associated infrastructure id from PROMINENCE_INFRASTRUCTURE_ID in data')
@@ -124,6 +126,7 @@ def find_unexpected_im_infras(db):
             infra_id = match.group(1)
             logger.info('From RADL found that IM id %s is associated with infra id %s', im_id, infra_id)
 
+        if not cloud:
             match = re.search(r'\\\\\\"id\\\\\\": \\\\\\"([\w\-]+)\\\\\\"', data['data'])
             if match:
                 cloud_from_data = match.group(1)
