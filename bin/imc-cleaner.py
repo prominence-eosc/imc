@@ -138,8 +138,6 @@ def find_unexpected_im_infras(db):
 
         if (not cloud or cloud == 'none') and cloud_from_data:
             cloud = cloud_from_data
-        if not identity or identity == 'none':
-            identity = '0d31ecc87b9c1b0c6f407a8884f41bfbb6da4092fa08b64beb313634a6ea7bf1@egi.eu'
            
         if not cloud or cloud == 'none' or identity == 'none':
             logger.info(' - this IM infrastructure %s has no known cloud or identity associated with it', infra_id)
