@@ -11,7 +11,7 @@ class OpenStack():
     """
     OpenStack connector
     """
-    def __init__(self, credentials, credential_type='password'):
+    def __init__(self, credentials, credential_type='password', region=None):
         loader = loading.get_plugin_loader(credential_type)
         auth = loader.load_from_options(**credentials)
         self._session = session.Session(auth=auth)
