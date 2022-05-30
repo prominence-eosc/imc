@@ -60,7 +60,7 @@ class PolicyEngine():
 
         new_flavours = []
         for flavour in flavours:
-            if flavour[1] <= required_cores_max and flavour[2] >= required_memory_max and flavour[3] >= required_disk_max:
+            if flavour[1] <= required_cores_max and flavour[2] >= required_memory_max and (flavour[3] >= required_disk_max or flavour[3] == -1):
                 new_flavours.append(flavour)
 
         logger.info('Found %d flavours from database after taking into account max', len(new_flavours))
