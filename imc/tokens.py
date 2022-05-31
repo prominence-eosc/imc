@@ -171,34 +171,33 @@ def check_if_token_required(cloud, data):
     """
     Check if the given cloud requires a token for access
     """
-    if 'credentials' in data:
-        if 'token' in data['credentials']:
-            user_token = False
-            refresh_token = None
-            if 'provider' in data['credentials']['token']:
-                if data['credentials']['token']['provider'] == 'user':
-                    user_token = True
-            if 'client_id' not in data['credentials']['token']:
-                logger.error('client_id not defined in token section of credentials for cloud %s', cloud)
-                return None
-            if 'client_secret' not in data['credentials']['token']:
-                logger.error('client_secret not defined in token section of credentials for cloud %s', cloud)
-                return None
-            if 'refresh_token' in data['credentials']['token']:
-                refresh_token = data['credentials']['token']['refresh_token']
-            if 'scope' not in data['credentials']['token']:
-                logger.error('scope not defined in token section of credentials for cloud %s', cloud)
-                return None
-            if 'url' not in data['credentials']['token']:
-                logger.error('url not defined in token section of credentials for cloud %s', cloud)
-                return None
+    if 'token_source' in data:
+        user_token = False
+        refresh_token = None
+        if 'provider' in data['token_source']:
+            if data['token_source']['provider'] == 'user':
+                user_token = True
+        if 'client_id' not in data['token_source']:
+            logger.error('client_id not defined in token section of credentials for cloud %s', cloud)
+            return None
+        if 'client_secret' not in data['token_source']:
+            logger.error('client_secret not defined in token section of credentials for cloud %s', cloud)
+            return None
+        if 'refresh_token' in data['token_source']:
+            refresh_token = data['token_source']['refresh_token']
+        if 'scope' not in data['token_source']:
+            logger.error('scope not defined in token section of credentials for cloud %s', cloud)
+            return None
+        if 'url' not in data['token_source']:
+            logger.error('url not defined in token section of credentials for cloud %s', cloud)
+            return None
 
-            return (user_token,
-                    data['credentials']['token']['client_id'],
-                    data['credentials']['token']['client_secret'],
-                    refresh_token,
-                    data['credentials']['token']['scope'],
-                    data['credentials']['token']['url'])
+        return (user_token,
+                data['token_source']['client_id'],
+                data['token_source']['client_secret'],
+                refresh_token,
+                data['token_source']['scope'],
+                data['token_source']['url'])
 
     return (None, None, None, None, None, None)
 
@@ -246,3 +245,26 @@ def get_scoped_token(os_auth_url, os_project_id, unscoped_token):
     if 'X-Subject-Token' in response.headers:
         return response.headers['X-Subject-Token']
     return None
+
+def get_openstack_token(token, info):
+    """
+    Add a scoped token the credentials provided
+    """
+    if token:
+        try:
+            unscoped_token = get_unscoped_token(info['credentials']['auth_url'],
+                                                token,
+                                                info['credentials_additional']['username'],
+                                                info['credentials_additional']['tenant'])
+        except Exception as err:
+            logger.info('Got exception which getting unscoped token for OpenStack: %s', err)
+            return info
+
+        try:
+            info['credentials']['token'] = get_scoped_token(info['credentials']['auth_url'],
+                                                            info['credentials']['project_id'],
+                                                            unscoped_token)
+        except Exception as err:
+            logger.info('Got exception which getting scoped token for OpenStack: %s', err)
+
+    return info
