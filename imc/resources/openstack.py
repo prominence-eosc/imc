@@ -14,8 +14,10 @@ class OpenStack():
     def __init__(self, info):
         if 'password' in info['credentials']:
             loader = loading.get_plugin_loader('password')
+            logger.info('Using password for authentication with OpenStack')
         else:
             loader = loading.get_plugin_loader('token')
+            logger.info('Using token for authentication with OpenStack')
         auth = loader.load_from_options(**info['credentials'])
         self._session = session.Session(auth=auth)
         self._info = info
