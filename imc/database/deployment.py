@@ -142,7 +142,7 @@ def get_infra_from_im_infra_id(self, im_infra_id):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT id,status,cloud FROM deployments WHERE im_infra_id='%s'" % im_infra_id)
+        cursor.execute("SELECT id,status,cloud FROM deployments WHERE cloud_infra_id='%s'" % im_infra_id)
         for row in cursor:
             infra_id = row[0]
             status = row[1]
@@ -164,7 +164,7 @@ def deployment_get_im_infra_id(self, infra_id):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT im_infra_id,status,cloud,creation,updated FROM deployments WHERE id='%s'" % infra_id)
+        cursor.execute("SELECT cloud_infra_id,status,cloud,creation,updated FROM deployments WHERE id='%s'" % infra_id)
         for row in cursor:
             im_infra_id = row[0]
             status = row[1]
@@ -192,11 +192,11 @@ def deployment_create_with_retries(self, infra_id, description, identity, identi
             self.connect()
     return success
 
-def create_im_deployment(self, infra_id, im_infra_id, cloud):
+def create_cloud_deployment(self, infra_id, cloud_infra_id, cloud):
     """
-    Log IM deployment
+    Log deployment
     """
-    return self.execute("INSERT INTO deployment_log (id, im_infra_id, cloud, created) VALUES (%s,%s,%s,%s)", (infra_id, im_infra_id, cloud, time.time()))
+    return self.execute("INSERT INTO deployment_log (id, cloud_infra_id, cloud, created) VALUES (%s,%s,%s,%s)", (infra_id, cloud_infra_id, cloud, time.time()))
 
 def delete_im_deployments(self, infra_id=None, since=None):
     """
@@ -217,7 +217,7 @@ def get_im_deployments(self, infra_id):
     infra = []
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT im_infra_id,cloud FROM deployment_log WHERE id='%s'" % infra_id)
+        cursor.execute("SELECT cloud_infra_id,cloud FROM deployment_log WHERE id='%s'" % infra_id)
         for row in cursor:
             infra.append({'id': row[0], 'cloud': row[1]})
         cursor.close()
@@ -233,7 +233,7 @@ def check_im_deployment(self, im_infra_id):
     cloud = None
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT id,cloud FROM deployment_log WHERE im_infra_id='%s'" % im_infra_id)
+        cursor.execute("SELECT id,cloud FROM deployment_log WHERE cloud_infra_id='%s'" % im_infra_id)
         for row in cursor:
             infra = row[0]
             cloud = row[1]
@@ -266,11 +266,11 @@ def deployment_update_status(self, infra_id, status=None, cloud=None, im_infra_i
     Update deployment status
     """
     if cloud and im_infra_id and status:
-        return self.execute("UPDATE deployments SET resource_type='%s',status='%s',cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, status, cloud, im_infra_id, time.time(), infra_id))
+        return self.execute("UPDATE deployments SET resource_type='%s',status='%s',cloud='%s',cloud_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, status, cloud, im_infra_id, time.time(), infra_id))
     elif cloud and status:
         return self.execute("UPDATE deployments SET resource_type='%s',status='%s',cloud='%s',updated=%d WHERE id='%s'" % (resource_type, status, cloud, time.time(), infra_id))
     elif im_infra_id and cloud and not status:
-        return self.execute("UPDATE deployments SET resource_type='%s',cloud='%s',im_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, cloud, im_infra_id, time.time(), infra_id))
+        return self.execute("UPDATE deployments SET resource_type='%s',cloud='%s',cloud_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, cloud, im_infra_id, time.time(), infra_id))
     elif status:
         if status in ('configured', 'waiting', 'unable', 'creating'):
             return self.execute("UPDATE deployments SET resource_type='%s',status='%s',updated=%d WHERE id='%s' AND status NOT IN ('deleted', 'deleting', 'deletion-requested', 'deletion-failed')" % (resource_type, status, time.time(), infra_id))

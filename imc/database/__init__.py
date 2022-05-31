@@ -67,7 +67,7 @@ class Database(object):
                             deployment_update_status, \
                             deployment_update_status_reason, \
                             set_deployment_failure, \
-                            create_im_deployment, \
+                            create_cloud_deployment, \
                             get_im_deployments, \
                             deployment_update_resources, \
                             get_used_resources
@@ -135,7 +135,7 @@ class Database(object):
                                           description JSON NOT NULL,
                                           status TEXT NOT NULL,
                                           status_reason TEXT,
-                                          im_infra_id TEXT,
+                                          cloud_infra_id TEXT,
                                           cloud TEXT,
                                           resource_type TEXT,
                                           identity TEXT,
@@ -149,7 +149,8 @@ class Database(object):
 
             # Create deployments log table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              deployment_log(im_infra_id TEXT NOT NULL PRIMARY KEY,
+                              deployment_log(cloud_infra_id TEXT NOT NULL PRIMARY KEY,
+                                             cloud TEXT,
                                              id TEXT NOT NULL,
                                              created INT NOT NULL,
                                              CONSTRAINT fk_infra
@@ -206,7 +207,8 @@ class Database(object):
 
             # Create cloud flavours
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              cloud_flavours(name TEXT NOT NULL,
+                              cloud_flavours(id TEXT NOT NULL,
+                                             name TEXT NOT NULL,
                                              cpus INT NOT NULL,
                                              memory INT NOT NULL,
                                              disk INT NOT NULL,
@@ -218,7 +220,7 @@ class Database(object):
             # Create cloud images
             cursor.execute('''CREATE TABLE IF NOT EXISTS
                               cloud_images(name TEXT NOT NULL,
-                                           im_name TEXT NOT NULL,
+                                           id TEXT NOT NULL,
                                            os_arch TEXT NOT NULL,
                                            os_dist TEXT NOT NULL,
                                            os_type TEXT NOT NULL,

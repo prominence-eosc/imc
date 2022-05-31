@@ -35,9 +35,9 @@ def get_flavours(self, identity, cloud, cpus, memory, disk):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT name, cpus, memory, disk FROM cloud_flavours WHERE %s AND cloud='%s' AND cpus>=%s AND memory>=%s AND (disk>=%s OR disk=-1) ORDER BY cpus*memory ASC" % (use_identity, cloud, cpus, memory, disk))
+        cursor.execute("SELECT id, name, cpus, memory, disk FROM cloud_flavours WHERE %s AND cloud='%s' AND cpus>=%s AND memory>=%s AND (disk>=%s OR disk=-1) ORDER BY cpus*memory ASC" % (use_identity, cloud, cpus, memory, disk))
         for row in cursor:
-            flavours.append((row[0], int(row[1]), int(row[2]), int(row[3])))
+            flavours.append((row[0], row[1], int(row[2]), int(row[3]), int(row[4])))
         cursor.close()
     except Exception as error:
         logger.critical('[get_flavours] unable to execute SELECT query due to: %s', error)
@@ -67,14 +67,14 @@ def get_flavour(self, identity, cloud, cpus, memory, disk):
 
     return (name, cpus_used, memory_used, disk_used)
 
-def set_flavour(self, identity, cloud, name, cpus, memory, disk):
+def set_flavour(self, identity, cloud, name, id, cpus, memory, disk):
     """
     Add a new flavour
     """
     try:
         cursor = self._connection.cursor()
         cursor.execute("DELETE FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
-        cursor.execute("INSERT INTO cloud_flavours (identity, cloud, name, cpus, memory, disk) VALUES (%s, %s, %s, %s, %s, %s)", (identity, cloud, name, cpus, memory, disk))
+        cursor.execute("INSERT INTO cloud_flavours (identity, cloud, name, id, cpus, memory, disk) VALUES (%s, %s, %s, %s, %s, %s, %s)", (identity, cloud, name, id, cpus, memory, disk))
         self._connection.commit()
         cursor.close()
     except Exception as error:

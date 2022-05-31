@@ -34,10 +34,10 @@ def get_images(self, identity, cloud):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT name, im_name, os_type, os_arch, os_dist, os_vers FROM cloud_images WHERE identity='%s' AND cloud='%s'" % (identity, cloud))
+        cursor.execute("SELECT name, id, os_type, os_arch, os_dist, os_vers FROM cloud_images WHERE identity='%s' AND cloud='%s'" % (identity, cloud))
         for row in cursor:
             data = {"name": row[0],
-                    "im_name": row[1],
+                    "id": row[1],
                     "type": row[2],
                     "architecture": row[3],
                     "distribution": row[4],
@@ -71,14 +71,14 @@ def get_image(self, identity, cloud, os_type, os_arch, os_dist, os_vers):
 
     return name, im_name
 
-def set_image(self, identity, cloud, name, im_name, os_type, os_arch, os_dist, os_vers):
+def set_image(self, identity, cloud, name, id, os_type, os_arch, os_dist, os_vers):
     """
     Set an image
     """
     try:
         cursor = self._connection.cursor()
         cursor.execute("DELETE FROM cloud_images WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
-        cursor.execute("INSERT INTO cloud_images (identity, cloud, name, im_name, os_type, os_arch, os_dist, os_vers) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (identity, cloud, name, im_name, os_type, os_arch, os_dist, os_vers))
+        cursor.execute("INSERT INTO cloud_images (identity, cloud, name, id, os_type, os_arch, os_dist, os_vers) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (identity, cloud, name, id, os_type, os_arch, os_dist, os_vers))
         self._connection.commit()
         cursor.close()
     except Exception as error:
