@@ -212,6 +212,7 @@ class Database(object):
                                              cpus INT NOT NULL,
                                              memory INT NOT NULL,
                                              disk INT NOT NULL,
+                                             limit_instances INT NOT NULL DEFAULT -1,
                                              cloud TEXT NOT NULL,
                                              identity TEXT NOT NULL,
                                              PRIMARY KEY (name, cloud, identity)
