@@ -7,6 +7,7 @@ from imc import config
 from imc import tokens
 from imc import utilities
 from imc import cloud_utils
+from imc import resources
 
 # Configuration
 CONFIG = config.get_config()
@@ -45,11 +46,11 @@ def update_appdb_status(db, identity):
                     logger.info('Setting cloud %s monitoring status in DB to down', name)
                     db.set_cloud_mon_status(name, identity, 1)
 
-def update_clouds_status(db, identity, config):
+def update_clouds_status(db, identity, info):
     """
     Update status of each cloud
     """
-    for cloud_info in config:
+    for cloud_info in info:
         name = cloud_info['name']
 
         if cloud_info['type'] != 'cloud':
@@ -65,7 +66,7 @@ def update_clouds_status(db, identity, config):
                     token_required = True
 
         # Get a token if necessary
-        token = tokens.get_token(name, identity, db, config)
+        token = tokens.get_token(name, identity, db, info)
 
         if not token and token_required:
             logger.error('Unable to get token so cannot check if cloud %s is functional', name)
@@ -74,8 +75,8 @@ def update_clouds_status(db, identity, config):
         retryme = False
         try:
             status = check_cloud(name, cloud_info, token)
-        except:
-            logger.info('Setting status of cloud %s to down due to timeout', name)
+        except Exception as err:
+            logger.info('Setting status of cloud %s to down due to exception: %s', name, err)
             db.set_cloud_status(name, identity, 1)
         else:
             if not status:
@@ -89,8 +90,8 @@ def update_clouds_status(db, identity, config):
         if retryme:
             try:
                 status = check_cloud(name, cloud_info, token)
-            except:
-                logger.info('Setting status of cloud %s to down due to timeout', name)
+            except Exception as err:
+                logger.info('Setting status of cloud %s to down due to exception: %s', name, err)
                 db.set_cloud_status(name, identity, 1)
             else:
                 if not status:
@@ -99,25 +100,15 @@ def update_clouds_status(db, identity, config):
                 else:
                     db.set_cloud_status(name, identity, 0)
 
-def check_cloud(cloud, config, token):
+def check_cloud(cloud, info, token):
     """
     Check if a cloud is functional by listing locations
     """
-    # Connect to the cloud
-    conn = cloud_utils.connect_to_cloud(cloud, config, token)
-    if not conn:
-        return False
+    client = resources.Resource(info)
+    flavours = client.list_flavors()
 
-    # List locations (it's quick!)
-    images = None
-    try:
-        images = conn.list_images()
-    except Exception as ex:
-        logger.warning('Unable to list locations on cloud %s due to %s', cloud, ex)
-        return False
-
-    if not images:
-        logger.warning('Unable to list images on cloud %s', cloud)
+    if not flavours:
+        logger.warning('Unable to list flavours on cloud %s', cloud)
 
     return True
 

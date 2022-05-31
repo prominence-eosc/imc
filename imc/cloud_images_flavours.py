@@ -8,13 +8,11 @@ import sys
 import time
 import configparser
 
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-
 from imc import config
 from imc import tokens
 from imc import cloud_utils
 from imc import utilities
+from imc import resources
 
 # Configuration
 CONFIG = config.get_config()
@@ -48,11 +46,11 @@ def update_images(db, cloud, identity, images):
     """
     for image_name in images:
         image = images[image_name]
-        logger.info('Setting image in DB: name=%s, im=%s', image_name, image['im_name'])
+        logger.info('Setting image in DB: name=%s', image_name)
         db.set_image(identity,
                      cloud,
                      image_name,
-                     image['im_name'],
+                     image['id'],
                      image['type'],
                      image['architecture'],
                      image['distribution'],
@@ -81,6 +79,7 @@ def update_flavours(db, cloud, identity, flavours):
         db.set_flavour(identity,
                        cloud,
                        flavour['name'],
+                       flavour['id'],
                        flavour['cpus'],
                        flavour['memory'],
                        flavour['disk'])
@@ -128,58 +127,34 @@ def generate_images_and_flavours(config, cloud, token):
     output['images'] = None
     output['flavours'] = None
 
-    # Connect to the cloud
-    conn = cloud_utils.connect_to_cloud(cloud, config, token)
-    if not conn:
-        return output
-
-    # List images
-    try:
-        images = conn.list_images()
-    except Exception as ex:
-        logger.critical('Unable to get list of images from cloud %s due to "%s"', cloud, ex)
-        return output
+    client = resources.Resource(config)
+    images = client.list_images()
 
     output_images = {}
     for image in images:
         for image_t in config['image_templates']:
-            if image_t in image.name:
-                image_identifier = image.name
-                if config['credentials']['type'] == 'OpenStack':
-                    image_identifier = image.id
-
-                data = config['image_templates'][image_t]
-                data['im_name'] = '%s/%s' % (config['image_prefix'], image_identifier)
-                data['name'] = image.name
-                output_images[image.name] = data
+            if image_t == image['name']:
+                image['type'] = config['image_templates'][image_t]['type']
+                image['distribution'] = config['image_templates'][image_t]['distribution']
+                image['architecture'] = config['image_templates'][image_t]['architecture']
+                image['version'] = config['image_templates'][image_t]['version']
+                output_images[image['name']] = image
 
     output['images'] = output_images
     logger.info('Got %d images from cloud %s', len(output['images']), cloud)
 
     # List flavours
-    try:
-        flavours = conn.list_sizes()
-    except Exception as ex:
-        logger.critical('Unable to get list of flavours from cloud %s due to "%s"', cloud, ex)
-        return output
-
+    flavours = client.list_flavors()
     output_flavours = {}
     for flavour in flavours:
         match_obj_name = False
         use = True
         if 'blacklist' in config['flavour_filters']:
-            match_obj_name = re.match(r'%s' % config['flavour_filters']['blacklist'], flavour.name)
+            match_obj_name = re.match(r'%s' % config['flavour_filters']['blacklist'], flavour['name'])
             use = False
 
         if not match_obj_name or use:
-            try:
-                data = {"name":flavour.name,
-                        "cpus":flavour.vcpus,
-                        "memory":memory_convert(flavour.ram),
-                        "disk":flavour.disk}
-                output_flavours[flavour.name] = data
-            except:
-                pass
+            output_flavours[flavour['name']] = flavour
 
     output['flavours'] = output_flavours
     logger.info('Got %d flavours from cloud %s', len(output['flavours']), cloud)

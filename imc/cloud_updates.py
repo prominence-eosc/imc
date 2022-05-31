@@ -20,7 +20,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def update(identity, level=0, static=False):
+def update(identity, full=False, static=False):
     """
     Update cloud status, images, flavours
     """
@@ -29,9 +29,9 @@ def update(identity, level=0, static=False):
         logger.critical('Unable to connect to DB for updating identity %s', identity)
         return
 
-    logger.info('Starting to update clouds for identity %s with level %d', identity, level)
+    logger.info('Starting to update clouds for identity %s', identity)
 
-    if level == 0:
+    if full:
         # Update the database
         db.set_resources_update_start(identity)
 
@@ -53,7 +53,7 @@ def update(identity, level=0, static=False):
     logger.info('Checking if clouds are functional using their APIs')
     cloud_functional_checks.update_clouds_status(db, identity, clouds_info_list)
 
-    if level == 0:
+    if full:
         # Update cloud images & flavours if necessary
         logger.info('Updating cloud images and flavours if necessary')
         try:
