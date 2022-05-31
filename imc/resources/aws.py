@@ -18,10 +18,10 @@ class AWS():
     """
     AWS EC2 connector
     """
-    def __init__(self, credentials, credential_type=None, region=None):
-        self._ec2 = boto3.Session(aws_access_key_id=credentials['ACCESS_ID'],
-                                  aws_secret_access_key=credentials['SECRET_KEY'],
-                                  region_name=region)
+    def __init__(self, info):
+        self._ec2 = boto3.Session(aws_access_key_id=info['credentials']['ACCESS_ID'],
+                                  aws_secret_access_key=info['credentials']['SECRET_KEY'],
+                                  region_name=info['cloudRegion'])
 
     def _get_cpus_from_flavor(self, flavor):
         """
@@ -64,12 +64,12 @@ class AWS():
             instances = self._ec2.resource('ec2').create_instances(**args)
         except Exception as err:
             logger.error('Got exception creating instance: %s', err)
-            return None
+            return None, err
 
         if instances:
-            return instances[0].instance_id
+            return instances[0].instance_id, None
 
-        return None
+        return None, None
 
     def delete_instance(self, instance_id):
         """
@@ -109,8 +109,7 @@ class AWS():
             logger.error('Got exception getting instance: %s', err)
             return None
 
-        return {'name': get_name(instance.tags),
-                'status': instance.state['Name']}
+        return get_name(instance.tags), instance.state['Name']
 
     def list_images(self):
         """

@@ -11,11 +11,14 @@ class OpenStack():
     """
     OpenStack connector
     """
-    def __init__(self, credentials, credential_type='password', region=None):
-        loader = loading.get_plugin_loader(credential_type)
-        auth = loader.load_from_options(**credentials)
+    def __init__(self, info):
+        if 'password' in info['credentials']:
+            loader = loading.get_plugin_loader('password')
+        else:
+            loader = loading.get_plugin_loader('token')
+        auth = loader.load_from_options(**info['credentials'])
         self._session = session.Session(auth=auth)
-        self._credentials = credentials
+        self._info = info
 
     def create_instance(self, name, image, flavor, network, userdata):
         """
@@ -30,9 +33,9 @@ class OpenStack():
                                          userdata=userdata).to_dict()
         except Exception as err:
             logger.error('Got exception creating server: %s', err)
-            return None
+            return None, err
 
-        return server['id']
+        return server['id'], None
 
     def delete_instance(self, instance_id):
         """
@@ -77,8 +80,7 @@ class OpenStack():
             logger.error('Got exception getting instance: %s', err)
             return None
 
-        return {'name': result['name'],
-                'status': result['status']}
+        return result['name'], result['status']
 
     def list_images(self):
         """
@@ -93,7 +95,7 @@ class OpenStack():
             return None
 
         for item in results:
-            data.append({item['id'], item['name']})
+            data.append({'id': item['id'], 'name': item['name']})
 
         return data
 
@@ -125,7 +127,7 @@ class OpenStack():
         quotas = {}
         try:
             nova = client.Client(2, session=self._session)
-            os_quotas = nova.quotas.get(self._credentials['project_id'], detail=False).to_dict()
+            os_quotas = nova.quotas.get(self._info['credentials']['project_id'], detail=False).to_dict()
         except Exception as err:
             logger.error('Got exception getting quotas (limits only): %s', err)
             return None
@@ -138,7 +140,7 @@ class OpenStack():
         # Now try to get usage
         try:
             nova = client.Client(2, session=self._session)
-            os_quotas = nova.quotas.get(self._credentials['project_id'], detail=True).to_dict()
+            os_quotas = nova.quotas.get(self._info['credentials']['project_id'], detail=True).to_dict()
         except Exception as err:
             logger.error('Got exception getting quotas (usage): %s', err)
             return quotas
