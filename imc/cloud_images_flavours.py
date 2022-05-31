@@ -176,6 +176,7 @@ def update(db, identity, config):
         # Get a token if necessary
         logger.info('Getting a new token if necessary')
         token = tokens.get_token(name, identity, db, config)
+        cloud = tokens.get_openstack_token(token, cloud)
 
         # Get new images & flavours
         logger.info('Getting list of new images and flavours')

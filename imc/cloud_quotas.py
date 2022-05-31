@@ -49,6 +49,7 @@ def set_quotas(requirements, db, identity, config):
 
         # Get a token if necessary
         token = tokens.get_token(name, identity, db, config)
+        cloud = tokens.get_openstack_token(token, cloud)
 
         # Check if the cloud hasn't been updated recently
         logger.info('Checking if we need to update cloud %s quotas', name)
@@ -65,6 +66,10 @@ def set_quotas(requirements, db, identity, config):
             logger.info('Quotas for cloud %s have not been updated recently, so getting current values', name)
             client = resources.Resource(cloud)
             quotas = client.get_quotas()
+
+            if not quotas:
+                logger.info('Did not any quotas from cloud %s', name)
+                continue
 
             if 'limits' not in quotas:
                 logger.info('Did not obtain limits from cloud %s', name)

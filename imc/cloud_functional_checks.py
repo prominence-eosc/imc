@@ -60,10 +60,9 @@ def update_clouds_status(db, identity, info):
 
         # Check if a token is necessary
         token_required = False
-        if 'credentials' in cloud_info:
-            if 'token' in cloud_info['credentials']:
-                if cloud_info['credentials']['token']:
-                    token_required = True
+        if 'token_source' in cloud_info:
+            if cloud_info['token_source']:
+                token_required = True
 
         # Get a token if necessary
         token = tokens.get_token(name, identity, db, info)
@@ -71,6 +70,9 @@ def update_clouds_status(db, identity, info):
         if not token and token_required:
             logger.error('Unable to get token so cannot check if cloud %s is functional', name)
             continue
+
+        # Get a scoped token if necessary
+        cloud_info = tokens.get_openstack_token(token, cloud_info)
 
         retryme = False
         try:
