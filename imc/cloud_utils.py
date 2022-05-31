@@ -40,7 +40,6 @@ def create_clouds_list_egi(db, identity):
         cloud['tags']['multi-node-jobs'] = 'false'
         cloud['quotas'] = {}
         cloud['supported_groups'] = []
-        cloud['image_prefix'] = cloud['credentials']['host'].replace('https', 'ost')
         cloud['image_templates'] = {}
         cloud['image_templates'][CONFIG.get('egi.image', 'image')] = {}
         cloud['image_templates'][CONFIG.get('egi.image', 'image')]['architecture'] = CONFIG.get('egi.image', 'architecture')
