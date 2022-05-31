@@ -70,22 +70,22 @@ def updater(db, executors, last_fast_update_time):
         last_fast_update_time = time.time()
         for identity in identities:
             logger.info('Submitting fast updater for identity %s', identity)
-            executors.submit(cloud_updates.update, identity, 1, False)
+            executors.submit(cloud_updates.update, identity, False, False)
         # Static resources
         if len(identities) > 0:
             logger.info('Submitting fast updater for static resources')
-            executors.submit(cloud_updates.update, 'static', 1, True)
+            executors.submit(cloud_updates.update, 'static', False, True)
 
     # Check which identities need checks
     for identity in identities:
         (last_update_start, last_update) = db.get_resources_update(identity)
         if not last_update_start:
             logger.info('Submitting updater for identity %s as it has not run before', identity)
-            executors.submit(cloud_updates.update, identity, 0, False)
+            executors.submit(cloud_updates.update, identity, True, False)
         elif time.time() - last_update > int(CONFIG.get('updates', 'discover')) and \
             time.time() - last_update_start > int(CONFIG.get('updates', 'deadline')):
             logger.info('Submitting updater for identity %s', identity)
-            executors.submit(cloud_updates.update, identity, 0, False)
+            executors.submit(cloud_updates.update, identity, True, False)
 
     # Check static resources
     checked_static = False
@@ -93,18 +93,18 @@ def updater(db, executors, last_fast_update_time):
         (last_update_start, last_update) = db.get_resources_update('static')
         if not last_update_start:
             logger.info('Submitting updater for static resources')
-            executors.submit(cloud_updates.update, 'static', 0, True)
+            executors.submit(cloud_updates.update, 'static', True, True)
             checked_static = True
         elif time.time() - last_update > int(CONFIG.get('updates', 'discover')) and \
             time.time() - last_update_start > int(CONFIG.get('updates', 'deadline')):
             logger.info('Submitting updater for static resources')
-            executors.submit(cloud_updates.update, 'static', 0, True)
+            executors.submit(cloud_updates.update, 'static', True, True)
             checked_static = True
 
     # Check for any new static or user-defined resources
     if cloud_utils.check_for_new_clouds(db, 'static') and not checked_static:
         logger.info('Running updates due to new clouds')
-        executors.submit(cloud_updates.update, 'static', 0, True)
+        executors.submit(cloud_updates.update, 'static', True, True)
 
     return last_fast_update_time
 
