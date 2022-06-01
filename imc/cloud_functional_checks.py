@@ -103,7 +103,7 @@ def update_clouds_status(db, identity, info):
 
 def check_cloud(cloud, info, token):
     """
-    Check if a cloud is functional by listing locations
+    Check if a cloud is functional by listing flavours
     """
     client = resources.Resource(info)
     flavours = client.list_flavors()
