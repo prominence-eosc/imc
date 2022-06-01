@@ -147,13 +147,16 @@ def generate_images_and_flavours(config, cloud, token):
     flavours = client.list_flavors()
     output_flavours = {}
     for flavour in flavours:
-        match_obj_name = False
-        use = True
-        if 'blacklist' in config['flavour_filters']:
-            match_obj_name = re.match(r'%s' % config['flavour_filters']['blacklist'], flavour['name'])
-            use = False
+        match_obj_name_bl = False
+        match_obj_name_wh = False
 
-        if not match_obj_name or use:
+        if 'blacklist' in config['flavour_filters']:
+            match_obj_name_bl = re.match(r'%s' % config['flavour_filters']['blacklist'], flavour['name'])
+
+        if 'whitelist' in config['flavour_filters']:
+            match_obj_name_wh = re.match(r'%s' % config['flavour_filters']['whitelist'], flavour['name'])
+
+        if not match_obj_name_bl and ('whitelist' not in config['flavour_filters'] or match_obj_name_wh):
             output_flavours[flavour['name']] = flavour
 
     output['flavours'] = output_flavours
