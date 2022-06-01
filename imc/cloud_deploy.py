@@ -150,11 +150,11 @@ def deploy(userdata, image, flavor, disk, cloud, clouds_info_list, time_begin, u
                 fatal_failure = True
             elif 'Flavor' in msg and 'could not be found' in msg:
                 logger.info('Infrastructure creation failed due to flavour not found on cloud %s, our id=%s', cloud, unique_id)
-                db.set_deployment_failure(cloud, identity, 7, time.time()-time_created) # CHECK
+                db.set_deployment_failure(cloud, identity, 8, time.time()-time_created)
                 fatal_failure = True
             elif 'InsufficientInstanceCapacity' in msg:
                 logger.info('Infrastructure creation failed due to InsufficientInstanceCapacity on cloud %s, our id=%s', cloud, unique_id)
-                db.set_deployment_failure(cloud, identity, 9, time.time()-time_created) # CHECK
+                db.set_deployment_failure(cloud, identity, 9, time.time()-time_created)
                 fatal_failure = True
 
             file_failed = '%s/failed-%s-%d.txt' % (CONFIG.get('logs', 'contmsg'), unique_id, time.time())
