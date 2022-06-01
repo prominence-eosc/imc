@@ -3,6 +3,7 @@ import logging
 from novaclient import client
 from glanceclient import Client
 from keystoneauth1 import loading, session
+from neutronclient.v2_0 import client as neutronclient
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -40,10 +41,28 @@ class OpenStack():
         self._session = session.Session(auth=auth)
         self._info = info
 
+    def _find_network(self):
+        """
+        Attempt to find the correct network to use
+        """
+        try:
+            neutron = neutronclient.Client(session=self._session)
+            for network in neutron.list_networks()['networks']:
+                if not network['shared'] and network["router:external"]:
+                    return network['id']
+        except Exception as err:
+            logger.error('Got exception listing networks: %s', err)
+
+        return None
+
     def create_instance(self, name, image, flavor, network, userdata, disk=None):
         """
         Create an instance
         """
+        # Find a network if none specified
+        if not network:
+            network = self._find_network()
+
         try:
             nova = client.Client(2, session=self._session)
             server = nova.servers.create(name,

@@ -14,7 +14,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://prominence-eosc.github.io/docs",
     platforms=["any"],
-    install_requires=["requests", "paramiko", "psycopg2-binary", "psutil", "flask", "xmltodict", "defusedxml", "apache-libcloud", "python-openstackclient"],
+    install_requires=["requests", "paramiko", "psycopg2-binary", "psutil", "flask", "xmltodict", "defusedxml", "apache-libcloud", "python-openstackclient", "python-neutronclient", "python-glanceclient", "python-keystoneclient"],
     package_dir={'': '.'},
     scripts=["bin/imc-cleaner", "bin/imc-manager", "bin/imc-restapi.py"],
     packages=['imc'],
