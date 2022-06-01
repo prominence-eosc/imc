@@ -66,9 +66,23 @@ def delete_images(db, cloud, identity, old, new):
         for image_new in new:
             name_new = new[image_new]['name']
             if name_old == name_new:
-                return True
+                found = True
         if not found:
             db.delete_image(identity, cloud, name_old)
+
+def delete_flavours(db, cloud, identity, old, new):
+    """
+    Delete flavours which no longer exist from the database
+    """
+    for flavour_old in old:
+        name_old = old[flavour_old]['name']
+        found = False
+        for flavour_new in new:
+            name_new = new[flavour_new]['name']
+            if name_old == name_new:
+                found = True
+        if not found:
+            db.delete_flavour(identity, cloud, name_old)
 
 def update_flavours(db, cloud, identity, flavours):
     """
@@ -228,6 +242,7 @@ def update(db, identity, config):
         if (not flavours_old or requires_update or not compare_dicts(flavours_old, new_data['flavours'])) and new_data['flavours']:
             if not compare_dicts(flavours_old, new_data['flavours']):
                 logger.info('Updating flavours in DB for cloud %s', name)
+                delete_flavours(db, name, identity, flavours_old, new_data['flavours'])
                 update_flavours(db, name, identity, new_data['flavours'])
                 updated = True
             else:
