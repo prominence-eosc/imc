@@ -13,9 +13,9 @@ from imc import config
 from imc import cloud_utils
 from imc import database
 from imc import destroy
-from imc import imclient
 from imc import tokens
 from imc import utilities
+from imc import resources
 
 # Configuration
 CONFIG = config.get_config()
@@ -66,6 +66,35 @@ def delete_stuck_infras(db, state):
             db.deployment_update_status(infra['id'], 'deletion-requested')
             db.deployment_update_status_reason(infra['id'], 'DeploymentFailed')
 
+def find_and_delete_phantoms(db):
+    """
+    Find and delete any phantom infrastructures on each resource
+    """
+    # Get full list of cloud info
+    clouds_info_list = cloud_utils.create_clouds_list(db, 'static', True)
+
+    for cloud in clouds_info_list:
+        # Get a token if necessary
+        logger.info('Getting a new token if necessary')
+        token = tokens.get_token(cloud['name'], 'static', db, clouds_info_list)
+        cloud = tokens.get_openstack_token(token, cloud)
+
+        # Get list of VMs on the resource
+        client = resources.Resource(config)
+        instances = client.list_instances()
+        
+        for instance in instances:
+            # Check if we know about the instance
+            (infra_id, status, cloud) = db.get_infra_from_im_infra_id(instance['id'])
+
+            # Ignore valid instances
+            if infra_id and status in ('configured', 'creating'):
+                logger.info('Found valid instance with id %s associated with cloud %s with status %s', infra_id, cloud, status)
+                continue
+
+            if not infra_id:
+                logger.info('Found unknown instance %s, %s on cloud %s', instance['name'], instance['id'], cloud['name'])
+
 if __name__ == "__main__":
     while True:
         logger.info('Connecting to the DB')
@@ -85,6 +114,9 @@ if __name__ == "__main__":
             retry_incomplete_deletions(db, 'deletion-failed')
             retry_incomplete_deletions(db, 'deleting')
             retry_incomplete_deletions(db, 'deletion-requested')
+
+            logger.info('Finding any phantom infrastructures')
+            find_and_delete_phantoms(db)
 
             db.close()
         else:
