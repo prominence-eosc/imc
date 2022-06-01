@@ -132,7 +132,7 @@ def deployment_get_json(self, infra_id):
 
     return (description, identity, identifier)
 
-def get_infra_from_infra_id(self, infra_id):
+def get_infra_from_infra_id(self, cloud_infra_id):
     """
     Check if the provided infra ID corresponds to known infrastructure
     """
@@ -142,7 +142,7 @@ def get_infra_from_infra_id(self, infra_id):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT id,status,cloud FROM deployments WHERE cloud_infra_id='%s'" % infra_id)
+        cursor.execute("SELECT id,status,cloud FROM deployments WHERE cloud_infra_id='%s'" % cloud_infra_id)
         for row in cursor:
             infra_id = row[0]
             status = row[1]
@@ -156,7 +156,7 @@ def deployment_get_infra_id(self, infra_id):
     """
     Return the infrastructure ID, our status and cloud name
     """
-    infra_id = None
+    cloud_infra_id = None
     status = None
     cloud = None
     created = None
@@ -165,8 +165,9 @@ def deployment_get_infra_id(self, infra_id):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT cloud_infra_id,status,cloud,creation,updated FROM deployments WHERE id='%s'" % infra_id)
+        print("SELECT cloud_infra_id,status,cloud,creation,updated FROM deployments WHERE id='%s'" % infra_id)
         for row in cursor:
-            infra_id = row[0]
+            cloud_infra_id = row[0]
             status = row[1]
             cloud = row[2]
             created = row[3]
@@ -174,7 +175,7 @@ def deployment_get_infra_id(self, infra_id):
         cursor.close()
     except Exception as error:
         logger.critical('[deployment_get_infra_id] Unable to execute query due to: %s', error)
-    return (infra_id, status, cloud, created, updated)
+    return (cloud_infra_id, status, cloud, created, updated)
 
 def deployment_create_with_retries(self, infra_id, description, identity, identifier):
     """
@@ -261,16 +262,16 @@ def deployment_log_remove(self, infra_id):
     """
     return self.execute("DELETE FROM deployment_log WHERE id='%s'" % infra_id)
 
-def deployment_update_status(self, infra_id, status=None, cloud=None, infra_id=None, resource_type='cloud'):
+def deployment_update_status(self, infra_id, status=None, cloud=None, cloud_infra_id=None, resource_type='cloud'):
     """
     Update deployment status
     """
     if cloud and infra_id and status:
-        return self.execute("UPDATE deployments SET resource_type='%s',status='%s',cloud='%s',cloud_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, status, cloud, infra_id, time.time(), infra_id))
+        return self.execute("UPDATE deployments SET resource_type='%s',status='%s',cloud='%s',cloud_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, status, cloud, cloud_infra_id, time.time(), infra_id))
     elif cloud and status:
         return self.execute("UPDATE deployments SET resource_type='%s',status='%s',cloud='%s',updated=%d WHERE id='%s'" % (resource_type, status, cloud, time.time(), infra_id))
     elif infra_id and cloud and not status:
-        return self.execute("UPDATE deployments SET resource_type='%s',cloud='%s',cloud_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, cloud, infra_id, time.time(), infra_id))
+        return self.execute("UPDATE deployments SET resource_type='%s',cloud='%s',cloud_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, cloud, cloud_infra_id, time.time(), infra_id))
     elif status:
         if status in ('configured', 'waiting', 'unable', 'creating'):
             return self.execute("UPDATE deployments SET resource_type='%s',status='%s',updated=%d WHERE id='%s' AND status NOT IN ('deleted', 'deleting', 'deletion-requested', 'deletion-failed')" % (resource_type, status, time.time(), infra_id))
