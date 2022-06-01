@@ -1,4 +1,4 @@
-"""Destroy the specified IM infrastructure, with retries"""
+"""Destroy the specified infrastructure, with retries"""
 
 from __future__ import print_function
 import random

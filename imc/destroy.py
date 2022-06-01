@@ -52,11 +52,11 @@ def delete(unique_id):
     db = database.get_db()
     db.connect()
 
-    (im_infra_id, infra_status, cloud, _, _) = db.deployment_get_im_infra_id(unique_id)
-    logger.info('Obtained cloud infrastructure id %s and cloud %s and status %s', im_infra_id, cloud, infra_status)
+    (infra_id, infra_status, cloud, _, _) = db.deployment_get_infra_id(unique_id)
+    logger.info('Obtained cloud infrastructure id %s and cloud %s and status %s', infra_id, cloud, infra_status)
 
-    if im_infra_id and cloud:
-        logger.info('Deleting cloud infrastructure with IM id %s', im_infra_id)
+    if infra_id and cloud:
+        logger.info('Deleting cloud infrastructure with infrastructure id %s', infra_id)
 
         # Get the identity of the user who created the infrastructure
         identity = db.deployment_get_identity(unique_id)
@@ -76,17 +76,17 @@ def delete(unique_id):
         client = resources.Resource(info)
 
         # Delete the infrastructure, with retries
-        destroyed = destroy(client, im_infra_id)
+        destroyed = destroy(client, infra_id)
 
         if destroyed:
             db.deployment_update_status(unique_id, 'deleted')
-            logger.info('Destroyed infrastructure with infrastructure id %s', im_infra_id)
+            logger.info('Destroyed infrastructure with infrastructure id %s', infra_id)
         else:
             db.deployment_update_status(unique_id, 'deletion-failed')
-            logger.critical('Unable to destroy infrastructure with infrastructure id %s', im_infra_id)
+            logger.critical('Unable to destroy infrastructure with infrastructure id %s', infra_id)
             return False
     else:
-        logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s', im_infra_id, cloud)
+        logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s', infra_id, cloud)
         db.deployment_update_status(unique_id, 'deleted')
 
     db.close()

@@ -57,18 +57,18 @@ class Database(object):
                             deployment_get_identity, \
                             deployment_get_identities, \
                             deployment_get_json, \
-                            get_infra_from_im_infra_id, \
-                            deployment_get_im_infra_id, \
+                            get_infra_from_infra_id, \
+                            deployment_get_infra_id, \
                             deployment_create_with_retries, \
                             deployment_create, \
                             deployment_remove, \
                             deployment_log_remove, \
-                            check_im_deployment, \
+                            check_deployment, \
                             deployment_update_status, \
                             deployment_update_status_reason, \
                             set_deployment_failure, \
                             create_cloud_deployment, \
-                            get_im_deployments, \
+                            get_deployments, \
                             deployment_update_resources, \
                             get_used_resources
 

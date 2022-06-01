@@ -54,7 +54,7 @@ def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_
         retry += 1
 
         # Check if we should stop
-        (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
+        (infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_infra_id(unique_id)
         if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return (None, None)
@@ -89,14 +89,14 @@ def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_
                 time.sleep(int(CONFIG.get('polling', 'duration')))
 
                 # Check if we should stop
-                (im_infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_im_infra_id(unique_id)
+                (infra_id_new, infra_status_new, cloud_new, _, _) = db.deployment_get_infra_id(unique_id)
                 if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
                     logger.info('Deletion requested of infrastructure so aborting deployment')
                     return (None, None)
 
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
-                    logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with IM id %s', infrastructure_id)
+                    logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with infrastructure id %s', infrastructure_id)
                     db.set_deployment_failure(cloud, identity, 5, time.time()-time_begin)
                     destroy.destroy(client, infrastructure_id)
                     return (None, None)
@@ -152,15 +152,15 @@ def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_
             logger.warning('Deployment failure on cloud %s with id %s with msg="%s"', cloud, infrastructure_id, msg)
 
             if 'Quota exceeded' in msg:
-                logger.info('Infrastructure creation failed due to quota exceeded on cloud %s, our id=%s, IM id=%s', cloud, unique_id, infrastructure_id)
+                logger.info('Infrastructure creation failed due to quota exceeded on cloud %s, our id=%s, infrastructure id=%s', cloud, unique_id, infrastructure_id)
                 db.set_deployment_failure(cloud, identity, 6, time.time()-time_created)
                 fatal_failure = True
             elif 'Can not find requested image' in msg:
-                logger.info('Infrastructure creation failed due to image not found on cloud %s, our id=%s, IM id=%s', cloud, unique_id, infrastructure_id)
+                logger.info('Infrastructure creation failed due to image not found on cloud %s, our id=%s, infrastructure id=%s', cloud, unique_id, infrastructure_id)
                 db.set_deployment_failure(cloud, identity, 7, time.time()-time_created)
                 fatal_failure = True
             elif 'Flavor' in msg and 'could not be found' in msg:
-                logger.info('Infrastructure creation failed due to flavour not found on cloud %s, our id=%s, IM id=%s', cloud, unique_id, infrastructure_id)
+                logger.info('Infrastructure creation failed due to flavour not found on cloud %s, our id=%s, infrastructure id=%s', cloud, unique_id, infrastructure_id)
                 db.set_deployment_failure(cloud, identity, 7, time.time()-time_created) # CHECK
                 fatal_failure = True
 
