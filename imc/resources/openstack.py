@@ -40,7 +40,7 @@ class OpenStack():
         self._session = session.Session(auth=auth)
         self._info = info
 
-    def create_instance(self, name, image, flavor, network, userdata):
+    def create_instance(self, name, image, flavor, network, userdata, disk=None):
         """
         Create an instance
         """
