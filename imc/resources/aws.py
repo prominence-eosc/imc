@@ -64,7 +64,7 @@ class AWS():
             instances = self._ec2.resource('ec2').create_instances(**args)
         except Exception as err:
             logger.error('Got exception creating instance: %s', err)
-            return None, err
+            return None, str(err)
 
         if instances:
             return instances[0].instance_id, None
