@@ -23,6 +23,8 @@ def deployer(infra_id):
     # Random sleep
     time.sleep(random.randint(0, 4))
 
+    success = None
+
     db = database.get_db()
     if db.connect():
         logger.info('Connected to DB, about to deploy infrastructure for job')

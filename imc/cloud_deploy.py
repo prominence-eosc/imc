@@ -61,6 +61,7 @@ def deploy(userdata, image, flavor, disk, cloud, clouds_info_list, time_begin, u
         # Create infrastructure
         network = cloud_info['network']
         name = 'prominence-%s-%d' % (unique_id, time.time())
+        time_created = time.time()
         (infrastructure_id, msg) = client.create_instance(name , image, flavor, network, userdata, disk)
 
         if infrastructure_id:
@@ -77,8 +78,6 @@ def deploy(userdata, image, flavor, disk, cloud, clouds_info_list, time_begin, u
             # Change the status
             db.deployment_update_status(unique_id, 'creating')
 
-            time_created = time.time()
-            count_unconfigured = 0
             state_previous = None
 
             # Wait for infrastructure to enter the running state
@@ -142,16 +141,20 @@ def deploy(userdata, image, flavor, disk, cloud, clouds_info_list, time_begin, u
             logger.warning('Deployment failure on cloud %s with id %s with msg="%s"', cloud, infrastructure_id, msg)
 
             if 'Quota exceeded' in msg:
-                logger.info('Infrastructure creation failed due to quota exceeded on cloud %s, our id=%s, infrastructure id=%s', cloud, unique_id, infrastructure_id)
+                logger.info('Infrastructure creation failed due to quota exceeded on cloud %s, our id=%s', cloud, unique_id)
                 db.set_deployment_failure(cloud, identity, 6, time.time()-time_created)
                 fatal_failure = True
             elif 'Can not find requested image' in msg:
-                logger.info('Infrastructure creation failed due to image not found on cloud %s, our id=%s, infrastructure id=%s', cloud, unique_id, infrastructure_id)
+                logger.info('Infrastructure creation failed due to image not found on cloud %s, our id=%s', cloud, unique_id)
                 db.set_deployment_failure(cloud, identity, 7, time.time()-time_created)
                 fatal_failure = True
             elif 'Flavor' in msg and 'could not be found' in msg:
-                logger.info('Infrastructure creation failed due to flavour not found on cloud %s, our id=%s, infrastructure id=%s', cloud, unique_id, infrastructure_id)
+                logger.info('Infrastructure creation failed due to flavour not found on cloud %s, our id=%s', cloud, unique_id)
                 db.set_deployment_failure(cloud, identity, 7, time.time()-time_created) # CHECK
+                fatal_failure = True
+            elif 'InsufficientInstanceCapacity' in msg:
+                logger.info('Infrastructure creation failed due to InsufficientInstanceCapacity on cloud %s, our id=%s', cloud, unique_id)
+                db.set_deployment_failure(cloud, identity, 9, time.time()-time_created) # CHECK
                 fatal_failure = True
 
             file_failed = '%s/failed-%s-%d.txt' % (CONFIG.get('logs', 'contmsg'), unique_id, time.time())
