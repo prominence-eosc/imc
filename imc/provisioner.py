@@ -139,8 +139,6 @@ def deploy_job(db, unique_id):
         # are specified all flavours will be considered.
         flavours = utilities.create_flavour_list(flavours, requirements)
 
-        logger.info('Attempting to deploy on cloud %s', cloud)
- 
         # Check if we should stop
         (_, infra_status_new, _, _, _) = db.deployment_get_infra_id(unique_id)
         if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):

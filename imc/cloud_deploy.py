@@ -59,7 +59,6 @@ def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_
             return (None, None)
 
         # Create infrastructure
-        ## name, image, flavor, network, userdata
         network = cloud_info['network']
         name = 'prominence-%s-%d' % (unique_id.split('-')[0], time.time())
         (infrastructure_id, msg) = client.create_instance(name , image, flavor, network, userdata)
@@ -136,7 +135,7 @@ def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_
                     break
 
                 # Destroy infrastructure for which deployment failed
-                if state == 'failed':
+                if state == 'failed' or state == 'error':
                     logger.warning('Infrastructure creation failed on cloud %s, so destroying', cloud)
                     db.set_deployment_failure(cloud, identity, 1, time.time()-time_created)
                     destroy.destroy(client, infrastructure_id)
