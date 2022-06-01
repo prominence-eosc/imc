@@ -60,7 +60,7 @@ def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_
 
         # Create infrastructure
         network = cloud_info['network']
-        name = 'prominence-%s-%d' % (unique_id.split('-')[0], time.time())
+        name = 'prominence-%s-%d' % (unique_id, time.time())
         (infrastructure_id, msg) = client.create_instance(name , image, flavor, network, userdata)
 
         if infrastructure_id:
@@ -101,7 +101,6 @@ def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_
 
                 # Get the current state of the infrastructure
                 (_, state) = client.get_instance(infrastructure_id)
-                logger.info('InfraID=%s ID=%s has state: %s', unique_id, infrastructure_id, state)
 
                 # If state is not known, wait
                 if not state:
@@ -119,13 +118,6 @@ def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_
                     db.set_deployment_failure(cloud, identity, 0, time.time()-time_begin_this_cloud)
                     success = True
                     return (infrastructure_id, None)
-
-                # Destroy infrastructure which is taking too long to enter the configured state
-                if time.time() - time_created > int(CONFIG.get('timeouts', 'configured')):
-                    logger.warning('Waiting too long for infrastructure to be configured, so destroying')
-                    db.set_deployment_failure(cloud, identity, 3, time.time()-time_created)
-                    destroy.destroy(client, infrastructure_id)
-                    break
 
                 # Destroy infrastructure which is taking too long to enter the running state
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'notrunning')) and state != 'running':
