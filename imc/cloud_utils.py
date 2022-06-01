@@ -1,5 +1,4 @@
 """Miscellaneous cloud functions"""
-from __future__ import print_function
 import glob
 import json
 import logging

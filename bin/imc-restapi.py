@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """REST API"""
 
-from __future__ import print_function
 from functools import wraps
 import uuid
 import logging

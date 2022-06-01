@@ -1,6 +1,5 @@
 """Destroy the specified infrastructure, with retries"""
 
-from __future__ import print_function
 import random
 import time
 import logging

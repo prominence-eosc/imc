@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Runs infrastructure deploy and destroy workers"""
 
-from __future__ import print_function
 from concurrent.futures import ThreadPoolExecutor
 import logging
 from logging.handlers import RotatingFileHandler

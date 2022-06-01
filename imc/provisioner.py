@@ -1,4 +1,3 @@
-from __future__ import print_function
 from string import Template
 import time
 from random import shuffle

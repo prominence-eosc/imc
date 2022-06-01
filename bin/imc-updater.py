@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Updates clouds available to each user"""
 
-from __future__ import print_function
 from concurrent.futures import ThreadPoolExecutor
 import logging
 from logging.handlers import RotatingFileHandler

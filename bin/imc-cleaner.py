@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Periodic cleaning of infrastructure and the database"""
 
-from __future__ import print_function
 import configparser
 import logging
 from logging.handlers import RotatingFileHandler

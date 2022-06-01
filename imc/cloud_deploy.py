@@ -1,6 +1,5 @@
 """Deploy infrastructure on the specified cloud, with extensive error handling"""
 
-from __future__ import print_function
 import os
 import sys
 from string import Template

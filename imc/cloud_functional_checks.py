@@ -1,5 +1,4 @@
 """Check if clouds are functional"""
-from __future__ import print_function
 import logging
 
 from imc import appdbclient
