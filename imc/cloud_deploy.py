@@ -22,7 +22,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_id, identity, db, used_cpus=1, used_memory=1):
+def deploy(userdata, image, flavor, disk, cloud, clouds_info_list, time_begin, unique_id, identity, db, used_cpus=1, used_memory=1):
     """
     Deploy infrastructure on the specified cloud
     """
@@ -61,7 +61,7 @@ def deploy(userdata, image, flavor, cloud, clouds_info_list, time_begin, unique_
         # Create infrastructure
         network = cloud_info['network']
         name = 'prominence-%s-%d' % (unique_id, time.time())
-        (infrastructure_id, msg) = client.create_instance(name , image, flavor, network, userdata)
+        (infrastructure_id, msg) = client.create_instance(name , image, flavor, network, userdata, disk)
 
         if infrastructure_id:
             logger.info('Created infrastructure on cloud %s with id %s and waiting for it to be deployed', cloud, infrastructure_id)

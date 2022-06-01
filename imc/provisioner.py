@@ -178,6 +178,7 @@ def deploy_job(db, unique_id):
             (infra_id, reason) = cloud_deploy.deploy(userdata,
                                                      image_id,
                                                      flavour_id,
+                                                     requirements['resources']['disk'],
                                                      cloud,
                                                      clouds_info_list,
                                                      time_begin,
