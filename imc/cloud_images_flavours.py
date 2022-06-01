@@ -128,20 +128,24 @@ def generate_images_and_flavours(config, cloud, token):
     output['flavours'] = None
 
     client = resources.Resource(config)
-    images = client.list_images()
 
-    output_images = {}
-    for image in images:
-        for image_t in config['image_templates']:
-            if image_t == image['name']:
-                image['type'] = config['image_templates'][image_t]['type']
-                image['distribution'] = config['image_templates'][image_t]['distribution']
-                image['architecture'] = config['image_templates'][image_t]['architecture']
-                image['version'] = config['image_templates'][image_t]['version']
-                output_images[image['name']] = image
+    if config['image_templates']:
+        images = client.list_images()
+        output_images = {}
+        for image in images:
+            for image_t in config['image_templates']:
+                if image_t == image['name']:
+                    image['type'] = config['image_templates'][image_t]['type']
+                    image['distribution'] = config['image_templates'][image_t]['distribution']
+                    image['architecture'] = config['image_templates'][image_t]['architecture']
+                    image['version'] = config['image_templates'][image_t]['version']
+                    output_images[image['name']] = image
 
-    output['images'] = output_images
-    logger.info('Got %d images from cloud %s', len(output['images']), cloud)
+        output['images'] = output_images
+        logger.info('Got %d images from cloud %s', len(output['images']), cloud)
+    else:
+        output['images'] = {}
+        logger.info('Due to config file not going to get images from cloud %s', cloud)
 
     # List flavours
     flavours = client.list_flavors()
