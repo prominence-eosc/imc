@@ -165,7 +165,6 @@ def deployment_get_infra_id(self, infra_id):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT cloud_infra_id,status,cloud,creation,updated FROM deployments WHERE id='%s'" % infra_id)
-        print("SELECT cloud_infra_id,status,cloud,creation,updated FROM deployments WHERE id='%s'" % infra_id)
         for row in cursor:
             cloud_infra_id = row[0]
             status = row[1]
