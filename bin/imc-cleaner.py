@@ -11,7 +11,6 @@ import time
 
 from imc import config
 from imc import cloud_utils
-from imc import im_utils
 from imc import database
 from imc import destroy
 from imc import imclient
