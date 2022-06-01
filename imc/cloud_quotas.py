@@ -19,7 +19,7 @@ def set_quotas(requirements, db, identity, config):
     """
     for cloud in config:
         name = cloud['name']
-        logger.info('[set_quotas] Considering cloud %s', name)
+        logger.info('Considering cloud %s', name)
         credentials = cloud['credentials']
 
         instances = None
