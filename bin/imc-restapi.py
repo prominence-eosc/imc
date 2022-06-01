@@ -10,7 +10,6 @@ from flask import Flask, request, jsonify
 
 from imc import config
 from imc import database
-from imc import imclient
 from imc import logger as custom_logger
 from imc import return_sites
 from imc import tokens
@@ -127,28 +126,6 @@ def get_infrastructures():
             infra = db.deployment_get_infra_in_state_cloud(request.args.get('status'), cloud)
             db.close()
             return jsonify(infra), 200
-    elif 'type' in request.args and 'cloud' in request.args:
-        if request.args.get('type') == 'im':
-            cloud = request.args.get('cloud')
-            db = database.get_db()
-            if db.connect():
-                clouds_info_list = cloud_utils.create_clouds_list(db, identity)
-                token = tokens.get_token(cloud, None, db, clouds_info_list)
-                db.close()
-                im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
-                client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
-                (status, msg) = client.getauth()
-                if status != 0:
-                    logger.critical('Error reading IM auth file: %s', msg)
-                    return jsonify({}), 400
-                (status, ids) = client.list_infra_ids(10)
-                im_list = []
-                if ids:
-                    for uri in ids:
-                        pieces = uri.split('/')
-                        im_id = pieces[len(pieces) - 1]
-                        im_list.append(im_id)
-                    return jsonify(im_list), 200
         
     return jsonify({}), 400
 
@@ -218,21 +195,6 @@ def delete_infrastructure(infra_id):
                 return jsonify({}), 200
         logger.critical('Infrastructure deletion request failed, possibly a database issue')
         return jsonify({}), 400
-    elif request.args.get('type') == 'im':
-        cloud = request.args.get('cloud')
-        db = database.get_db()
-        if db.connect():
-            clouds_info_list = utilities.create_clouds_list(CONFIG.get('clouds', 'path'))
-            token = tokens.get_token(cloud, None, db, clouds_info_list)
-            db.close()
-            im_auth = utilities.create_im_auth(cloud, token, clouds_info_list)
-            client = imclient.IMClient(url=CONFIG.get('im', 'url'), data=im_auth)
-            (status, msg) = client.getauth()
-            if status != 0:
-                logger.critical('Error reading IM auth file: %s', msg)
-                return jsonify({}), 400        
-            client.destroy(infra_id, 30)
-            return jsonify({}), 200
     return jsonify({}), 400
 
 @app.route('/credentials', methods=['POST'])
