@@ -39,7 +39,7 @@ def retry_incomplete_deletions(db, state):
     for infra in infras:
         if time.time() - infra['updated'] > int(CONFIG.get('cleanup', 'retry_failed_deletes_after')) or 1 == 1:
             logger.info('Attempting to delete infra with ID %s', infra['id'])
-            if destroy.delete(infra['id']):
+            if destroy.delete(db, infra['id']):
                 logger.info('Successfully deleted infrastructure with ID %s', infra['id'])
 
 def remove_old_entries(db, state):

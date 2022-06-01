@@ -42,14 +42,11 @@ def destroy(client, infrastructure_id):
 
     return destroyed
 
-def delete(unique_id):
+def delete(db, unique_id):
     """
     Delete the infrastructure with the specified id
     """
     logger.info('Deleting infrastructure with id %s', unique_id)
-
-    db = database.get_db()
-    db.connect()
 
     (infra_id, infra_status, cloud, _, _) = db.deployment_get_infra_id(unique_id)
     logger.info('Obtained cloud infrastructure id %s and cloud %s and status %s', infra_id, cloud, infra_status)
@@ -88,6 +85,5 @@ def delete(unique_id):
         logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s', infra_id, cloud)
         db.deployment_update_status(unique_id, 'deleted')
 
-    db.close()
     return True
 

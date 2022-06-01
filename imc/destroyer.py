@@ -27,7 +27,7 @@ def destroyer(infra_id):
     db = database.get_db()
     if db.connect():
         try:
-            destroy.delete(infra_id)
+            destroy.delete(db, infra_id)
         except Exception as exc:
             logging.info('Got exception running delete: %s', exc)
         db.close()
