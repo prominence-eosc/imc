@@ -82,3 +82,18 @@ def set_flavour(self, identity, cloud, name, id, cpus, memory, disk):
         return False
 
     return True
+
+def delete_flavour(self, identity, cloud, name):
+    """
+    Delete a flavour
+    """
+    try:
+        cursor = self._connection.cursor()
+        cursor.execute("DELETE FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
+        self._connection.commit()
+        cursor.close()
+    except Exception as error:
+        logger.critical('[delete_flavour] unable to execute DELETE query due to: %s', error)
+        return False
+
+    return True
