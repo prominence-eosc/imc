@@ -65,42 +65,21 @@ def update_clouds_status(db, identity, info):
 
         # Get a token if necessary
         token = tokens.get_token(name, identity, db, info)
+        cloud_info = tokens.get_openstack_token(token, cloud_info)
 
         if not token and token_required:
             logger.error('Unable to get token so cannot check if cloud %s is functional', name)
             continue
 
-        # Get a scoped token if necessary
-        cloud_info = tokens.get_openstack_token(token, cloud_info)
+        status = check_cloud(name, cloud_info, token)
 
-        retryme = False
-        try:
-            status = check_cloud(name, cloud_info, token)
-        except Exception as err:
-            logger.info('Setting status of cloud %s to down due to exception: %s', name, err)
+        if not status:
+            logger.info('Setting status of cloud %s to down', name)
             db.set_cloud_status(name, identity, 1)
         else:
-            if not status:
-                logger.info('Setting status of cloud %s to down, will retry', name)
-                retryme = True
-                db.set_cloud_status(name, identity, 1)
-            else:
-                logger.info('Cloud %s is functional', name)
-                db.set_cloud_status(name, identity, 0)
+            logger.info('Cloud %s is functional', name)
+            db.set_cloud_status(name, identity, 0)
           
-        if retryme:
-            try:
-                status = check_cloud(name, cloud_info, token)
-            except Exception as err:
-                logger.info('Setting status of cloud %s to down due to exception: %s', name, err)
-                db.set_cloud_status(name, identity, 1)
-            else:
-                if not status:
-                    logger.info('Setting status of cloud %s to down SECOND ATTEMPT', name)
-                    db.set_cloud_status(name, identity, 1)
-                else:
-                    db.set_cloud_status(name, identity, 0)
-
 def check_cloud(cloud, info, token):
     """
     Check if a cloud is functional by listing flavours
