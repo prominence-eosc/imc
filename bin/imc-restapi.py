@@ -148,19 +148,19 @@ def get_infrastructure(infra_id):
     logger = custom_logger.CustomAdapter(logging.getLogger(__name__), {'id': infra_id})
     logger.info('Infrastructure status request')
 
-    im_infra_id = None
+    resource_infra_id = None
     status = None
     status_reason = None
     cloud = None
 
     db = database.get_db()
     if db.connect():
-        (im_infra_id, status, cloud, _, _) = db.deployment_get_im_infra_id(infra_id)
+        (resource_infra_id, status, cloud, _, _) = db.deployment_get_infra_id(infra_id)
         if status in ('unable', 'failed', 'waiting'):
             status_reason = db.deployment_get_status_reason(infra_id)
     db.close()
     if status:
-        return jsonify({'status':status, 'status_reason':status_reason, 'cloud':cloud, 'infra_id':im_infra_id}), 200
+        return jsonify({'status':status, 'status_reason':status_reason, 'cloud':cloud, 'infra_id':resource_infra_id}), 200
     return jsonify({'status':'invalid'}), 404
 
 @app.route('/infrastructures/<string:infra_id>', methods=['DELETE'])
@@ -175,7 +175,7 @@ def delete_infrastructure(infra_id):
         db = database.get_db()
         if db.connect():
             # Get current status of infrastructure
-            (_, status, _, _, _) = db.deployment_get_im_infra_id(infra_id)
+            (_, status, _, _, _) = db.deployment_get_infra_id(infra_id)
 
             # If it has already been deleted, don't do anything but return success
             if status == 'deleted':
