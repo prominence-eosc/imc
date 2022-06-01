@@ -6,7 +6,6 @@ import logging
 
 from imc import cloud_deploy
 from imc import cloud_utils
-from imc import im_utils
 from imc import config
 from imc import utilities
 from imc import cloud_quotas
@@ -26,13 +25,6 @@ def deploy_job(db, unique_id):
     (description, identity, identifier) = db.deployment_get_json(unique_id)
     logger.info('Deploying infrastructure %s with identifier %s', unique_id, identifier)
 
-    # Get RADL
-    radl_contents = im_utils.get_radl(description)
-    if not radl_contents:
-        logging.critical('RADL must be provided')
-        db.deployment_update_status(unique_id, 'unable')
-        return None
-
     # Get requirements & preferences
     requirements = {}
     preferences = {}
@@ -40,13 +32,6 @@ def deploy_job(db, unique_id):
         requirements = description['requirements']
     if 'prefereneces' in description:
         preferences = description['preferences']
-
-    job_want = description['want']
-
-    # Count number of instances
-    instances = im_utils.get_num_instances(radl_contents)
-    logger.info('Found %d instances to deploy', instances)
-    requirements['resources']['instances'] = instances
 
     # Get full list of cloud info
     logger.info('Getting list of clouds from DB')
@@ -118,6 +103,7 @@ def deploy_job(db, unique_id):
                 region = cloud_info['region']
                 if 'supported_groups' in cloud_info:
                     groups = cloud_info['supported_groups']
+                break
 
         if resource_type:
             logger.info('Resource %s is of type %s', cloud, resource_type)
@@ -127,7 +113,7 @@ def deploy_job(db, unique_id):
         
         # Get image
         try:
-            (image_name, image_url) = policy.get_image(cloud)
+            (image_name, image_id) = policy.get_image(cloud)
         except Exception as err:
             logger.critical('Unable to get image due to %s', err)
             return False
@@ -164,39 +150,50 @@ def deploy_job(db, unique_id):
 
         # Loop over flavours
         for flavour in flavours:
-            flavour_name = flavour[0]
-            flavour_cpus = flavour[1]
-            flavour_memory = flavour[2]
+            flavour_id = flavour[0]
+            flavour_name = flavour[1]
+            flavour_cpus = flavour[2]
+            flavour_memory = flavour[3]
 
-            logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image_url, flavour_name)
+            logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image_name, flavour_name)
 
-            # Create complete RADL content
+            # Update userdata
+            userdata_file = CONFIG.get('infrastructure', 'userdata')
+
             try:
-                radl = Template(str(radl_contents)).substitute(instance=flavour_name,
-                                                               image=image_url,
-                                                               cloud=cloud,
-                                                               allow_groups=utilities.groups_start_expr(groups),
-                                                               region=region)
-            except Exception as ex:
-                logger.critical('Error creating RADL from template due to %s', ex)
+                with open(userdata_file) as fh:
+                    userdata = fh.read()
+            except Exception as err:
+                logger.critical('Error reading userdata template due to: %s', err)
+                return False
+
+            try:
+                userdata = Template(userdata).substitute(cloud=cloud,
+                                                         region=region,
+                                                         token=description['token'],
+                                                         uid_infra=unique_id)
+            except Exception as err:
+                logger.critical('Error creating userdata from template due to: %s', err)
                 return False
 
             # Deploy infrastructure
             reason = None
-            (infra_id, reason) = cloud_deploy.deploy(radl,
+            (infra_id, reason) = cloud_deploy.deploy(userdata,
+                                                     image_id,
+                                                     flavour_id,
                                                      cloud,
+                                                     clouds_info_list,
                                                      time_begin,
                                                      unique_id,
                                                      identity,
                                                      db,
-                                                     int(requirements['resources']['instances']),
-                                                     flavour_cpus*int(requirements['resources']['instances']),
-                                                     flavour_memory*int(requirements['resources']['instances']))
+                                                     flavour_cpus,
+                                                     flavour_memory)
 
 
             if infra_id:
                 success = True
-                # Set cloud and IM infra id
+                # Set cloud and infra id
                 db.deployment_update_status(unique_id, None, cloud, infra_id, resource_type)
 
                 # Final check if we should delete the infrastructure
