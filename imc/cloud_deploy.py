@@ -59,7 +59,8 @@ def deploy(userdata, image, flavor, disk, cloud, clouds_info_list, time_begin, u
             return (None, None)
 
         # Create infrastructure
-        network = cloud_info['network']
+        network = random.choice(cloud_info['networks'])
+        logging.info('Using network %s', network)
         name = 'prominence-%s-%d' % (unique_id, time.time())
         time_created = time.time()
         (infrastructure_id, msg) = client.create_instance(name , image, flavor, network, userdata, disk)
