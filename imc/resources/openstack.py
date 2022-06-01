@@ -7,6 +7,24 @@ from keystoneauth1 import loading, session
 # Logging
 logger = logging.getLogger(__name__)
 
+def map(status):
+    """
+    Map OpenStack status
+    """
+    if status == 'ACTIVE':
+        return 'running'
+    elif status == 'BUILDING':
+        return 'pending'
+    elif status == 'STOPPED':
+        return 'stopped'
+    elif status == 'DELETED' or status == 'SOFT_DELETED':
+        return 'terminated'
+    elif status == 'ERROR':
+        return 'error'
+    else:
+        logger.error('OpenStack status is %s, returning unknown', status)
+        return 'unknown'
+
 class OpenStack():
     """
     OpenStack connector
@@ -82,7 +100,7 @@ class OpenStack():
             logger.error('Got exception getting instance: %s', err)
             return None
 
-        return result['name'], result['status']
+        return result['name'], map(result['status'])
 
     def list_images(self):
         """
