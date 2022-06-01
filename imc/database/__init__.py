@@ -165,6 +165,15 @@ class Database(object):
                                                   time INT NOT NULL,
                                                   duration INT DEFAULT -1
                                                   )''')
+            # Reasons:
+            # 0 = Success
+            # 1 = VMs failed
+            # 2 = Waiting too long to start running
+            # 5 = Total time waiting too long
+            # 6 = Quota exceeded
+            # 7 = Image not found
+            # 8 = Flavor not found
+            # 9 = Insufficient capacity
 
             # Create cloud updates table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
