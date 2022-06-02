@@ -38,7 +38,7 @@ class AWS():
 
         return None
 
-    def create_instance(self, name, image, flavor, network, userdata, disk=None):
+    def create_instance(self, name, image, flavor, network, userdata, disk, infra_id):
         """
         Create an instance
         """
@@ -53,7 +53,9 @@ class AWS():
                                        'Tags': [{'Key': 'Name',
                                                  'Value': name},
                                                 {'Key': 'Creator',
-                                                 'Value': 'Prominence'}]}],
+                                                 'Value': 'Prominence'},
+                                                {'Key': 'ProminenceInfrastructureId',
+                                                 'Value': infra_id}]}],
                 'BlockDeviceMappings': [{'DeviceName': '/dev/sda1',
                                          'Ebs': {'VolumeSize': disk}}],
                 'NetworkInterfaces': [{'SubnetId': network,

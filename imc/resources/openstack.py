@@ -55,7 +55,7 @@ class OpenStack():
 
         return None
 
-    def create_instance(self, name, image, flavor, network, userdata, disk=None):
+    def create_instance(self, name, image, flavor, network, userdata, disk, infra_id):
         """
         Create an instance
         """
@@ -66,6 +66,7 @@ class OpenStack():
             nova = client.Client("2.52", session=self._session)
             server = nova.servers.create(name,
                                          tags=['CreatedByProminence'],
+                                         meta={'ProminenceInfrastructureId': infra_id},
                                          image=image,
                                          flavor=flavor,
                                          nics=[{'net-id': network}],
@@ -101,7 +102,8 @@ class OpenStack():
                 server_dict = server.to_dict()
                 data.append({'id': server_dict['id'],
                              'name': server_dict['name'],
-                             'status': status_map(server_dict['status'])})
+                             'status': status_map(server_dict['status']),
+                             'metadata': server_dict['metadata']})
         except Exception as err:
             logger.error('Got exception listing instances: %s', err)
 
