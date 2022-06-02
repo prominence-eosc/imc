@@ -8,7 +8,7 @@ from neutronclient.v2_0 import client as neutronclient
 # Logging
 logger = logging.getLogger(__name__)
 
-def map(status):
+def status_map(status):
     """
     Map OpenStack status
     """
@@ -59,20 +59,20 @@ class OpenStack():
         """
         Create an instance
         """
-        # Find a network if none specified
         if not network:
             network = self._find_network()
 
         try:
-            nova = client.Client(2, session=self._session)
+            nova = client.Client("2.52", session=self._session)
             server = nova.servers.create(name,
+                                         tags=['CreatedByProminence'],
                                          image=image,
                                          flavor=flavor,
                                          nics=[{'net-id': network}],
                                          userdata=userdata).to_dict()
         except Exception as err:
             logger.error('Got exception creating server: %s', err)
-            return None, err
+            return None, str(err)
 
         return server['id'], None
 
@@ -95,14 +95,13 @@ class OpenStack():
         """
         data = []
         try:
-            nova = client.Client(2, session=self._session)
-            results = nova.servers.list()
+            nova = client.Client("2.52", session=self._session)
+            results = nova.servers.list(search_opts={'tags':'CreatedByProminence'})
             for server in results:
                 server_dict = server.to_dict()
-                if server_dict['name'].startswith('prominence-'):
-                    data.append({'id': server_dict['id'],
-                                 'name': server_dict['name'],
-                                 'status': server_dict['status']})
+                data.append({'id': server_dict['id'],
+                             'name': server_dict['name'],
+                             'status': status_map(server_dict['status'])})
         except Exception as err:
             logger.error('Got exception listing instances: %s', err)
 
@@ -119,7 +118,7 @@ class OpenStack():
             logger.error('Got exception getting instance: %s', err)
             return None
 
-        return result['name'], map(result['status'])
+        return result['name'], status_map(result['status'])
 
     def list_images(self):
         """
