@@ -63,7 +63,7 @@ def deploy(userdata, image, flavor, disk, cloud, clouds_info_list, time_begin, u
         logging.info('Using network %s', network)
         name = 'prominence-%s-%d' % (unique_id, time.time())
         time_created = time.time()
-        (infrastructure_id, msg) = client.create_instance(name , image, flavor, network, userdata, disk)
+        (infrastructure_id, msg) = client.create_instance(name , image, flavor, network, userdata, disk, unique_id)
 
         if infrastructure_id:
             logger.info('Created infrastructure on cloud %s with id %s and waiting for it to be deployed', cloud, infrastructure_id)
