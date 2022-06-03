@@ -48,7 +48,7 @@ class OpenStack():
         try:
             neutron = neutronclient.Client(session=self._session)
             for network in neutron.list_networks()['networks']:
-                if not network['shared'] and not network["router:external"]:
+                if not network["router:external"]:
                     return network['id']
         except Exception as err:
             logger.error('Got exception listing networks: %s', err)
