@@ -55,7 +55,7 @@ class OpenStack():
 
         return None
 
-    def create_instance(self, name, image, flavor, network, userdata, disk, infra_id):
+    def create_instance(self, name, image, flavor, network, userdata, disk, infra_id, unique_infra_id):
         """
         Create an instance
         """
@@ -66,7 +66,8 @@ class OpenStack():
             nova = client.Client("2.52", session=self._session)
             server = nova.servers.create(name,
                                          tags=['CreatedByProminence'],
-                                         meta={'ProminenceInfrastructureId': infra_id},
+                                         meta={'ProminenceInfrastructureId': infra_id,
+                                               'ProminenceUniqueInfrastructureId': unique_infra_id},
                                          image=image,
                                          flavor=flavor,
                                          nics=[{'net-id': network}],

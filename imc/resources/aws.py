@@ -14,6 +14,15 @@ def get_name(tags):
             return pair['Value']
     return None
 
+def to_dict(tags):
+    """
+    Convert to dictionary
+    """
+    dict = {}
+    for pair in tags:
+        dict[pair['Key']] = pair['Value']
+    return dict
+
 class AWS():
     """
     AWS EC2 connector
@@ -38,7 +47,7 @@ class AWS():
 
         return None
 
-    def create_instance(self, name, image, flavor, network, userdata, disk, infra_id):
+    def create_instance(self, name, image, flavor, network, userdata, disk, infra_id, unique_infra_id):
         """
         Create an instance
         """
@@ -55,7 +64,9 @@ class AWS():
                                                 {'Key': 'Creator',
                                                  'Value': 'Prominence'},
                                                 {'Key': 'ProminenceInfrastructureId',
-                                                 'Value': infra_id}]}],
+                                                 'Value': infra_id},
+                                                {'Key': 'ProminenceUniqueInfrastructureId',
+                                                 'Value': unique_infra_id}]}],
                 'BlockDeviceMappings': [{'DeviceName': '/dev/sda1',
                                          'Ebs': {'VolumeSize': disk}}],
                 'NetworkInterfaces': [{'SubnetId': network,
@@ -95,7 +106,8 @@ class AWS():
                                                                                  'Values': ['Prominence']}]):
                 data.append({'id': instance.id,
                              'status': instance.state['Name'],
-                             'name': get_name(instance.tags)})
+                             'name': get_name(instance.tags),
+                             'metadata': to_dict(instance.tags)})
         except Exception as err:
             logger.error('Got exception listing instances: %s', err)
 
