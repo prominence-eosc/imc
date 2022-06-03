@@ -154,40 +154,21 @@ def deploy_job(db, unique_id):
 
             logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image_name, flavour_name)
 
-            # Update userdata
-            userdata_file = CONFIG.get('infrastructure', 'userdata')
-
-            try:
-                with open(userdata_file) as fh:
-                    userdata = fh.read()
-            except Exception as err:
-                logger.critical('Error reading userdata template due to: %s', err)
-                return False
-
-            try:
-                userdata = Template(userdata).substitute(cloud=cloud,
-                                                         region=region,
-                                                         token=description['token'],
-                                                         uid_infra=unique_id)
-            except Exception as err:
-                logger.critical('Error creating userdata from template due to: %s', err)
-                return False
-
             # Deploy infrastructure
             reason = None
-            (infra_id, reason) = cloud_deploy.deploy(userdata,
-                                                     image_id,
+            (infra_id, reason) = cloud_deploy.deploy(image_id,
                                                      flavour_id,
                                                      requirements['resources']['disk'],
                                                      cloud,
+                                                     region,
                                                      clouds_info_list,
                                                      time_begin,
                                                      unique_id,
                                                      identity,
                                                      db,
+                                                     description['token'],
                                                      flavour_cpus,
                                                      flavour_memory)
-
 
             if infra_id:
                 success = True

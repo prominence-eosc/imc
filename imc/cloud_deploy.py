@@ -7,6 +7,7 @@ import time
 import random
 import logging
 import configparser
+import uuid
 
 from imc import config
 from imc import database
@@ -22,7 +23,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def deploy(userdata, image, flavor, disk, cloud, clouds_info_list, time_begin, unique_id, identity, db, used_cpus=1, used_memory=1):
+def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, unique_id, identity, db, worker_token, used_cpus=1, used_memory=1):
     """
     Deploy infrastructure on the specified cloud
     """
@@ -58,17 +59,47 @@ def deploy(userdata, image, flavor, disk, cloud, clouds_info_list, time_begin, u
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return (None, None)
 
-        # Create infrastructure
+        # Network
         network = random.choice(cloud_info['networks'])
         logging.info('Using network %s', network)
-        name = 'prominence-%s-%d' % (unique_id, time.time())
+
+        # Prepare for creating infrastructure
+        unique_infra_id = str(uuid.uuid4())
+        db.create_cloud_deployment(unique_id, unique_infra_id, cloud)
+        name = 'prominence-%s' % unique_infra_id
         time_created = time.time()
-        (infrastructure_id, msg) = client.create_instance(name , image, flavor, network, userdata, disk, unique_id)
+
+        # Update userdata
+        try:
+            with open(CONFIG.get('infrastructure', 'userdata')) as fh:
+                 userdata = fh.read()
+        except Exception as err:
+            logger.critical('Error reading userdata template due to: %s', err)
+            return False
+
+        try:
+            userdata = Template(userdata).substitute(cloud=cloud,
+                                                     region=region,
+                                                     token=worker_token,
+                                                     uid_infra=unique_id,
+                                                     unique_uid_infra=unique_infra_id)
+        except Exception as err:
+            logger.critical('Error creating userdata from template due to: %s', err)
+            return False
+
+        # Create infrastructure
+        (infrastructure_id, msg) = client.create_instance(name,
+                                                          image,
+                                                          flavor,
+                                                          network,
+                                                          userdata,
+                                                          disk,
+                                                          unique_id,
+                                                          unique_infra_id)
 
         if infrastructure_id:
             logger.info('Created infrastructure on cloud %s with id %s and waiting for it to be deployed', cloud, infrastructure_id)
-            if not db.create_cloud_deployment(unique_id, infrastructure_id, cloud):
-                logger.critical('Unable to add infrastructure ID %s for infra with id %s to deployments log', infrastructure_id, unique_id)
+            db.update_cloud_deployment(unique_infra_id, infrastructure_id)
 
             # Set the cloud & infrastructure ID
             db.deployment_update_status(unique_id, None, cloud, infrastructure_id)
