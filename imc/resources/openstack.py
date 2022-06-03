@@ -14,7 +14,7 @@ def status_map(status):
     """
     if status == 'ACTIVE':
         return 'running'
-    elif status == 'BUILDING':
+    elif status == 'BUILD':
         return 'pending'
     elif status == 'STOPPED':
         return 'stopped'
