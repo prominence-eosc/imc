@@ -192,11 +192,18 @@ def deployment_create_with_retries(self, infra_id, description, identity, identi
             self.connect()
     return success
 
-def create_cloud_deployment(self, infra_id, cloud_infra_id, cloud):
+def create_cloud_deployment(self, infra_id, unique_infra_id, cloud):
     """
     Log deployment
     """
-    return self.execute("INSERT INTO deployment_log (id, cloud_infra_id, cloud, created) VALUES (%s,%s,%s,%s)", (infra_id, cloud_infra_id, cloud, time.time()))
+    return self.execute("INSERT INTO deployment_log (id, unique_infra_id, cloud, created) VALUES (%s,%s,%s,%s)",
+                        (infra_id, unique_infra_id, cloud, time.time()))
+
+def update_cloud_deployment(self, unique_infra_id, cloud_infra_id):
+    """
+    Add cloud infrastructure id to deployment
+    """
+    return self.execute("UPDATE deployment_log SET cloud_infra_id='%s' WHERE unique_infra_id='%s'" % (unique_infra_id, cloud_infra_id))
 
 def delete_deployments(self, infra_id=None, since=None):
     """

@@ -68,6 +68,7 @@ class Database(object):
                             deployment_update_status_reason, \
                             set_deployment_failure, \
                             create_cloud_deployment, \
+                            update_cloud_deployment, \
                             get_deployments, \
                             deployment_update_resources, \
                             get_used_resources
@@ -149,8 +150,9 @@ class Database(object):
 
             # Create deployments log table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              deployment_log(cloud_infra_id TEXT NOT NULL PRIMARY KEY,
-                                             cloud TEXT,
+                              deployment_log(unique_infra_id TEXT NOT NULL PRIMARY KEY,
+                                             cloud TEXT NOT NULL,
+                                             cloud_infra_id TEXT,
                                              id TEXT NOT NULL,
                                              created INT NOT NULL,
                                              CONSTRAINT fk_infra
