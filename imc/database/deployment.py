@@ -203,7 +203,7 @@ def update_cloud_deployment(self, unique_infra_id, cloud_infra_id):
     """
     Add cloud infrastructure id to deployment
     """
-    return self.execute("UPDATE deployment_log SET cloud_infra_id='%s' WHERE unique_infra_id='%s'" % (unique_infra_id, cloud_infra_id))
+    return self.execute("UPDATE deployment_log SET cloud_infra_id='%s' WHERE unique_infra_id='%s'" % (cloud_infra_id, unique_infra_id))
 
 def delete_deployments(self, infra_id=None, since=None):
     """
@@ -237,6 +237,7 @@ def get_deployment(self, infra_id):
     Try to find the infra id associated with the given infrastructure id
     """
     infra = None
+    unique_id = None
     cloud = None
     try:
         cursor = self._connection.cursor()
