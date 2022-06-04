@@ -232,7 +232,7 @@ def get_deployments(self, infra_id):
         logger.critical('[get_deployments] Unable to execute query due to: %s', error)
     return infra
 
-def check_deployment(self, infra_id):
+def get_deployment(self, infra_id):
     """
     Try to find the infra id associated with the given infrastructure id
     """
@@ -240,15 +240,16 @@ def check_deployment(self, infra_id):
     cloud = None
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT id,cloud FROM deployment_log WHERE cloud_infra_id='%s'" % infra_id)
+        cursor.execute("SELECT id,unique_infra_id,cloud FROM deployment_log WHERE cloud_infra_id='%s'" % infra_id)
         for row in cursor:
             infra = row[0]
-            cloud = row[1]
+            unique_id = row[1]
+            cloud = row[2]
         cursor.close()
     except Exception as error:
         logger.critical('[check_deployment] Unable to execute query due to: %s', error)
 
-    return infra, cloud
+    return infra, unique_id, cloud
 
 def deployment_create(self, infra_id, description, identity, identifier):
     """

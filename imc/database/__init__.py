@@ -63,7 +63,7 @@ class Database(object):
                             deployment_create, \
                             deployment_remove, \
                             deployment_log_remove, \
-                            check_deployment, \
+                            get_deployment, \
                             deployment_update_status, \
                             deployment_update_status_reason, \
                             set_deployment_failure, \
