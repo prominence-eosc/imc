@@ -52,15 +52,14 @@ def get_user_credentials(self, identity):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT refresh_token, access_token, access_token_creation, access_token_expiry FROM user_credentials WHERE identity='%s'" % identity)
-        for row in cursor:
-            refresh_token = row[0]
-            access_token = row[1]
-            access_token_creation = row[2]
-            access_token_expiry = row[3]
+        result = cursor.fetchone()
+        refresh_token = result[0]
+        access_token = result[1]
+        access_token_creation = result[2]
+        access_token_expiry = result[3]
         cursor.close()
     except Exception as error:
         logger.critical('[get_user_credentials] Unable to execute SELECT query due to: %s', error)
-        return (refresh_token, access_token, access_token_creation, access_token_expiry)
     return (refresh_token, access_token, access_token_creation, access_token_expiry)
 
 def get_token(self, cloud):
@@ -74,14 +73,13 @@ def get_token(self, cloud):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT token,expiry,creation FROM credentials WHERE cloud='%s'" % cloud)
-        for row in cursor:
-            token = row[0]
-            expiry = row[1]
-            creation = row[2]
+        result = cursor.fetchone()
+        token = result[0]
+        expiry = result[1]
+        creation = result[2]
         cursor.close()
     except Exception as error:
         logger.critical('[get_token] Unable to execute SELECT query due to: %s', error)
-        return (token, expiry, creation)
     return (token, expiry, creation)
 
 def delete_token(self, cloud):

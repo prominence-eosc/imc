@@ -18,8 +18,7 @@ def get_cloud_updated_quotas(self, cloud, identity):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT updated_quotas FROM clouds_info WHERE identity='%s' AND name='%s'" % (identity, cloud))
-        for row in cursor:
-            updated = row[0]
+        updated = cursor.fetchone()[0]
         cursor.close()
     except Exception as error:
         logger.critical('[get_cloud_updated_quotas] Unable to execute SELECT query due to: %s', error)

@@ -56,11 +56,11 @@ def get_flavour(self, identity, cloud, cpus, memory, disk):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT name, cpus, memory, disk FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND cpus>=%s AND memory>=%s AND (disk>=%s OR disk=-1) ORDER BY cpus*memory ASC LIMIT 1" % (identity, cloud, cpus, memory, disk))
-        for row in cursor:
-            name = row[0]
-            cpus_used = int(row[1])
-            memory_used = int(row[2])
-            disk_used = int(row[3])
+        result = cursor.fetchone()
+        name = result[0]
+        cpus_used = int(result[1])
+        memory_used = int(result[2])
+        disk_used = int(result[3])
         cursor.close()
     except Exception as error:
         logger.critical('[get_flavour] unable to execute SELECT query due to: %s', error)
@@ -87,13 +87,4 @@ def delete_flavour(self, identity, cloud, name):
     """
     Delete a flavour
     """
-    try:
-        cursor = self._connection.cursor()
-        cursor.execute("DELETE FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
-        self._connection.commit()
-        cursor.close()
-    except Exception as error:
-        logger.critical('[delete_flavour] unable to execute DELETE query due to: %s', error)
-        return False
-
-    return True
+    return self.execute("DELETE FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))

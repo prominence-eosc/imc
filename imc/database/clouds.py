@@ -108,11 +108,11 @@ def get_resources_update(self, identity):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT start, time FROM cloud_updates WHERE identity='%s'" % identity)
-        for row in cursor:
-            update_start = row[0]
-            updated = row[1]
+        result = cursor.fetchone()
+        update_start = int(result[0])
+        updated = int(result[1])
         cursor.close()
     except Exception as error:
         logger.critical('[get_resources_update] Unable to get update time due to %s', error)
 
-    return (int(update_start), int(updated))
+    return update_start, updated

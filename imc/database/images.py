@@ -18,8 +18,7 @@ def get_cloud_updated_images(self, cloud, identity):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT updated_images FROM clouds_info WHERE identity='%s' AND name='%s'" % (identity, cloud))
-        for row in cursor:
-            updated = row[0]
+        updated = cursor.fetchone()[0]
         cursor.close()
     except Exception as error:
         logger.critical('[get_cloud_updated_images] Unable to execute SELECT query due to: %s', error)
@@ -62,9 +61,9 @@ def get_image(self, identity, cloud, os_type, os_arch, os_dist, os_vers):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT name, id FROM cloud_images WHERE %s AND cloud='%s' AND os_type='%s' AND os_arch='%s' AND os_dist='%s' AND os_vers='%s' ORDER BY name ASC" % (use_identity, cloud, os_type, os_arch, os_dist, os_vers))
-        for row in cursor:
-            name = row[0]
-            im_name = row[1]
+        result = cursor.fetchone()
+        name = result[0]
+        im_name = result[1]
         cursor.close()
     except Exception as error:
         logger.critical('[get_image] unable to execute SELECT query due to: %s', error)
@@ -91,13 +90,4 @@ def delete_image(self, identity, cloud, name):
     """
     Delete an image
     """
-    try:
-        cursor = self._connection.cursor()
-        cursor.execute("DELETE FROM cloud_images WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
-        self._connection.commit()
-        cursor.close()
-    except Exception as error:
-        logger.critical('[delete_image] unable to execute DELETE query due to: %s', error)
-        return False
-
-    return True
+    return self.execute("DELETE FROM cloud_images WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
