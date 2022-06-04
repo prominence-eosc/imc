@@ -164,7 +164,7 @@ class GCP():
             return None
 
         for machine_type in machine_types:
-            data.append({'id': machine_type.name,
+            data.append({'id': machine_type.name, # need to use names when creating instances, not id
                          'name': machine_type.name,
                          'cpus': machine_type.guest_cpus,
                          'memory': machine_type.memory_mb/1024,
