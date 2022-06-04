@@ -30,7 +30,7 @@ class AWS():
     def __init__(self, info):
         self._ec2 = boto3.Session(aws_access_key_id=info['credentials']['ACCESS_ID'],
                                   aws_secret_access_key=info['credentials']['SECRET_KEY'],
-                                  region_name=info['cloudRegion'])
+                                  region_name=info['cloud_region'])
 
     def _get_cpus_from_flavor(self, flavor):
         """
@@ -84,7 +84,7 @@ class AWS():
 
         return None, None
 
-    def delete_instance(self, instance_id):
+    def delete_instance(self, instance_name, instance_id):
         """
         Delete the specified instance
         """
@@ -113,7 +113,7 @@ class AWS():
 
         return data
 
-    def get_instance(self, instance_id):
+    def get_instance(self, instance_name, instance_id):
         """
         Get details of the specified instance
         """
@@ -123,7 +123,7 @@ class AWS():
             logger.error('Got exception getting instance: %s', err)
             return None
 
-        return get_name(instance.tags), instance.state['Name']
+        return instance.state['Name']
 
     def list_images(self):
         """

@@ -78,7 +78,7 @@ class OpenStack():
 
         return server['id'], None
 
-    def delete_instance(self, instance_id):
+    def delete_instance(self, instance_name, instance_id):
         """
         Delete the specified instance
         """
@@ -110,7 +110,7 @@ class OpenStack():
 
         return data
 
-    def get_instance(self, instance_id):
+    def get_instance(self, instance_name, instance_id):
         """
         Get details of the specified instance
         """
@@ -121,7 +121,7 @@ class OpenStack():
             logger.error('Got exception getting instance: %s', err)
             return None
 
-        return result['name'], status_map(result['status'])
+        return status_map(result['status'])
 
     def list_images(self):
         """
