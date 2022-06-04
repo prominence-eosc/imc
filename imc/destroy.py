@@ -17,7 +17,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def destroy(client, infrastructure_id):
+def destroy(client, name, resource_infra_id):
     """
     Destroy the specified infrastructure, including retries
     """
@@ -26,7 +26,7 @@ def destroy(client, infrastructure_id):
     delay = delay_factor
     destroyed = False
     while not destroyed and count < int(CONFIG.get('deletion', 'retries')):
-        status = client.delete_instance(infrastructure_id)
+        status = client.delete_instance(name, resource_infra_id)
         if status:
             destroyed = True
             break
@@ -36,54 +36,60 @@ def destroy(client, infrastructure_id):
         time.sleep(int(count + delay))
 
     if destroyed:
-        logger.info('Destroyed infrastructure with id %s', infrastructure_id)
+        logger.info('Destroyed infrastructure with id %s', resource_infra_id)
     else:
-        logger.critical('Unable to destroy infrastructure with id %s', infrastructure_id)
+        logger.critical('Unable to destroy infrastructure with id %s', resource_infra_id)
 
     return destroyed
 
-def delete(db, unique_id):
+def delete(db, infra_id):
     """
     Delete the infrastructure with the specified id
     """
-    logger.info('Deleting infrastructure with id %s', unique_id)
+    logger.info('Deleting infrastructure with id %s', infra_id)
 
-    (infra_id, infra_status, cloud, _, _) = db.deployment_get_infra_id(unique_id)
-    logger.info('Obtained cloud infrastructure id %s and cloud %s and status %s', infra_id, cloud, infra_status)
+    # Get cloud and resource infra id
+    (resource_infra_id, infra_status, cloud, _, _) = db.deployment_get_infra_id(infra_id)
+    logger.info('Obtained cloud infrastructure id %s and cloud %s and status %s', resource_infra_id, cloud, infra_status)
 
-    if infra_id and cloud:
-        logger.info('Deleting cloud infrastructure with infrastructure id %s', infra_id)
+    # Get infra unique id
+    (_, unique_infra_id, _) = db.get_deployment(resource_infra_id)
+    name = 'prominence-%s' % unique_infra_id
+    logger.info('Obtained infrastructure unique id %s', unique_infra_id)
 
-        # Get the identity of the user who created the infrastructure
-        identity = db.deployment_get_identity(unique_id)
+    if not resource_infra_id or not cloud:
+        logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s', resource_infra_id, cloud)
+        db.deployment_update_status(infra_id, 'deleted')
+        return True
 
-        # Get cloud details
-        clouds_info_list = cloud_utils.create_clouds_list(db, identity)
-        for cloud_info in clouds_info_list:
-            if cloud_info['name'] == cloud:
-                info = cloud_info
-                break
+    logger.info('Deleting cloud infrastructure with infrastructure id %s', resource_infra_id)
+
+    # Get the identity of the user who created the infrastructure
+    identity = db.deployment_get_identity(infra_id)
+
+    # Get cloud details
+    clouds_info_list = cloud_utils.create_clouds_list(db, identity)
+    for cloud_info in clouds_info_list:
+        if cloud_info['name'] == cloud:
+            info = cloud_info
+            break
      
-        # Check & get auth token if necessary
-        token = tokens.get_token(cloud, identity, db, clouds_info_list)
-        info = tokens.get_openstack_token(token, info)
+    # Check & get auth token if necessary
+    token = tokens.get_token(cloud, identity, db, clouds_info_list)
+    info = tokens.get_openstack_token(token, info)
 
-        # Setup Resource client
-        client = resources.Resource(info)
+    # Setup Resource client
+    client = resources.Resource(info)
 
-        # Delete the infrastructure, with retries
-        destroyed = destroy(client, infra_id)
+    # Delete the infrastructure, with retries
+    destroyed = destroy(client, name, resource_infra_id)
 
-        if destroyed:
-            db.deployment_update_status(unique_id, 'deleted')
-            logger.info('Destroyed infrastructure with infrastructure id %s', infra_id)
-        else:
-            db.deployment_update_status(unique_id, 'deletion-failed')
-            logger.critical('Unable to destroy infrastructure with infrastructure id %s', infra_id)
-            return False
+    if destroyed:
+        db.deployment_update_status(infra_id, 'deleted')
+        logger.info('Destroyed infrastructure with infrastructure id %s', resource_infra_id)
     else:
-        logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s', infra_id, cloud)
-        db.deployment_update_status(unique_id, 'deleted')
+        db.deployment_update_status(infra_id, 'deletion-failed')
+        logger.critical('Unable to destroy infrastructure with infrastructure id %s', resource_infra_id)
+        return False
 
     return True
-
