@@ -14,3 +14,4 @@ uwsgi
 google-api-python-client
 oauth2client
 google-cloud-compute
+boto3
