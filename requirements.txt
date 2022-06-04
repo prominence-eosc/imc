@@ -11,3 +11,6 @@ python-neutronclient
 python-glanceclient
 python-keystoneclient
 uwsgi
+google-api-python-client
+oauth2client
+google-cloud-compute
