@@ -57,7 +57,7 @@ def delete(db, infra_id):
     name = 'prominence-%s' % unique_infra_id
     logger.info('Obtained infrastructure unique id %s', unique_infra_id)
 
-    if not resource_infra_id or not cloud:
+    if not resource_infra_id or not cloud or not unique_infra_id:
         logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s', resource_infra_id, cloud)
         db.deployment_update_status(infra_id, 'deleted')
         return True
