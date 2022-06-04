@@ -48,7 +48,8 @@ class Database(object):
                         set_user_credentials, \
                         update_user_access_token, \
                         get_user_credentials, \
-                        get_token, delete_token
+                        get_token, \
+                        delete_token
 
     from .deployment import deployment_get_infra_in_state_cloud, \
                             deployment_check_infra_id, \
