@@ -31,6 +31,7 @@ class AWS():
         self._ec2 = boto3.Session(aws_access_key_id=info['credentials']['ACCESS_ID'],
                                   aws_secret_access_key=info['credentials']['SECRET_KEY'],
                                   region_name=info['cloud_region'])
+        self._info = info
 
     def _get_cpus_from_flavor(self, flavor):
         """
@@ -51,13 +52,11 @@ class AWS():
         """
         Create an instance
         """
-        num_cpus = self._get_cpus_from_flavor(flavor)
         args = {'ImageId': image,
                 'InstanceType': flavor,
                 'MinCount': 1,
                 'MaxCount': 1,
                 'UserData': userdata,
-                'CpuOptions': {'ThreadsPerCore': 1, 'CoreCount': num_cpus},
                 'TagSpecifications': [{'ResourceType': 'instance',
                                        'Tags': [{'Key': 'Name',
                                                  'Value': name},
@@ -72,6 +71,10 @@ class AWS():
                 'NetworkInterfaces': [{'SubnetId': network,
                                        'DeviceIndex': 0,
                                        'DeleteOnTermination': True}]}
+
+        if self._info['disable_hyperthreading']:
+            num_cpus = self._get_cpus_from_flavor(flavor)
+            args['CpuOptions'] = {'ThreadsPerCore': 1, 'CoreCount': num_cpus}
 
         try:
             instances = self._ec2.resource('ec2').create_instances(**args)
@@ -141,8 +144,14 @@ class AWS():
             for instance_type in self._ec2.client('ec2').describe_instance_types()['InstanceTypes']:
                 if instance_type["InstanceStorageSupported"]:
                     continue
-                threads_per_core = instance_type['VCpuInfo']['DefaultThreadsPerCore']
-                data.append({'cpus': instance_type['VCpuInfo']['DefaultCores']/threads_per_core, # We want 1 vCPU per physical core
+
+                if self._info['disable_hyperthreading']:
+                    threads_per_core = instance_type['VCpuInfo']['DefaultThreadsPerCore']
+                else:
+                    threads_per_core = 1
+
+                data.append({'cpus': instance_type['VCpuInfo']['DefaultCores']/threads_per_core,
+
                              'memory': int(instance_type['MemoryInfo']['SizeInMiB']/1024),
                              'disk': -1,
                              'name': instance_type['InstanceType'],

@@ -63,9 +63,10 @@ class GCP():
         instance.machine_type = 'zones/%s/machineTypes/%s' % (self._info['cloud_region'], flavor)
         instance.disks = [boot_disk]
 
-        advanced_machine_features = compute_v1.AdvancedMachineFeatures()
-        advanced_machine_features.threads_per_core = 1
-        instance.advanced_machine_features = advanced_machine_features
+        if self._info['disable_hyperthreading']:
+            advanced_machine_features = compute_v1.AdvancedMachineFeatures()
+            advanced_machine_features.threads_per_core = 1
+            instance.advanced_machine_features = advanced_machine_features
 
         network_interface = compute_v1.NetworkInterface()
         network_interface.name = 'global/networks/default'
@@ -168,14 +169,17 @@ class GCP():
             return None
 
         for machine_type in machine_types:
-            # See https://cloud.google.com/compute/docs/machine-types
-            threads_per_core = 2
-            if machine_type.name.startswith('t2d'):
+            if self._info['disable_hyperthreading']:
+                # See https://cloud.google.com/compute/docs/machine-types
+                threads_per_core = 2
+                if machine_type.name.startswith('t2d'):
+                    threads_per_core = 1
+            else:
                 threads_per_core = 1
 
             data.append({'id': machine_type.name, # need to use names when creating instances, not id
                          'name': machine_type.name,
-                         'cpus': machine_type.guest_cpus/threads_per_core, # We want 1 vCPU per physical core
+                         'cpus': machine_type.guest_cpus/threads_per_core,
                          'memory': machine_type.memory_mb/1024,
                          'disk': -1})
 
