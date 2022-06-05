@@ -139,13 +139,14 @@ class AWS():
         data = []
         try:
             for instance_type in self._ec2.client('ec2').describe_instance_types()['InstanceTypes']:
-                if not instance_type["InstanceStorageSupported"]:
-                    data.append({'cpus': instance_type['VCpuInfo']['DefaultCores'],
-                                 'memory': int(instance_type['MemoryInfo']['SizeInMiB']/1024),
-                                 'disk': -1,
-                                 'name': instance_type['InstanceType'],
-                                 'id': instance_type['InstanceType']})
-            
+                if instance_type["InstanceStorageSupported"]:
+                    continue
+                threads_per_core = instance_type['VCpuInfo']['DefaultThreadsPerCore']
+                data.append({'cpus': instance_type['VCpuInfo']['DefaultCores']/threads_per_core, # We want 1 vCPU per physical core
+                             'memory': int(instance_type['MemoryInfo']['SizeInMiB']/1024),
+                             'disk': -1,
+                             'name': instance_type['InstanceType'],
+                             'id': instance_type['InstanceType']})
         except Exception as err:
             logger.error('Got exception listing flavours: %s', err)
 
