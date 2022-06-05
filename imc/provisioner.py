@@ -103,11 +103,7 @@ def deploy_job(db, unique_id):
                 break
 
         # Get image
-        try:
-            (image_name, image_id) = policy.get_image(cloud)
-        except Exception as err:
-            logger.critical('Unable to get image due to %s', err)
-            return False
+        (image_name, image_id) = policy.get_image(cloud)
 
         # If no image meets the requirements we should skip the current cloud
         if not image_name:
@@ -115,11 +111,7 @@ def deploy_job(db, unique_id):
             continue
 
         # Get flavours
-        try:
-            flavours = policy.get_flavours(cloud)
-        except Exception as err:
-            logger.critical('Unable to get flavours due to %s', err)
-            return False
+        flavours = policy.get_flavours(cloud)
 
         # If no flavour meets the requirements we should skip the current cloud
         if not flavours:
