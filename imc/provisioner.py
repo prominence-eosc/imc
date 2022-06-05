@@ -93,23 +93,15 @@ def deploy_job(db, unique_id):
             break
 
         infra_id = None
-        resource_type = None
         region = None
         groups = []
         for cloud_info in clouds_info_list:
             if cloud_info['name'] == cloud:
-                resource_type = cloud_info['type']
                 region = cloud_info['region']
                 if 'supported_groups' in cloud_info:
                     groups = cloud_info['supported_groups']
                 break
 
-        if resource_type:
-            logger.info('Resource %s is of type %s', cloud, resource_type)
-        else:
-            logger.info('Skipping because no resource type could be determined for resource %s', cloud)
-            continue
-        
         # Get image
         try:
             (image_name, image_id) = policy.get_image(cloud)
@@ -173,7 +165,7 @@ def deploy_job(db, unique_id):
             if infra_id:
                 success = True
                 # Set cloud and infra id
-                db.deployment_update_status(unique_id, None, cloud, infra_id, resource_type)
+                db.deployment_update_status(unique_id, None, cloud, infra_id)
 
                 # Final check if we should delete the infrastructure
                 (_, infra_status_new, _, _, _) = db.deployment_get_infra_id(unique_id)
