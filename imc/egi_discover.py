@@ -219,12 +219,6 @@ def get_egi_clouds(access_token):
     return clouds
 
 def egi_clouds_update(identity, db):
-    try:
-        egi_clouds_update_do(identity, db)
-    except Exception as err:
-        logger.error('Got nasty exception: %s', err)
-
-def egi_clouds_update_do(identity, db):
     """
     Update EGI Federated Clouds for the specified user
     """
