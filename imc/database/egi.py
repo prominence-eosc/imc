@@ -30,14 +30,13 @@ def get_egi_clouds(self, identity):
             cloud = {}
             cloud['name'] = row[0]
             cloud['credentials'] = {}
-            cloud['credentials']['host'] = row[1]
+            cloud['credentials']['auth_url'] = row[1]
             cloud['credentials']['project_id'] = row[2]
             cloud['credentials']['tenant_id'] = row[2]
-            cloud['credentials']['service_region'] = row[5]
             cloud['credentials']['project_domain_id'] = row[3]
-            cloud['credentials']['user_domain_name'] = row[4]
-            cloud['credentials']['tenant'] = row[6]
-            cloud['credentials']['type'] = 'OpenStack'
+            cloud['credentials_additional'] = {}
+            cloud['credentials_additional']['username'] = 'egi.eu'
+            cloud['credentials_additional']['tenant'] = row[6]
             clouds[cloud['name']] = cloud
         cursor.close()
     except Exception as error:
