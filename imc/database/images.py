@@ -8,7 +8,7 @@ def set_cloud_updated_images(self, cloud, identity):
     """
     Set time when images updated
     """
-    return self.execute("UPDATE clouds_info SET updated_images=%s WHERE identity='%s' AND name='%s'" % (time.time(), identity, cloud))
+    return self.execute("UPDATE status SET updated_images=%s WHERE identity='%s' AND name='%s'" % (time.time(), identity, cloud))
 
 def get_cloud_updated_images(self, cloud, identity):
     """
@@ -17,7 +17,7 @@ def get_cloud_updated_images(self, cloud, identity):
     updated = 0
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT updated_images FROM clouds_info WHERE identity='%s' AND name='%s'" % (identity, cloud))
+        cursor.execute("SELECT updated_images FROM status WHERE identity='%s' AND name='%s'" % (identity, cloud))
         result = cursor.fetchone()
         if result:
             updated = result[0]
@@ -35,7 +35,7 @@ def get_images(self, identity, cloud):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT name, id, os_type, os_arch, os_dist, os_vers FROM cloud_images WHERE identity='%s' AND cloud='%s'" % (identity, cloud))
+        cursor.execute("SELECT name, id, os_type, os_arch, os_dist, os_vers FROM images WHERE identity='%s' AND cloud='%s'" % (identity, cloud))
         for row in cursor:
             data = {"name": row[0],
                     "id": row[1],
@@ -62,7 +62,7 @@ def get_image(self, identity, cloud, os_type, os_arch, os_dist, os_vers):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT name, id FROM cloud_images WHERE %s AND cloud='%s' AND os_type='%s' AND os_arch='%s' AND os_dist='%s' AND os_vers='%s' ORDER BY name ASC" % (use_identity, cloud, os_type, os_arch, os_dist, os_vers))
+        cursor.execute("SELECT name, id FROM images WHERE %s AND cloud='%s' AND os_type='%s' AND os_arch='%s' AND os_dist='%s' AND os_vers='%s' ORDER BY name ASC" % (use_identity, cloud, os_type, os_arch, os_dist, os_vers))
         result = cursor.fetchone()
         if result:
             name = result[0]
@@ -79,8 +79,8 @@ def set_image(self, identity, cloud, name, id, os_type, os_arch, os_dist, os_ver
     """
     try:
         cursor = self._connection.cursor()
-        cursor.execute("DELETE FROM cloud_images WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
-        cursor.execute("INSERT INTO cloud_images (identity, cloud, name, id, os_type, os_arch, os_dist, os_vers) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (identity, cloud, name, id, os_type, os_arch, os_dist, os_vers))
+        cursor.execute("DELETE FROM images WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
+        cursor.execute("INSERT INTO images (identity, cloud, name, id, os_type, os_arch, os_dist, os_vers) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (identity, cloud, name, id, os_type, os_arch, os_dist, os_vers))
         self._connection.commit()
         cursor.close()
     except Exception as error:
@@ -93,4 +93,4 @@ def delete_image(self, identity, cloud, name):
     """
     Delete an image
     """
-    return self.execute("DELETE FROM cloud_images WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))
+    return self.execute("DELETE FROM images WHERE identity='%s' AND cloud='%s' AND name='%s'" % (identity, cloud, name))

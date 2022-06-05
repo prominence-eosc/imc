@@ -19,7 +19,7 @@ def get_cloud_info(self, cloud, identity):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT status, mon_status, limit_cpus, limit_memory, limit_instances, remaining_cpus, remaining_memory, remaining_instances FROM clouds_info WHERE name='%s' AND (identity='%s' OR identity='static')" % (cloud, identity))
+        cursor.execute("SELECT status, mon_status, limit_cpus, limit_memory, limit_instances, remaining_cpus, remaining_memory, remaining_instances FROM status WHERE name='%s' AND (identity='%s' OR identity='static')" % (cloud, identity))
         for row in cursor:
             status = row[0]
             mon_status = row[1]
@@ -39,25 +39,25 @@ def set_cloud_updated_quotas(self, cloud, identity):
     """
     Set time that quotas where updated
     """
-    return self.execute("UPDATE clouds_info SET updated_quotas=%s WHERE identity='%s' AND name='%s'" % (time.time(), identity, cloud))
+    return self.execute("UPDATE status SET updated_quotas=%s WHERE identity='%s' AND name='%s'" % (time.time(), identity, cloud))
 
 def set_cloud_mon_status(self, cloud, identity, status):
     """
     Set time when monitoring info was updated
     """
-    return self.execute("UPDATE clouds_info SET mon_status=%s WHERE identity='%s' AND name='%s'" % (status, identity, cloud))
+    return self.execute("UPDATE status SET mon_status=%s WHERE identity='%s' AND name='%s'" % (status, identity, cloud))
 
 def set_cloud_status(self, cloud, identity, status):
     """
     Set time when cloud status was updated
     """
-    return self.execute("UPDATE clouds_info SET status=%s WHERE identity='%s' AND name='%s'" % (status, identity, cloud))
+    return self.execute("UPDATE status SET status=%s WHERE identity='%s' AND name='%s'" % (status, identity, cloud))
 
 def init_cloud_info(self, cloud, identity):
     """
     Initialise a cloud name and user
     """
-    return self.execute("INSERT INTO clouds_info (name, identity) SELECT '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM clouds_info WHERE name='%s' AND identity='%s')" % (cloud, identity, cloud, identity))
+    return self.execute("INSERT INTO status (name, identity) SELECT '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM status WHERE name='%s' AND identity='%s')" % (cloud, identity, cloud, identity))
 
 def get_deployment_failures(self, identity, interval, successes=False):
     """
@@ -70,7 +70,7 @@ def get_deployment_failures(self, identity, interval, successes=False):
     output = {}
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT COUNT(*), cloud FROM deployment_failures WHERE identity='%s' %s AND time > %s GROUP BY cloud" % (identity, where, time.time() - interval))
+        cursor.execute("SELECT COUNT(*), cloud FROM deployment_stats WHERE identity='%s' %s AND time > %s GROUP BY cloud" % (identity, where, time.time() - interval))
         for row in cursor:
             output[row[1]] = row[0]
         cursor.close()
@@ -84,7 +84,7 @@ def del_old_deployment_failures(self, interval):
     """
     Delete old deployment failures
     """
-    return self.execute("DELETE FROM deployment_failures WHERE time < %s" % (time.time() - interval))
+    return self.execute("DELETE FROM deployment_stats WHERE time < %s" % (time.time() - interval))
 
 def set_resources_update(self, identity):
     """

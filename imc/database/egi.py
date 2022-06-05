@@ -9,8 +9,8 @@ def set_egi_cloud(self, identity, name, auth_url, project_id, project_domain_id,
     """
     try:
         cursor = self._connection.cursor()
-        cursor.execute("UPDATE egi_clouds SET auth_url='%s',project_id='%s',project_domain_id='%s',user_domain_name='%s',region='%s',protocol='%s' WHERE identity='%s' AND site='%s'" % (auth_url, project_id, project_domain_id, user_domain_name, region, protocol, identity, name))
-        cursor.execute("INSERT INTO egi_clouds (identity, site, auth_url, project_id, project_domain_id, user_domain_name, region, protocol) SELECT '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM egi_clouds WHERE identity='%s' AND site='%s')" % (identity, name, auth_url, project_id, project_domain_id, user_domain_name, region, protocol, identity, name))
+        cursor.execute("UPDATE egi SET auth_url='%s',project_id='%s',project_domain_id='%s',user_domain_name='%s',region='%s',protocol='%s' WHERE identity='%s' AND site='%s'" % (auth_url, project_id, project_domain_id, user_domain_name, region, protocol, identity, name))
+        cursor.execute("INSERT INTO egi (identity, site, auth_url, project_id, project_domain_id, user_domain_name, region, protocol) SELECT '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM egi WHERE identity='%s' AND site='%s')" % (identity, name, auth_url, project_id, project_domain_id, user_domain_name, region, protocol, identity, name))
         self._connection.commit()
         cursor.close()
     except Exception as error:
@@ -25,7 +25,7 @@ def get_egi_clouds(self, identity):
     clouds = {}
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT site, auth_url, project_id, project_domain_id, user_domain_name, region, protocol FROM egi_clouds WHERE identity='%s' AND enabled='true'" % identity)
+        cursor.execute("SELECT site, auth_url, project_id, project_domain_id, user_domain_name, region, protocol FROM egi WHERE identity='%s' AND enabled='true'" % identity)
         for row in cursor:
             cloud = {}
             cloud['name'] = row[0]
@@ -50,4 +50,4 @@ def disable_egi_clouds(self, identity, clouds):
     """
     clouds_str = ','.join(["'{}'".format(value) for value in clouds])
 
-    return self.execute("UPDATE egi_clouds SET enabled='false' WHERE identity='%s' AND site NOT IN (%s)" % (identity, clouds_str))
+    return self.execute("UPDATE egi SET enabled='false' WHERE identity='%s' AND site NOT IN (%s)" % (identity, clouds_str))

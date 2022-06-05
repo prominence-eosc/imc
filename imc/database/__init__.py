@@ -161,14 +161,14 @@ class Database(object):
                                              REFERENCES deployments(id)
                                              )''')
 
-            # Create cloud failures table
+            # Create deployment stats table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              deployment_failures(cloud TEXT NOT NULL,
-                                                  identity TEXT NOT NULL,
-                                                  reason INT NOT NULL,
-                                                  time INT NOT NULL,
-                                                  duration INT DEFAULT -1
-                                                  )''')
+                              deployment_stats(cloud TEXT NOT NULL,
+                                               identity TEXT NOT NULL,
+                                               reason INT NOT NULL,
+                                               time INT NOT NULL,
+                                               duration INT DEFAULT -1
+                                               )''')
             # Reasons:
             # 0 = Success
             # 1 = VMs failed
@@ -181,67 +181,67 @@ class Database(object):
 
             # Create cloud updates table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              cloud_updates(identity TEXT NOT NULL PRIMARY KEY,
-                                            start INT NOT NULL DEFAULT 0,
-                                            time INT NOT NULL DEFAULT 0
+                              updates(identity TEXT NOT NULL PRIMARY KEY,
+                                      start INT NOT NULL DEFAULT 0,
+                                      time INT NOT NULL DEFAULT 0
                                             )''')
 
             # Create egi_clouds table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              egi_clouds(identity TEXT NOT NULL,
-                                         site TEXT NOT NULL,
-                                         auth_url TEXT NOT NULL,
-                                         project_id TEXT NOT NULL,
-                                         project_domain_id TEXT NOT NULL,
-                                         user_domain_name TEXT NOT NULL,
-                                         region TEXT NOT NULL,
-                                         protocol TEXT NOT NULL,
-                                         enabled BOOLEAN DEFAULT TRUE,
-                                         PRIMARY KEY (site, identity, project_id)
-                                         )''')
+                              egi(identity TEXT NOT NULL,
+                                  site TEXT NOT NULL,
+                                  auth_url TEXT NOT NULL,
+                                  project_id TEXT NOT NULL,
+                                  project_domain_id TEXT NOT NULL,
+                                  user_domain_name TEXT NOT NULL,
+                                  region TEXT NOT NULL,
+                                  protocol TEXT NOT NULL,
+                                  enabled BOOLEAN DEFAULT TRUE,
+                                  PRIMARY KEY (site, identity, project_id)
+                                  )''')
 
             # Create cloud status
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              clouds_info(name TEXT NOT NULL,
-                                          identity TEXT NOT NULL,
-                                          status INT NOT NULL DEFAULT -1,
-                                          mon_status INT NOT NULL DEFAULT -1,
-                                          limit_cpus INT NOT NULL DEFAULT -1,
-                                          limit_memory INT NOT NULL DEFAULT -1,
-                                          limit_instances INT NOT NULL DEFAULT -1,
-                                          remaining_cpus INT NOT NULL DEFAULT -1,
-                                          remaining_memory INT NOT NULL DEFAULT -1,
-                                          remaining_instances INT NOT NULL DEFAULT -1,
-                                          updated_quotas INT NOT NULL DEFAULT -1,
-                                          updated_images INT NOT NULL DEFAULT -1,
-                                          PRIMARY KEY (name, identity)
-                                          )''')
+                              status(name TEXT NOT NULL,
+                                     identity TEXT NOT NULL,
+                                     status INT NOT NULL DEFAULT -1,
+                                     mon_status INT NOT NULL DEFAULT -1,
+                                     limit_cpus INT NOT NULL DEFAULT -1,
+                                     limit_memory INT NOT NULL DEFAULT -1,
+                                     limit_instances INT NOT NULL DEFAULT -1,
+                                     remaining_cpus INT NOT NULL DEFAULT -1,
+                                     remaining_memory INT NOT NULL DEFAULT -1,
+                                     remaining_instances INT NOT NULL DEFAULT -1,
+                                     updated_quotas INT NOT NULL DEFAULT -1,
+                                     updated_images INT NOT NULL DEFAULT -1,
+                                     PRIMARY KEY (name, identity)
+                                     )''')
 
             # Create cloud flavours
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              cloud_flavours(id TEXT NOT NULL,
-                                             name TEXT NOT NULL,
-                                             cpus INT NOT NULL,
-                                             memory INT NOT NULL,
-                                             disk INT NOT NULL,
-                                             limit_instances INT NOT NULL DEFAULT -1,
-                                             cloud TEXT NOT NULL,
-                                             identity TEXT NOT NULL,
-                                             PRIMARY KEY (name, cloud, identity)
-                                             )''')
+                              flavours(id TEXT NOT NULL,
+                                       name TEXT NOT NULL,
+                                       cpus INT NOT NULL,
+                                       memory INT NOT NULL,
+                                       disk INT NOT NULL,
+                                       limit_instances INT NOT NULL DEFAULT -1,
+                                       cloud TEXT NOT NULL,
+                                       identity TEXT NOT NULL,
+                                       PRIMARY KEY (name, cloud, identity)
+                                       )''')
 
             # Create cloud images
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              cloud_images(name TEXT NOT NULL,
-                                           id TEXT NOT NULL,
-                                           os_arch TEXT NOT NULL,
-                                           os_dist TEXT NOT NULL,
-                                           os_type TEXT NOT NULL,
-                                           os_vers TEXT NOT NULL,
-                                           cloud TEXT NOT NULL,
-                                           identity TEXT NOT NULL,
-                                           PRIMARY KEY (name, cloud, identity)
-                                           )''')
+                              images(name TEXT NOT NULL,
+                                     id TEXT NOT NULL,
+                                     os_arch TEXT NOT NULL,
+                                     os_dist TEXT NOT NULL,
+                                     os_type TEXT NOT NULL,
+                                     os_vers TEXT NOT NULL,
+                                     cloud TEXT NOT NULL,
+                                     identity TEXT NOT NULL,
+                                     PRIMARY KEY (name, cloud, identity)
+                                     )''')
                                           
             self._connection.commit()
             cursor.close()
