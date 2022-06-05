@@ -24,7 +24,6 @@ def create_clouds_list_egi(db, identity):
         cloud['token_source']['client_secret'] = CONFIG.get('egi.credentials', 'client_secret')
         cloud['token_source']['scope'] = CONFIG.get('egi.credentials', 'scope')
         cloud['token_source']['url'] = CONFIG.get('egi.credentials', 'url')
-        cloud['credentials'] = {}
         cloud['type'] = 'cloud'
         cloud['enabled'] = True
         cloud['source'] = 'egi'
