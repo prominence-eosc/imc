@@ -28,15 +28,15 @@ def add_defaults(data, config):
         if config['default_images']:
             for image in config['default_images']:
                 if image:
-                    if image not in data['images']:
-                        data['images'][image] = config['default_images'][image]
+                    if image['name'] not in data['images']:
+                        data['images'][image['name']] = image
 
     if 'default_flavours' in config:
         if config['default_flavours']:
             for flavour in config['default_flavours']:
                 if flavour:
-                    if flavour not in data['flavours']:
-                        data['flavours'][flavour] = config['default_flavours'][flavour]
+                    if flavour['name'] not in data['flavours']:
+                        data['flavours'][flavour['name']] = flavour
 
     return data
 
