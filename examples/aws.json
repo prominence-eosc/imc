@@ -1,59 +1,39 @@
 {
-  "name": "AWS-eu-west-2",
-  "region": "Public",
-  "supported_groups": [],
-  "tags": {
-    "multi-node-jobs": "false"
+  "name": "AWS",
+  "type": "cloud",
+  "resource_type": "AWS",
+  "enabled": true,
+  "source": "static",
+  "credentials": {
+    "ACCESS_ID": "",
+    "SECRET_KEY": ""
   },
-  "images": {
-    "aws-ubuntu-16.04": {
-      "name": "aws://eu-west-2/ami-0cbe2951c7cd54704",
+  "region": "PUBLIC/AWS",
+  "cloud_region": "eu-west-1",
+  "disable_hyperthreading": true,
+  "networks": [""],
+  "quotas": {
+    "cores": 10,
+    "instances": 10,
+    "memory": 40
+  },
+  "supported_groups": [
+  ],
+  "flavour_filters": {
+    "whitelist": "^c6i"
+  },
+  "default_images": [
+    {
+      "name": "CentOS 7 (x86_64) - with Updates HVM",
+      "id": "ami-0babc7cb0024fd1f7",
       "architecture": "x86_64",
-      "distribution": "ubuntu",
+      "distribution": "centos",
       "type": "linux",
-      "version": "16.04"
+      "version": "7"
     }
+  ],
+  "image_templates": {
   },
-  "flavours": {
-    "c5.large": {
-      "name": "c5.large",
-      "cores": 2,
-      "memory": 4
-    },
-    "c5.xlarge": {
-      "name": "c5.xlarge",
-      "cores": 4,
-      "memory": 8
-    },
-    "c5.2xlarge": {
-      "name": "c5.2xlarge",
-      "cores": 8,
-      "memory": 16
-    },
-    "c5.4xlarge": {
-      "name": "c5.4xlarge",
-      "cores": 16,
-      "memory": 32
-    },
-    "m5.large": {
-      "name": "m5.large",
-      "cores": 2,
-      "memory": 8
-    },
-    "m5.xlarge": {
-      "name": "m5.xlarge",
-      "cores": 4,
-      "memory": 16
-    },
-    "m5.2xlarge": {
-      "name": "m5.2xlarge",
-      "cores": 8,
-      "memory": 32
-    },
-    "m5.4xlarge": {
-      "name": "m5.4xlarge",
-      "cores": 16,
-      "memory": 64
-    }
-  }
+  "default_flavours": [
+  ]
 }
