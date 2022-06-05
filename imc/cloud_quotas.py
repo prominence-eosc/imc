@@ -81,13 +81,13 @@ def set_quotas(requirements, db, identity, config):
             memory_limit = quotas['limits']['memory']
             instances_limit = quotas['limits']['instances']
 
-            if cores_static < cores_limit:
+            if cores_static < cores_limit and cores_static > -1:
                 cores_limit = cores_static
 
-            if memory_static < memory_limit:
+            if memory_static < memory_limit and memory_static > -1:
                 memory_limit = memory_static
 
-            if instances_static < instances_limit:
+            if instances_static < instances_limit and instances_static > -1:
                 instances_limit = instances_static
 
             db.set_cloud_static_quotas(name, use_identity, cores_limit, memory_limit, instances_limit)
