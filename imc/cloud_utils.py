@@ -3,9 +3,6 @@ import glob
 import json
 import logging
 
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-
 from imc import config
 
 # Configuration
@@ -51,80 +48,6 @@ def create_clouds_list_egi(db, identity):
         clouds.append(cloud)
 
     return clouds
-
-def connect_to_cloud(cloud, config, token):
-    """
-    Connect to a cloud using LibCloud
-    """
-    if config['credentials']['type'] == 'OpenStack':
-        details = {}
-        if config['credentials']['auth_version'] == '3.x_password':
-            details['ex_force_auth_url'] = config['credentials']['host']
-            if 'auth_version' in config['credentials']:
-                details['ex_force_auth_version'] = config['credentials']['auth_version']
-            if 'tenant' in config['credentials']:
-                details['ex_tenant_name'] = config['credentials']['tenant']
-            if 'domain' in config['credentials']:
-                details['ex_domain_name'] = config['credentials']['domain']
-            if 'service_region' in config['credentials']:
-                details['ex_force_service_region'] = config['credentials']['service_region']
-            if 'project_domain_id' in config['credentials']:
-                details['ex_tenant_domain_id'] = config['credentials']['project_domain_id']
-
-            provider = get_driver(Provider.OPENSTACK)
-            try:
-                conn = provider(config['credentials']['username'],
-                                config['credentials']['password'],
-                                **details)
-            except Exception as ex:
-                logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
-                return None
-        elif config['credentials']['auth_version'] == '3.x_oidc_access_token':
-            details['ex_force_auth_url'] = config['credentials']['host']
-            if 'auth_version' in config['credentials']:
-                details['ex_force_auth_version'] = config['credentials']['auth_version']
-            if 'tenant' in config['credentials']:
-                details['ex_tenant_name'] = config['credentials']['tenant']
-            if 'domain' in config['credentials']:
-                details['ex_domain_name'] = config['credentials']['domain']
-            if 'service_region' in config['credentials']:
-                details['ex_force_service_region'] = config['credentials']['service_region']
-            if 'project_domain_id' in config['credentials']:
-                details['ex_tenant_domain_id'] = config['credentials']['project_domain_id']
-            if 'ex_force_base_url' in config['credentials']:
-                details['ex_force_base_url'] = config['credentials']['ex_force_base_url']
-
-            provider = get_driver(Provider.OPENSTACK)
-            try:
-                conn = provider(config['credentials']['username'],
-                                token,
-                                **details)
-            except Exception as ex:
-                logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
-                return None
-        else:
-            return None
-
-    elif config['credentials']['type'] == 'GCE':
-        details = {}
-        if 'project' in config['credentials']:
-            details['project'] = config['credentials']['project']
-        if 'datacenter' in config['credentials']:
-            details['datacenter'] = config['credentials']['datacenter']
-
-        provider = get_driver(Provider.GCE)
-        try:
-            conn = provider(config['credentials']['username'],
-                            config['credentials']['password'],
-                            **details)
-        except Exception as ex:
-            logger.critical('Unable to connect to cloud %s due to "%s"', cloud, ex)
-            return None
-
-    else:
-        return None
-
-    return conn
 
 def create_clouds_list_static(path):
     """
