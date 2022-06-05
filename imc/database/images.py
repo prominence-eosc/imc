@@ -54,16 +54,17 @@ def get_image(self, identity, cloud, os_type, os_arch, os_dist, os_vers):
     """
     name = None
     im_name = None
-    use_identity = "identity='%s'"
+    use_identity = "identity='%s'" % identity
     if identity != 'static':
-        use_identity = "(identity='%s' OR identity='static')"
+        use_identity = "(identity='%s' OR identity='static')" % identity
 
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT name, id FROM cloud_images WHERE %s AND cloud='%s' AND os_type='%s' AND os_arch='%s' AND os_dist='%s' AND os_vers='%s' ORDER BY name ASC" % (use_identity, cloud, os_type, os_arch, os_dist, os_vers))
         result = cursor.fetchone()
-        name = result[0]
-        im_name = result[1]
+        if result:
+            name = result[0]
+            im_name = result[1]
         cursor.close()
     except Exception as error:
         logger.critical('[get_image] unable to execute SELECT query due to: %s', error)
