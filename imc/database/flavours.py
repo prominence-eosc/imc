@@ -57,10 +57,11 @@ def get_flavour(self, identity, cloud, cpus, memory, disk):
         cursor = self._connection.cursor()
         cursor.execute("SELECT name, cpus, memory, disk FROM cloud_flavours WHERE identity='%s' AND cloud='%s' AND cpus>=%s AND memory>=%s AND (disk>=%s OR disk=-1) ORDER BY cpus*memory ASC LIMIT 1" % (identity, cloud, cpus, memory, disk))
         result = cursor.fetchone()
-        name = result[0]
-        cpus_used = int(result[1])
-        memory_used = int(result[2])
-        disk_used = int(result[3])
+        if result:
+            name = result[0]
+            cpus_used = int(result[1])
+            memory_used = int(result[2])
+            disk_used = int(result[3])
         cursor.close()
     except Exception as error:
         logger.critical('[get_flavour] unable to execute SELECT query due to: %s', error)
