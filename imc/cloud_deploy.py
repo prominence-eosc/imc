@@ -165,11 +165,6 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
                     logger.warning('Infrastructure creation failed on cloud %s, so destroying', cloud)
                     db.set_deployment_failure(cloud, identity, 1, time.time()-time_created)
                     destroy.destroy(client, name, infrastructure_id)
-
-                    # In the event of a fatal failure there's no reason to try again
-                    if fatal_failure:
-                        return (None, None)
-
                     break
 
         else:
@@ -191,6 +186,10 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
                 logger.info('Infrastructure creation failed due to InsufficientInstanceCapacity on cloud %s, our id=%s', cloud, unique_id)
                 db.set_deployment_failure(cloud, identity, 9, time.time()-time_created)
                 fatal_failure = True
+            elif 'Image' in msg and 'is not active' in msg:
+                logger.info('Infrastructure creation failed due to image not active on cloud %s, our id=%s', cloud, unique_id)
+                db.set_deployment_failure(cloud, identity, 7, time.time()-time_created)
+                fatal_failure = True
 
             file_failed = '%s/failed-%s-%d.txt' % (CONFIG.get('logs', 'contmsg'), unique_id, time.time())
             logger.warning('Infrastructure creation failed, writing stdout/err to file "%s"', file_failed)
@@ -200,6 +199,10 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
                     failed.write(msg)
             except Exception as error:
                 logger.warning('Unable to write contmsg to file')
+
+            # In the event of a fatal failure there's no reason to try again
+            if fatal_failure:
+                return (None, None)
 
     return (None, None)
 
