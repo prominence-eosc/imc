@@ -22,40 +22,31 @@ def create_clouds_list_egi(db, identity):
     clouds_from_db = db.get_egi_clouds(identity)
     for site in clouds_from_db:
         cloud = clouds_from_db[site]
-        cloud['credentials']['username'] = 'egi.eu'
-        cloud['credentials']['password'] = 'token'
-        cloud['credentials']['auth_version'] = '3.x_oidc_access_token'
-        cloud['credentials']['token'] = {}
-        cloud['credentials']['token']['provider'] = 'user'
-        cloud['credentials']['token']['client_id'] = CONFIG.get('egi.credentials', 'client_id')
-        cloud['credentials']['token']['client_secret'] = CONFIG.get('egi.credentials', 'client_secret')
-        cloud['credentials']['token']['scope'] = CONFIG.get('egi.credentials', 'scope')
-        cloud['credentials']['token']['url'] = CONFIG.get('egi.credentials', 'url')
+        cloud['token_source'] = {}
+        cloud['token_source']['client_id'] = CONFIG.get('egi.credentials', 'client_id')
+        cloud['token_source']['client_secret'] = CONFIG.get('egi.credentials', 'client_secret')
+        cloud['token_source']['scope'] = CONFIG.get('egi.credentials', 'scope')
+        cloud['token_source']['url'] = CONFIG.get('egi.credentials', 'url')
+        cloud['credentials'] = {}
         cloud['type'] = 'cloud'
         cloud['enabled'] = True
         cloud['source'] = 'egi'
+        cloud['networks'] = []
+        cloud['resource_type'] = 'OpenStack'
         cloud['region'] = CONFIG.get('egi', 'region')
         cloud['tags'] = {}
         cloud['tags']['multi-node-jobs'] = 'false'
         cloud['quotas'] = {}
         cloud['supported_groups'] = []
         cloud['image_templates'] = {}
-        cloud['image_templates'][CONFIG.get('egi.image', 'image')] = {}
-        cloud['image_templates'][CONFIG.get('egi.image', 'image')]['architecture'] = CONFIG.get('egi.image', 'architecture')
-        cloud['image_templates'][CONFIG.get('egi.image', 'image')]['distribution'] = CONFIG.get('egi.image', 'distribution')
-        cloud['image_templates'][CONFIG.get('egi.image', 'image')]['type'] = CONFIG.get('egi.image', 'type')
-        cloud['image_templates'][CONFIG.get('egi.image', 'image')]['version'] = CONFIG.get('egi.image', 'version')
-        cloud['default_flavours'] = {}
+        cloud['image_templates'][CONFIG.get('egi.image', 'name')] = {}
+        cloud['image_templates'][CONFIG.get('egi.image', 'name')]['architecture'] = CONFIG.get('egi.image', 'architecture')
+        cloud['image_templates'][CONFIG.get('egi.image', 'name')]['distribution'] = CONFIG.get('egi.image', 'distribution')
+        cloud['image_templates'][CONFIG.get('egi.image', 'name')]['type'] = CONFIG.get('egi.image', 'type')
+        cloud['image_templates'][CONFIG.get('egi.image', 'name')]['version'] = CONFIG.get('egi.image', 'version')
+        cloud['default_flavours'] = []
         cloud['flavour_filters'] = {}
-        cloud['default_images'] = {}
-        name = CONFIG.get('egi.image', 'name').replace('site', site)
-        cloud['default_images'][name] = {}
-        cloud['default_images'][name]['name'] = name
-        cloud['default_images'][name]['architecture'] = CONFIG.get('egi.image', 'architecture')
-        cloud['default_images'][name]['distribution'] = CONFIG.get('egi.image', 'distribution')
-        cloud['default_images'][name]['type'] = CONFIG.get('egi.image', 'type')
-        cloud['default_images'][name]['version'] = CONFIG.get('egi.image', 'version')
-        cloud['images'] = cloud['default_images']
+        cloud['default_images'] = []
 
         clouds.append(cloud)
 
