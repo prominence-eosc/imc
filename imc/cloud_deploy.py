@@ -197,7 +197,7 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
             try:
                 with open(file_failed, 'w') as failed:
                     failed.write(msg)
-            except Exception as error:
+            except Exception as err:
                 logger.warning('Unable to write contmsg to file')
 
             # In the event of a fatal failure there's no reason to try again
