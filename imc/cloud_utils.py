@@ -95,6 +95,7 @@ def create_clouds_list(db, identity, static=True):
 
 def check_for_new_clouds(db, identity):
     """
+    Check if any new clouds have been defined
     """
     clouds_list = create_clouds_list(db, identity)
     new_clouds = False
