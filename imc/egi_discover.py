@@ -13,6 +13,8 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
+TIMEOUT = 10
+
 def get_unscoped_token(os_auth_url, access_token):
     """
     Get an unscopped token, trying various protocol names if needed
@@ -34,7 +36,7 @@ def retrieve_unscoped_token(os_auth_url, access_token, protocol="openid"):
         os_auth_url,
         "/v3/OS-FEDERATION/identity_providers/egi.eu/protocols/%s/auth" % protocol,
     )
-    r = requests.post(url, headers={"Authorization": "Bearer %s" % access_token})
+    r = requests.post(url, headers={"Authorization": "Bearer %s" % access_token}, timeout=TIMEOUT)
     if r.status_code != requests.codes.created:
         raise RuntimeError("Unable to get an unscoped token")
     else:
@@ -59,7 +61,7 @@ def find_endpoint(service_type, production=True, monitored=True, site=None):
     else:
         sites = get_sites()
     url = "?".join([CONFIG.get('egi', 'goc_url'), parse.urlencode(q)])
-    r = requests.get(url)
+    r = requests.get(url, timeout=TIMEOUT)
     endpoints = []
     if r.status_code == 200:
         root = ET.fromstring(r.text)
@@ -80,7 +82,7 @@ def get_projects(os_auth_url, unscoped_token):
     Get projects
     """
     url = get_keystone_url(os_auth_url, "/v3/auth/projects")
-    r = requests.get(url, headers={"X-Auth-Token": unscoped_token})
+    r = requests.get(url, headers={"X-Auth-Token": unscoped_token}, timeout=TIMEOUT)
     r.raise_for_status()
     return r.json()["projects"]
 
@@ -89,7 +91,7 @@ def get_regions(os_auth_url, unscoped_token):
     Get regions
     """
     url = get_keystone_url(os_auth_url, "/v3/regions")
-    r = requests.get(url, headers={"X-Auth-Token": unscoped_token})
+    r = requests.get(url, headers={"X-Auth-Token": unscoped_token}, timeout=TIMEOUT)
     r.raise_for_status()
     return r.json()["regions"]
 
@@ -129,7 +131,7 @@ def projects(site, access_token):
 
 def oidc_discover(checkin_url):
     # discover oidc endpoints
-    r = requests.get(checkin_url + "/.well-known/openid-configuration")
+    r = requests.get(checkin_url + "/.well-known/openid-configuration", timeout=TIMEOUT)
     r.raise_for_status()
     return r.json()
 
@@ -145,7 +147,7 @@ def token_refresh(
         "scope": "openid email profile offline_access",
     }
     r = requests.post(
-        token_url, auth=(checkin_client_id, checkin_client_secret), data=refresh_data
+        token_url, auth=(checkin_client_id, checkin_client_secret), data=refresh_data, timeout=TIMEOUT
     )
     r.raise_for_status()
     return r.json()
@@ -160,7 +162,7 @@ def get_sites():
     """
     q = {"method": "get_site_list", "certification_status": "Certified"}
     url = "?".join([CONFIG.get('egi', 'goc_url'), parse.urlencode(q)])
-    r = requests.get(url)
+    r = requests.get(url, timeout=TIMEOUT)
     sites = []
     if r.status_code == 200:
         root = ET.fromstring(r.text)
@@ -200,12 +202,13 @@ def get_egi_clouds(access_token):
     # Get details for each site
     for site in sites:
         site_name = site[0]
+
         logger.info('Checking site %s', site_name)
 
         project_list = []
         try:
             project_list = projects(site_name, access_token)
-        except Exception:
+        except Exception as err:
             pass
 
         if project_list:
@@ -262,7 +265,7 @@ def egi_clouds_update_do(identity, db):
                                       cloud['region'],
                                       cloud['protocol'])
             if status:
-                count = count + 1
+               count = count + 1
 
     logger.info('Added %d clouds to the database', count)
 
