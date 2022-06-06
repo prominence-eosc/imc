@@ -43,6 +43,10 @@ class Oracle():
         """
         Create an instance
         """
+        # Boot volumes must be 50 GB or more in size
+        if disk < 50:
+            disk = 50
+
         launch_instance_details = oci.core.models.LaunchInstanceDetails(
             compartment_id=self._info['compartment_id'],
             availability_domain=self._info['availability_domain_name'],
