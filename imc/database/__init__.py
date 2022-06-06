@@ -299,7 +299,6 @@ class Database(object):
         Execute a query
         """
         try:
-            retry_counter = 0
             cursor = self._connection.cursor()
             if data:
                 cursor.execute(query, data)
