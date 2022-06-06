@@ -32,7 +32,7 @@ class GCP():
         self._credentials = service_account.Credentials.from_service_account_info(info['credentials'])
         self._info = info
 
-    def create_instance(self, name, image, flavor, network, userdata, disk, infra_id, unique_infra_id):
+    def create_instance(self, name, image, flavor, network, security_groups, userdata, disk, infra_id, unique_infra_id):
         """
         Create an instance
         """

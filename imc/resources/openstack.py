@@ -55,7 +55,7 @@ class OpenStack():
 
         return None
 
-    def create_instance(self, name, image, flavor, network, userdata, disk, infra_id, unique_infra_id):
+    def create_instance(self, name, image, flavor, network, security_groups, userdata, disk, infra_id, unique_infra_id):
         """
         Create an instance
         """
@@ -71,6 +71,7 @@ class OpenStack():
                                          image=image,
                                          flavor=flavor,
                                          nics=[{'net-id': network}],
+                                         security_groups=security_groups,
                                          userdata=userdata).to_dict()
         except Exception as err:
             logger.error('Got exception creating server: %s', err)

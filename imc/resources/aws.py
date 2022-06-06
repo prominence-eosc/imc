@@ -48,7 +48,7 @@ class AWS():
 
         return None
 
-    def create_instance(self, name, image, flavor, network, userdata, disk, infra_id, unique_infra_id):
+    def create_instance(self, name, image, flavor, network, security_groups, userdata, disk, infra_id, unique_infra_id):
         """
         Create an instance
         """
