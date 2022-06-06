@@ -52,7 +52,8 @@ class Oracle():
             metadata={'user_data': base64.b64encode(userdata.encode('ascii')).decode('utf-8')},
             shape=flavor,
             create_vnic_details=oci.core.models.CreateVnicDetails(subnet_id=network),
-            source_details=oci.core.models.InstanceSourceViaImageDetails(image_id=image)
+            source_details=oci.core.models.InstanceSourceViaImageDetails(image_id=image,
+                                                                         boot_volume_size_in_gbs=disk)
         )
 
         try:
