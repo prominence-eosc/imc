@@ -1,0 +1,42 @@
+{
+  "name": "OCI",
+  "type": "cloud",
+  "resource_type": "OCI",
+  "enabled": true,
+  "source": "static",
+  "credentials": {
+    "user": "",
+    "key_content": "",
+    "fingerprint": "",
+    "tenancy": "",
+    "region": ""
+  },
+  "availability_domain_name": "",
+  "compartment_id": "",
+  "networks": [],
+  "region": "PUBLIC/OCI",
+  "disable_hyperthreading": true,
+  "quotas": {
+    "cores": 10,
+    "instances": 10,
+    "memory": 40
+  },
+  "supported_groups": [
+  ],
+  "flavour_filters": {
+  },
+  "default_images": [
+    {
+      "name": "CentOS-7-2022.05.30-0",
+      "id": "",
+      "architecture": "x86_64",
+      "distribution": "centos",
+      "type": "linux",
+      "version": "7"
+    }
+  ],
+  "image_templates": {
+  },
+  "default_flavours": [
+  ]
+}
