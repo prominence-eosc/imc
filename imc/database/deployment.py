@@ -329,4 +329,4 @@ def set_deployment_failure(self, cloud, identity, reason, duration=-1):
     """
     Set deployment failure reason
     """
-    return self.execute("INSERT INTO deployment_failures (cloud, identity, reason, time, duration) VALUES (%s,%s,%s,%s,%s)", (cloud, identity, reason, time.time(), duration))
+    return self.execute("INSERT INTO deployment_stats (cloud, identity, reason, time, duration) VALUES (%s,%s,%s,%s,%s)", (cloud, identity, reason, time.time(), duration))

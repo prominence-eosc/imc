@@ -90,13 +90,13 @@ def set_resources_update(self, identity):
     """
     Update time when clouds were updated
     """
-    return self.execute("INSERT INTO cloud_updates (identity, time) VALUES (%s, %s) ON CONFLICT (identity) DO UPDATE SET time=EXCLUDED.time", (identity, time.time()))
+    return self.execute("INSERT INTO updates (identity, time) VALUES (%s, %s) ON CONFLICT (identity) DO UPDATE SET time=EXCLUDED.time", (identity, time.time()))
 
 def set_resources_update_start(self, identity):
     """
     Update time when clouds updated began
     """
-    return self.execute("INSERT INTO cloud_updates (identity, start) VALUES (%s, %s) ON CONFLICT (identity) DO UPDATE SET start=EXCLUDED.start", (identity, time.time()))
+    return self.execute("INSERT INTO updates (identity, start) VALUES (%s, %s) ON CONFLICT (identity) DO UPDATE SET start=EXCLUDED.start", (identity, time.time()))
 
 def get_resources_update(self, identity):
     """
@@ -107,7 +107,7 @@ def get_resources_update(self, identity):
 
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT start, time FROM cloud_updates WHERE identity='%s'" % identity)
+        cursor.execute("SELECT start, time FROM updates WHERE identity='%s'" % identity)
         result = cursor.fetchone()
         update_start = int(result[0])
         updated = int(result[1])
