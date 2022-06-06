@@ -1,6 +1,7 @@
 from .openstack import OpenStack
 from .aws import AWS
 from .gcp import GCP
+from .oracle import Oracle
 
 def Resource(info):
     """
@@ -9,7 +10,8 @@ def Resource(info):
     resources = {
         "OpenStack": OpenStack,
         "AWS": AWS,
-        "GCP": GCP
+        "GCP": GCP,
+        "OCI": Oracle
     }
 
     return resources[info['resource_type']](info)
