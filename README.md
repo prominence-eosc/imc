@@ -9,4 +9,5 @@ Supported clouds:
 * OpenStack
 * EGI Federated Cloud (OpenStack)
 * AWS
-* GCP
+* Google Cloud
+* Oracle Cloud
