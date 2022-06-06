@@ -60,11 +60,17 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
             return (None, None)
 
         # Network
-        if cloud_info['networks']:
-            network = random.choice(cloud_info['networks'])
-            logging.info('Using network %s', network)
-        else:
-            network = None
+        network = None
+        if 'networks' in cloud_info:
+            if cloud_info['networks']:
+                network = random.choice(cloud_info['networks'])
+                logging.info('Using network %s', network)
+
+        # Security groups
+        security_groups = None
+        if 'security_groups' in cloud_info:
+            if cloud_info['security_groups']:
+                security_groups = cloud_info['security_groups']
 
         # Prepare for creating infrastructure
         unique_infra_id = str(uuid.uuid4())
@@ -95,6 +101,7 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
                                                           image,
                                                           flavor,
                                                           network,
+                                                          security_groups,
                                                           userdata,
                                                           disk,
                                                           unique_id,
