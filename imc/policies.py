@@ -212,8 +212,6 @@ class PolicyEngine():
             if remaining_memory != -1 and self._requirements['resources']['memory']*instances > remaining_memory:
                 clouds_out.remove(cloud)
 
-        # Filter any flavours which wouldn't fit
-
         return clouds_out
 
     def satisfies_status(self):
