@@ -53,7 +53,7 @@ class PolicyEngine():
             required_disk_max = self._requirements['resources']['diskMax']
 
         flavours = self._db.get_flavours(self._identity, cloud, required_cores, required_memory, required_disk)
-        logger.info('Found %d flavours from database', len(flavours))
+        logger.info('Found %d flavours from database for cloud %s', len(flavours), cloud)
 
         if not required_cores_max:
             return flavours
@@ -63,7 +63,7 @@ class PolicyEngine():
             if flavour[1] <= required_cores_max and flavour[2] >= required_memory_max and (flavour[3] >= required_disk_max or flavour[3] == -1):
                 new_flavours.append(flavour)
 
-        logger.info('Found %d flavours from database after taking into account max', len(new_flavours))
+        logger.info('Found %d flavours from database for cloud %s after taking into account max', len(new_flavours), cloud)
 
         return list(reversed(new_flavours))
 
