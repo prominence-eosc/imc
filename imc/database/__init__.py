@@ -92,7 +92,7 @@ class Database(object):
                         get_resources_update, \
                         set_resources_update_start
 
-    def __init__(self, host=None, port=None, db=None, username=None, password=None):
+    def __init__(self, host, port, db, username, password):
         self._host = host
         self._db = db
         self._port = port
