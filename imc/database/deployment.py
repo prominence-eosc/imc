@@ -165,12 +165,13 @@ def deployment_get_infra_id(self, infra_id):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT cloud_infra_id,status,cloud,creation,updated FROM deployments WHERE id='%s'" % infra_id)
-        for row in cursor:
-            cloud_infra_id = row[0]
-            status = row[1]
-            cloud = row[2]
-            created = row[3]
-            updated = row[4]
+        result = cursor.fetchone()
+        if result:
+            cloud_infra_id = result[0]
+            status = result[1]
+            cloud = result[2]
+            created = result[3]
+            updated = result[4]
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in deployment_get_infra_id due to: %s', err)
@@ -226,10 +227,11 @@ def get_deployment(self, infra_id):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT id,unique_infra_id,cloud FROM deployment_log WHERE cloud_infra_id='%s'" % infra_id)
-        for row in cursor:
-            infra = row[0]
-            unique_id = row[1]
-            cloud = row[2]
+        result = cursor.fetchone()
+        if result:
+            infra = result[0]
+            unique_id = result[1]
+            cloud = result[2]
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in get_deployment due to: %s', err)
@@ -299,11 +301,12 @@ def get_used_resources(self, identity, cloud, creating=None):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT SUM(used_instances), SUM(used_cpus), SUM(used_memory) FROM deployments WHERE status IN (%s) AND identity='%s' AND cloud='%s'" % (states, identity, cloud))
-        for row in cursor:
-            if row[0] and row[1] and row[2]:
-                used_instances = int(row[0])
-                used_cpus = int(row[1])
-                used_memory = int(row[2])
+        result = cursor.fetchone()
+        if result:
+            if result[0] and result[1] and result[2]:
+                used_instances = int(result[0])
+                used_cpus = int(result[1])
+                used_memory = int(result[2])
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in get_used_resources due to: %s', err)
