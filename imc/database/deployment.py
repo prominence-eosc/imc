@@ -45,22 +45,6 @@ def deployment_check_infra_id(self, infra_id):
         return 0
     return 1
 
-def deployment_get_resource_type(self, infra_id):
-    """
-    Return the resource type for the current status
-    """
-    resource_type = None
-
-    try:
-        cursor = self._connection.cursor()
-        cursor.execute("SELECT resource_type FROM deployments WHERE id='%s'" % infra_id)
-        for row in cursor:
-            resource_type = row[0]
-        cursor.close()
-    except Exception as err:
-        logger.critical('Unable to execute query in deployment_get_resource_type due to: %s', err)
-    return resource_type
-
 def deployment_get_status_reason(self, infra_id):
     """
     Return reason for the current status
