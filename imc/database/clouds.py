@@ -59,7 +59,7 @@ def init_cloud_info(self, cloud, identity):
     """
     return self.execute("INSERT INTO status (name, identity) SELECT '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM status WHERE name='%s' AND identity='%s')" % (cloud, identity, cloud, identity))
 
-def get_deployment_failures(self, identity, interval, successes=False):
+def get_deployment_stats(self, identity, interval, successes=False):
     """
     Get list of deployment failures
     """
@@ -80,7 +80,7 @@ def get_deployment_failures(self, identity, interval, successes=False):
 
     return output
 
-def del_old_deployment_failures(self, interval):
+def del_old_deployment_stats(self, interval):
     """
     Delete old deployment failures
     """

@@ -136,7 +136,7 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
                 # Don't spend too long trying to create infrastructure, give up eventually
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
                     logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with infrastructure id %s', infrastructure_id)
-                    db.set_deployment_failure(cloud, identity, 5, time.time()-time_begin)
+                    db.set_deployment_stats(cloud, identity, 5, time.time()-time_begin)
                     destroy.destroy(client, name, infrastructure_id)
                     return (None, None)
 
@@ -156,21 +156,21 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
                 # Handle difference situation when state is running
                 if state == 'running':
                     logger.info('Successfully deployed infrastructure on cloud %s, took %d secs', cloud, time.time() - time_begin_this_cloud)
-                    db.set_deployment_failure(cloud, identity, 0, time.time()-time_begin_this_cloud)
+                    db.set_deployment_stats(cloud, identity, 0, time.time()-time_begin_this_cloud)
                     success = True
                     return (infrastructure_id, None)
 
                 # Destroy infrastructure which is taking too long to enter the running state
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'notrunning')) and state != 'running':
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
-                    db.set_deployment_failure(cloud, identity, 2, time.time()-time_created)
+                    db.set_deployment_stats(cloud, identity, 2, time.time()-time_created)
                     destroy.destroy(client, name, infrastructure_id)
                     break
 
                 # Destroy infrastructure for which deployment failed
                 if state == 'failed' or state == 'error':
                     logger.warning('Infrastructure creation failed on cloud %s, so destroying', cloud)
-                    db.set_deployment_failure(cloud, identity, 1, time.time()-time_created)
+                    db.set_deployment_stats(cloud, identity, 1, time.time()-time_created)
                     destroy.destroy(client, name, infrastructure_id)
                     break
 
@@ -179,23 +179,23 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
 
             if 'Quota exceeded' in msg:
                 logger.info('Infrastructure creation failed due to quota exceeded on cloud %s, our id=%s', cloud, unique_id)
-                db.set_deployment_failure(cloud, identity, 6, time.time()-time_created)
+                db.set_deployment_stats(cloud, identity, 6, time.time()-time_created)
                 fatal_failure = True
             elif 'Can not find requested image' in msg:
                 logger.info('Infrastructure creation failed due to image not found on cloud %s, our id=%s', cloud, unique_id)
-                db.set_deployment_failure(cloud, identity, 7, time.time()-time_created)
+                db.set_deployment_stats(cloud, identity, 7, time.time()-time_created)
                 fatal_failure = True
             elif 'Flavor' in msg and 'could not be found' in msg:
                 logger.info('Infrastructure creation failed due to flavour not found on cloud %s, our id=%s', cloud, unique_id)
-                db.set_deployment_failure(cloud, identity, 8, time.time()-time_created)
+                db.set_deployment_stats(cloud, identity, 8, time.time()-time_created)
                 fatal_failure = True
             elif 'InsufficientInstanceCapacity' in msg:
                 logger.info('Infrastructure creation failed due to InsufficientInstanceCapacity on cloud %s, our id=%s', cloud, unique_id)
-                db.set_deployment_failure(cloud, identity, 9, time.time()-time_created)
+                db.set_deployment_stats(cloud, identity, 9, time.time()-time_created)
                 fatal_failure = True
             elif 'Image' in msg and 'is not active' in msg:
                 logger.info('Infrastructure creation failed due to image not active on cloud %s, our id=%s', cloud, unique_id)
-                db.set_deployment_failure(cloud, identity, 7, time.time()-time_created)
+                db.set_deployment_stats(cloud, identity, 7, time.time()-time_created)
                 fatal_failure = True
 
             file_failed = '%s/failed-%s-%d.txt' % (CONFIG.get('logs', 'contmsg'), unique_id, time.time())

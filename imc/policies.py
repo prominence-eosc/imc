@@ -308,8 +308,8 @@ class PolicyEngine():
                         ranking_sites[cloud] = len(self._preferences['sites']) - count
 
         # Get list of clouds with numbers of successful and failed deployments
-        failures = self._db.get_deployment_failures(self._identity, 2*60*60)
-        successes = self._db.get_deployment_failures(self._identity, 2*60*60, True)
+        failures = self._db.get_deployment_stats(self._identity, 2*60*60)
+        successes = self._db.get_deployment_stats(self._identity, 2*60*60, True)
 
         ratios = {}
         for cloud in set(successes).intersection(failures):

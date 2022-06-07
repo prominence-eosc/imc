@@ -325,7 +325,7 @@ def get_used_resources(self, identity, cloud, creating=None):
         logger.critical('[get_used_resources] Unable to execute query due to: %s', error)
     return (used_instances, used_cpus, used_memory)
 
-def set_deployment_failure(self, cloud, identity, reason, duration=-1):
+def set_deployment_stats(self, cloud, identity, reason, duration=-1):
     """
     Set deployment failure reason
     """

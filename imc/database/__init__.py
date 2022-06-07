@@ -67,7 +67,7 @@ class Database(object):
                             get_deployment, \
                             deployment_update_status, \
                             deployment_update_status_reason, \
-                            set_deployment_failure, \
+                            set_deployment_stats, \
                             create_cloud_deployment, \
                             update_cloud_deployment, \
                             get_deployments, \
@@ -88,8 +88,8 @@ class Database(object):
                         set_cloud_mon_status, \
                         set_cloud_status, \
                         init_cloud_info, \
-                        get_deployment_failures, \
-                        del_old_deployment_failures, \
+                        get_deployment_stats, \
+                        del_old_deployment_stats, \
                         set_resources_update, \
                         get_resources_update, \
                         set_resources_update_start
