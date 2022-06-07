@@ -33,8 +33,9 @@ def deployment_check_infra_id(self, infra_id):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT count(*) FROM deployments WHERE id='%s'" % infra_id)
-        for row in cursor:
-            number = row[0]
+        result = cursor.fetchone()
+        if result:
+            number = result[0]
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in deployment_check_infra_id due to: %s', err)
