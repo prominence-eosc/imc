@@ -60,7 +60,6 @@ class Database(object):
                             deployment_get_json, \
                             get_infra_from_infra_id, \
                             deployment_get_infra_id, \
-                            deployment_create_with_retries, \
                             deployment_create, \
                             deployment_remove, \
                             deployment_log_remove, \

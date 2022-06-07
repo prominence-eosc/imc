@@ -176,22 +176,6 @@ def deployment_get_infra_id(self, infra_id):
         logger.critical('Unable to execute query in deployment_get_infra_id due to: %s', err)
     return (cloud_infra_id, status, cloud, created, updated)
 
-def deployment_create_with_retries(self, infra_id, description, identity, identifier):
-    """
-    Create deployment with retries & backoff
-    """
-    max_retries = 10
-    count = 0
-    success = False
-    while count < max_retries and not success:
-        success = self.deployment_create(infra_id, description, identity, identifier)
-        if not success:
-            count += 1
-            self.close()
-            time.sleep(count/2)
-            self.connect()
-    return success
-
 def create_cloud_deployment(self, infra_id, unique_infra_id, cloud):
     """
     Log deployment
