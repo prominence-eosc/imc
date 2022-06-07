@@ -57,19 +57,19 @@ class Database(object):
                             deployment_get_identity, \
                             deployment_get_identities, \
                             deployment_get_json, \
-                            get_infra_from_infra_id, \
                             deployment_get_infra_id, \
                             deployment_create, \
                             deployment_remove, \
                             deployment_log_remove, \
-                            get_deployment, \
                             deployment_update_status, \
                             deployment_update_status_reason, \
+                            deployment_update_resources, \
+                            get_infra_from_infra_id, \
+                            get_deployment, \
                             set_deployment_stats, \
                             create_cloud_deployment, \
                             update_cloud_deployment, \
                             get_deployments, \
-                            deployment_update_resources, \
                             get_used_resources
 
     from .egi import set_egi_cloud, \
