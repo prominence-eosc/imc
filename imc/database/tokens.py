@@ -13,8 +13,8 @@ def update_token(self, cloud, token, expiry, creation):
         cursor.execute("INSERT INTO credentials (cloud, token, expiry, creation) SELECT '%s', '%s', '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM credentials WHERE cloud='%s')" % (cloud, token, expiry, creation, cloud))
         self._connection.commit()
         cursor.close()
-    except Exception as error:
-        logger.critical('[update_token] Unable to execute UPDATE or INSERT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in update_token due to: %s', err)
         return False
 
     return True
@@ -29,8 +29,8 @@ def set_user_credentials(self, identity, refresh_token):
         cursor.execute("INSERT INTO user_credentials (identity, access_token, refresh_token, access_token_creation, access_token_expiry) SELECT '%s', '%s', '%s', %d, %d WHERE NOT EXISTS (SELECT 1 FROM user_credentials WHERE identity='%s');" % (identity, '', refresh_token, -1, -1, identity))
         self._connection.commit()
         cursor.close()
-    except Exception as error:
-        logger.critical('[set_user_credentials] Unable to execute UPDATE or INSERT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in set_user_credentials due to: %s', err)
         return False
     return True
 
@@ -58,8 +58,8 @@ def get_user_credentials(self, identity):
         access_token_creation = result[2]
         access_token_expiry = result[3]
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_user_credentials] Unable to execute SELECT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_user_credentials due to: %s', err)
     return (refresh_token, access_token, access_token_creation, access_token_expiry)
 
 def get_token(self, cloud):
@@ -78,8 +78,8 @@ def get_token(self, cloud):
         expiry = result[1]
         creation = result[2]
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_token] Unable to execute SELECT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_token due to: %s', err)
     return (token, expiry, creation)
 
 def delete_token(self, cloud):

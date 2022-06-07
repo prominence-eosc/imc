@@ -19,8 +19,8 @@ def get_all_flavours(self, identity, cloud):
                     "disk": row[3]}
             results[row[0]] = data
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_flavours] unable to execute SELECT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_all_flavours due to: %s', err)
 
     return results
 
@@ -39,8 +39,8 @@ def get_flavours(self, identity, cloud, cpus, memory, disk):
         for row in cursor:
             flavours.append((row[0], row[1], int(row[2]), int(row[3]), int(row[4])))
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_flavours] unable to execute SELECT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_flavours due to: %s', err)
 
     return flavours
 
@@ -63,8 +63,8 @@ def get_flavour(self, identity, cloud, cpus, memory, disk):
             memory_used = int(result[2])
             disk_used = int(result[3])
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_flavour] unable to execute SELECT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_flavour due to: %s', err)
 
     return (name, cpus_used, memory_used, disk_used)
 
@@ -78,8 +78,8 @@ def set_flavour(self, identity, cloud, name, id, cpus, memory, disk):
         cursor.execute("INSERT INTO flavours (identity, cloud, name, id, cpus, memory, disk) VALUES (%s, %s, %s, %s, %s, %s, %s)", (identity, cloud, name, id, cpus, memory, disk))
         self._connection.commit()
         cursor.close()
-    except Exception as error:
-        logger.critical('[set flavour] unable to execute DELETE+INSERT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in set_flavour due to: %s', err)
         return False
 
     return True

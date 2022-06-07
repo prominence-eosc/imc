@@ -13,8 +13,8 @@ def set_egi_cloud(self, identity, name, auth_url, project_id, project_domain_id,
         cursor.execute("INSERT INTO egi (identity, site, auth_url, project_id, project_domain_id, user_domain_name, region, protocol) SELECT '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM egi WHERE identity='%s' AND site='%s')" % (identity, name, auth_url, project_id, project_domain_id, user_domain_name, region, protocol, identity, name))
         self._connection.commit()
         cursor.close()
-    except Exception as error:
-        logger.critical('[set_egi_cloud] Unable to execute UPDATE or INSERT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in set_egi_cloud due to: %s', err)
         return False
     return True
 
@@ -39,8 +39,8 @@ def get_egi_clouds(self, identity):
             cloud['credentials_additional']['tenant'] = row[6]
             clouds[cloud['name']] = cloud
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_egi_clouds] Unable to execute SELECT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_egi_clouds due to: %s', err)
 
     return clouds
 

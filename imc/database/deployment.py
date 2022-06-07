@@ -21,8 +21,8 @@ def deployment_get_infra_in_state_cloud(self, state, cloud=None, order=False):
         for row in cursor:
             infra.append({"id":row[0], "created":row[1], "updated":row[2], "identity":row[3]})
         cursor.close()
-    except Exception as error:
-        logger.critical('[deployment_get_infra_in_state_cloud] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get_infra_in_state_cloud due to: %s', err)
     return infra
 
 def deployment_check_infra_id(self, infra_id):
@@ -37,8 +37,8 @@ def deployment_check_infra_id(self, infra_id):
         for row in cursor:
             number = row[0]
         cursor.close()
-    except Exception as error:
-        logger.critical('[deployment_check_infra_id] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_check_infra_id due to: %s', err)
         return 2
 
     if number > 0:
@@ -57,8 +57,8 @@ def deployment_get_resource_type(self, infra_id):
         for row in cursor:
             resource_type = row[0]
         cursor.close()
-    except Exception as error:
-        logger.critical('[deployment_get_resource_type] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get_resource_type due to: %s', err)
     return resource_type
 
 def deployment_get_status_reason(self, infra_id):
@@ -73,8 +73,8 @@ def deployment_get_status_reason(self, infra_id):
         for row in cursor:
             status_reason = row[0]
         cursor.close()
-    except Exception as error:
-        logger.critical('[deployment_get_status_reason] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get_status_reason due to: %s', err)
     return status_reason
 
 def deployment_get_identity(self, infra_id):
@@ -89,8 +89,8 @@ def deployment_get_identity(self, infra_id):
         for row in cursor:
             identity = row[0]
         cursor.close()
-    except Exception as error:
-        logger.critical('[deployment_get_identity] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get_identity due to: %s', err)
     return identity
 
 def deployment_get_identities(self):
@@ -105,8 +105,8 @@ def deployment_get_identities(self):
         for row in cursor:
             identities.append(row[0])
         cursor.close()
-    except Exception as error:
-        logger.critical('[deployment_get_identities] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get_identities due to: %s', err)
 
     return identities
 
@@ -126,8 +126,8 @@ def deployment_get_json(self, infra_id):
             identity = row[1]
             identifier = row[2]
         cursor.close()
-    except Exception as error:
-        logger.critical('[deployment_get_json] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get_json due to: %s', err)
         return None, None
 
     return (description, identity, identifier)
@@ -148,8 +148,8 @@ def get_infra_from_infra_id(self, cloud_infra_id):
             status = row[1]
             cloud = row[2]
         cursor.close()
-    except Exception as error:
-        logger.critical('[deployment_infra_from_infra_id] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_infra_from_infra_id due to: %s', err)
     return (infra_id, status, cloud)
 
 def deployment_get_infra_id(self, infra_id):
@@ -172,8 +172,8 @@ def deployment_get_infra_id(self, infra_id):
             created = row[3]
             updated = row[4]
         cursor.close()
-    except Exception as error:
-        logger.critical('[deployment_get_infra_id] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get_infra_id due to: %s', err)
     return (cloud_infra_id, status, cloud, created, updated)
 
 def deployment_create_with_retries(self, infra_id, description, identity, identifier):
@@ -228,8 +228,8 @@ def get_deployments(self, infra_id):
         for row in cursor:
             infra.append({'id': row[0], 'cloud': row[1]})
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_deployments] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_deployments due to: %s', err)
     return infra
 
 def get_deployment(self, infra_id):
@@ -247,8 +247,8 @@ def get_deployment(self, infra_id):
             unique_id = row[1]
             cloud = row[2]
         cursor.close()
-    except Exception as error:
-        logger.critical('[check_deployment] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_deployment due to: %s', err)
 
     return infra, unique_id, cloud
 
@@ -321,8 +321,8 @@ def get_used_resources(self, identity, cloud, creating=None):
                 used_cpus = int(row[1])
                 used_memory = int(row[2])
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_used_resources] Unable to execute query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_used_resources due to: %s', err)
     return (used_instances, used_cpus, used_memory)
 
 def set_deployment_stats(self, cloud, identity, reason, duration=-1):

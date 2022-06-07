@@ -22,8 +22,8 @@ def get_cloud_updated_quotas(self, cloud, identity):
         if result:
             updated = result[0]
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_cloud_updated_quotas] Unable to execute SELECT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_cloud_updated_quotas due to: %s', err)
 
     return 0
 

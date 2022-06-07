@@ -30,8 +30,8 @@ def get_cloud_info(self, cloud, identity):
             remaining_memory = row[6]
             remaining_instances = row[7]
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_cloud_info] Unable to execute SELECT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_cloud_info due to: %s', err)
 
     return (status, mon_status, limit_cpus, limit_memory, limit_instances, remaining_cpus, remaining_memory, remaining_instances)
 
@@ -74,8 +74,8 @@ def get_deployment_stats(self, identity, interval, successes=False):
         for row in cursor:
             output[row[1]] = row[0]
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_deployment_failures] Unable to execute SELECT query due to: %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_deployment_stats due to: %s', err)
         return output
 
     return output
@@ -112,7 +112,7 @@ def get_resources_update(self, identity):
         update_start = int(result[0])
         updated = int(result[1])
         cursor.close()
-    except Exception as error:
-        logger.critical('[get_resources_update] Unable to get update time due to %s', error)
+    except Exception as err:
+        logger.critical('Unable to execute query in get_deployment_stats due to: %s', err)
 
     return update_start, updated
