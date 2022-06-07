@@ -30,7 +30,6 @@ def deployment_check_infra_id(self, infra_id):
     Ceck if the given infrastructure ID exists
     """
     number = 0
-
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT count(*) FROM deployments WHERE id='%s'" % infra_id)
@@ -39,11 +38,11 @@ def deployment_check_infra_id(self, infra_id):
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in deployment_check_infra_id due to: %s', err)
-        return 2
+        return None
 
     if number > 0:
-        return 0
-    return 1
+        return False
+    return True
 
 def deployment_get_status_reason(self, infra_id):
     """

@@ -94,19 +94,19 @@ def create_infrastructure():
     db = database.get_db()
     if db.connect():
         check = db.deployment_check_infra_id(uid)
-        if check == 1:
+        if check:
             success = db.deployment_create(uid, request.get_json(), identity, identifier)
             db.close()
             if success:
                 logger.info('Infrastructure creation request successfully initiated')
                 return jsonify({'id':uid}), 201
-        elif check == 0:
+        elif check is None:
+            db.close()
+            logger.critical('Unable to check if infrastructure ID was already used')
+        else:
             db.close()
             logger.info('Duplicate Idempotency-Key used')
             return jsonify({'id':uid}), 200
-        else:
-            db.close()
-            logger.critical('Unable to check if infrastructure ID was already used')
     logger.critical('Infrastructure creation request failed, possibly a database issue')
     return jsonify({'id':uid}), 400
 
