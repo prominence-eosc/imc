@@ -53,7 +53,6 @@ class Database(object):
 
     from .deployment import deployment_get_infra_in_state_cloud, \
                             deployment_check_infra_id, \
-                            deployment_get_resource_type, \
                             deployment_get_status_reason, \
                             deployment_get_identity, \
                             deployment_get_identities, \
