@@ -54,6 +54,9 @@ def create_flavour_list(flavours, requirements):
     """
     if 'coresMax' in requirements['resources'] and 'memoryMax' in requirements['resources'] and 'diskMax' in requirements['resources']:
         logger.info('Fully constrained resources specified, will consider all matching flavours')
+
+        # TODO: Filter out any flavours inconsistent with usage & limits
+
         return flavours
 
     new_flavours = [flavours[0]]
