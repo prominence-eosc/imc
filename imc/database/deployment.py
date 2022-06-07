@@ -54,8 +54,9 @@ def deployment_get_status_reason(self, infra_id):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT status_reason FROM deployments WHERE id='%s'" % infra_id)
-        for row in cursor:
-            status_reason = row[0]
+        result = cursor.fetchone()
+        if result:
+            status_reason = result[0]
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in deployment_get_status_reason due to: %s', err)
@@ -70,8 +71,9 @@ def deployment_get_identity(self, infra_id):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT identity FROM deployments WHERE id='%s'" % infra_id)
-        for row in cursor:
-            identity = row[0]
+        result = cursor.fetchone()
+        if result:
+            identity = result[0]
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in deployment_get_identity due to: %s', err)
@@ -105,10 +107,11 @@ def deployment_get_json(self, infra_id):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT description,identity,identifier FROM deployments WHERE id='%s'" % infra_id)
-        for row in cursor:
-            description = row[0]
-            identity = row[1]
-            identifier = row[2]
+        result = cursor.fetchone()
+        if result:
+            description = result[0]
+            identity = result[1]
+            identifier = result[2]
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in deployment_get_json due to: %s', err)
@@ -127,10 +130,11 @@ def get_infra_from_infra_id(self, cloud_infra_id):
     try:
         cursor = self._connection.cursor()
         cursor.execute("SELECT id,status,cloud FROM deployments WHERE cloud_infra_id='%s'" % cloud_infra_id)
-        for row in cursor:
-            infra_id = row[0]
-            status = row[1]
-            cloud = row[2]
+        result = cursor.fetchone()
+        if result:
+            infra_id = result[0]
+            status = result[1]
+            cloud = result[2]
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in get_infra_from_infra_id due to: %s', err)
