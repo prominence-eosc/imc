@@ -119,6 +119,9 @@ class OpenStack():
             nova = client.Client(2, session=self._session)
             result = nova.servers.get(instance_id).to_dict()
         except Exception as err:
+            if 'Instance' in str(err) and 'could not be found' in str(err):
+                return False
+
             logger.error('Got exception getting instance: %s', err)
             return None
 

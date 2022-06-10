@@ -113,6 +113,9 @@ class Oracle():
         try:
             instance = self._compute_client.get_instance(instance_id)
         except Exception as err:
+            if 'NotAuthorizedOrNotFound' in str(err):
+                return False
+
             logger.error('Got exception getting instance: %s', err)
             return None
 
