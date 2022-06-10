@@ -42,7 +42,7 @@ def get_token(cloud, identity, db, config):
         # Get details required for generating a new token
         if not is_fed_cloud:
             (user_token, client_id, client_secret, refresh_token, scope, url) = check_if_token_required(cloud, data)
-            if not client_id or not client_secret or not scope or not url:
+            if not client_id or not scope or not url:
                 logger.info('A token is not required for cloud %s', cloud)
                 return None
 
@@ -129,13 +129,14 @@ def get_new_token(client_id, client_secret, refresh_token, scope, url):
     """
     creation = int(time.time())
     data = {'client_id':client_id,
-            'client_secret':client_secret,
             'grant_type':'refresh_token',
             'refresh_token':refresh_token,
             'scope':scope}
+    if client_secret:
+        data['client_secret'] = client_secret
+
     try:
         response = requests.post(url + '/token',
-                                 auth=(client_id, client_secret),
                                  timeout=10,
                                  data=data)
     except requests.exceptions.Timeout:
