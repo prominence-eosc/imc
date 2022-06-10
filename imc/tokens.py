@@ -53,7 +53,7 @@ def get_token(cloud, identity, db, config):
             logger.info('Getting EGI Federated Cloud credentials for cloud %s', cloud)
             user_token = True
             client_id = CONFIG.get('egi.credentials', 'client_id')
-            client_secret = CONFIG.get('egi.credentials', 'client_secret')
+            client_secret = CONFIG.get('egi.credentials', 'client_secret', fallback=None)
             scope = CONFIG.get('egi.credentials', 'scope')
             url = CONFIG.get('egi.credentials', 'url')
 
@@ -61,7 +61,7 @@ def get_token(cloud, identity, db, config):
         logger.info('Getting EGI Federated Cloud credentials')
         user_token = True
         client_id = CONFIG.get('egi.credentials', 'client_id')
-        client_secret = CONFIG.get('egi.credentials', 'client_secret')
+        client_secret = CONFIG.get('egi.credentials', 'client_secret', fallback=None)
         scope = CONFIG.get('egi.credentials', 'scope')
         url = CONFIG.get('egi.credentials', 'url')
 
