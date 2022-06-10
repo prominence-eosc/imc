@@ -120,16 +120,16 @@ class AWS():
         """
         Get details of the specified instance
         """
+        state = None
         try:
             instance = self._ec2.resource('ec2').Instance(instance_id)
+            state = instance.state['Name']
         except Exception as err:
             if 'InvalidInstanceID.NotFound' in str(err):
-                return False
-
+                state = False
             logger.error('Got exception getting instance: %s', err)
-            return None
 
-        return instance.state['Name']
+        return state
 
     def list_images(self):
         """
