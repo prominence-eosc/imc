@@ -140,6 +140,9 @@ class GCP():
         try:
             instance = instance_client.get(request=request)
         except Exception as err:
+            if 'The resource' in str(err) and 'was not found' in str(err):
+                return False
+
             logger.error('Got exception getting instance details: %s', err)
             return None
 
