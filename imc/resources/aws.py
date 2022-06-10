@@ -123,6 +123,9 @@ class AWS():
         try:
             instance = self._ec2.resource('ec2').Instance(instance_id)
         except Exception as err:
+            if 'InvalidInstanceID.NotFound' in str(err):
+                return False
+
             logger.error('Got exception getting instance: %s', err)
             return None
 
