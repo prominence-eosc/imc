@@ -11,7 +11,6 @@ import uuid
 
 from imc import config
 from imc import database
-from imc import destroy
 from imc import tokens
 from imc import utilities
 from imc import cloud_utils
@@ -137,7 +136,7 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
                 if time.time() - time_begin > int(CONFIG.get('timeouts', 'total')):
                     logger.info('Giving up, total time waiting is too long, so will destroy infrastructure with infrastructure id %s', infrastructure_id)
                     db.set_deployment_stats(cloud, identity, 5, time.time()-time_begin)
-                    destroy.destroy(client, name, infrastructure_id)
+                    client.delete_instance(name, infrastructure_id)
                     return (None, None)
 
                 # Get the current state of the infrastructure
@@ -164,14 +163,14 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
                 if time.time() - time_created > int(CONFIG.get('timeouts', 'notrunning')) and state != 'running':
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
                     db.set_deployment_stats(cloud, identity, 2, time.time()-time_created)
-                    destroy.destroy(client, name, infrastructure_id)
+                    client.delete_instance(name, infrastructure_id)
                     break
 
                 # Destroy infrastructure for which deployment failed
                 if state == 'failed' or state == 'error':
                     logger.warning('Infrastructure creation failed on cloud %s, so destroying', cloud)
                     db.set_deployment_stats(cloud, identity, 1, time.time()-time_created)
-                    destroy.destroy(client, name, infrastructure_id)
+                    client.delete_instance(name, infrastructure_id)
                     break
 
         else:

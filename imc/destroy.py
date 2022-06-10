@@ -17,31 +17,6 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def destroy(client, name, resource_infra_id):
-    """
-    Destroy the specified infrastructure, including retries
-    """
-    count = 0
-    delay_factor = float(CONFIG.get('deletion', 'factor'))
-    delay = delay_factor
-    destroyed = False
-    while not destroyed and count < int(CONFIG.get('deletion', 'retries')):
-        status = client.delete_instance(name, resource_infra_id)
-        if status:
-            destroyed = True
-            break
-
-        count += 1
-        delay = delay*delay_factor
-        time.sleep(int(count + delay))
-
-    if destroyed:
-        logger.info('Destroyed infrastructure with id %s', resource_infra_id)
-    else:
-        logger.critical('Unable to destroy infrastructure with id %s', resource_infra_id)
-
-    return destroyed
-
 def delete(db, infra_id):
     """
     Delete the infrastructure with the specified id
@@ -81,10 +56,10 @@ def delete(db, infra_id):
     # Setup Resource client
     client = resources.Resource(info)
 
-    # Delete the infrastructure, with retries
-    destroyed = destroy(client, name, resource_infra_id)
+    # Delete the infrastructure
+    status = client.delete_instance(name, resource_infra_id)
 
-    if destroyed:
+    if status:
         db.deployment_update_status(infra_id, 'deleted')
         logger.info('Destroyed infrastructure with infrastructure id %s', resource_infra_id)
     else:
