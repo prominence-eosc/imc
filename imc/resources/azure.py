@@ -1,3 +1,4 @@
+import base64
 import logging
 import string
 import random
@@ -9,6 +10,22 @@ from azure.mgmt.network import NetworkManagementClient
 
 # Logging
 logger = logging.getLogger(__name__)
+
+def status_map(status):
+    """
+    Map Azure status
+    """
+    if status == 'Succeeded':
+        return 'running'
+    elif status == 'InProgress':
+        return 'pending'
+    elif status == 'Deleting':
+        return 'terminated'
+    elif status == 'Failed':
+        return 'error'
+    else:
+        logger.error('Azure status is %s, returning unknown', status)
+        return 'unknown'
 
 def generate_password(length):
     """
@@ -80,7 +97,7 @@ class Azure():
             },
             "os_profile": {
                 "computer_name": name,
-                "admin_username": "admin",
+                "admin_username": "prominence",
                 "admin_password": generate_password(12)
             },
             "network_profile": {
@@ -88,7 +105,7 @@ class Azure():
                     "id": nic_result.id,
                 }]
             },
-            "userData": userdata
+            "userData": base64.b64encode(userdata.encode('ascii')).decode('utf-8')
         }
 
         try:
@@ -105,6 +122,8 @@ class Azure():
         """
         Delete the specified instance
         """
+        pieces = instance_name.split('-')
+        short_name = '%s-%s-%s-%s' % (pieces[0], pieces[1], pieces[2], pieces[3])
         compute_client = ComputeManagementClient(credential=self._credential,
                                                  subscription_id=self._info['credentials']['subscription_id'])
         network_client = NetworkManagementClient(credential=self._credential,
@@ -124,7 +143,7 @@ class Azure():
             disks_list = compute_client.disks.list_by_resource_group(self._info['credentials']['resource_group'])
             async_disk_handle_list = []
             for disk in disks_list:
-                if instance_name in disk.name:
+                if short_name in disk.name: # Full name is truncated in the disk name, so only search for part of the full name
                     async_disk_delete = compute_client.disks.begin_delete(self._info['credentials']['resource_group'],
                                                                           disk.name)
                     async_disk_handle_list.append(async_disk_delete)
@@ -165,7 +184,7 @@ class Azure():
                                          subscription_id=self._info['credentials']['subscription_id'])
 
         try:
-            instance = client.virtual_machines.get(client, instance_name)
+            instance = client.virtual_machines.get(self._info['credentials']['resource_group'], instance_name)
             state = instance.provisioning_state
         except Exception as err:
             if 'azure.core.exceptions.ResourceNotFoundError' in str(err):
@@ -173,7 +192,7 @@ class Azure():
             logger.error('Got exception getting instance: %s', err)
             return None
 
-        return instance.provisioning_state
+        return status_map(instance.provisioning_state)
 
     def list_images(self):
         """
