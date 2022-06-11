@@ -11,4 +11,4 @@ Supported clouds:
 * AWS
 * Google Cloud
 * Oracle Cloud
-* Microsoft Azure (in progress)
+* Microsoft Azure
