@@ -1,0 +1,42 @@
+{
+  "name": "Azure",
+  "type": "cloud",
+  "resource_type": "Azure",
+  "enabled": true,
+  "source": "static",
+  "credentials": {
+    "client_id": "",
+    "client_secret": "",
+    "tenant_id": "",
+    "subscription_id": "",
+    "resource_group": ""
+  },
+  "region": "PUBLIC/Azure",
+  "cloud_region": "",
+  "disable_hyperthreading": true,
+  "networks": [],
+  "quotas": {
+    "cores": 10,
+    "instances": 10,
+    "memory": 40
+  },
+  "supported_groups": [
+  ],
+  "flavour_filters": {
+    "whitelist": "^Standard_D.*d_v4"
+  },
+  "default_images": [
+    {
+      "name": "OpenLogic/CentOS/7_8-gen2/latest",
+      "id": "OpenLogic/CentOS/7_8-gen2/latest",
+      "architecture": "x86_64",
+      "distribution": "centos",
+      "type": "linux",
+      "version": "7"
+    }
+  ],
+  "image_templates": {
+  },
+  "default_flavours": [
+  ]
+}
