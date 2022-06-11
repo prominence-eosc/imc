@@ -12,7 +12,7 @@
     "resource_group": ""
   },
   "region": "PUBLIC/Azure",
-  "cloud_region": "",
+  "cloud_region": "uksouth",
   "disable_hyperthreading": true,
   "networks": [],
   "quotas": {
