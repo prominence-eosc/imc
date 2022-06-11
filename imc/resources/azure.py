@@ -124,6 +124,7 @@ class Azure():
         """
         pieces = instance_name.split('-')
         short_name = '%s-%s-%s-%s' % (pieces[0], pieces[1], pieces[2], pieces[3])
+
         compute_client = ComputeManagementClient(credential=self._credential,
                                                  subscription_id=self._info['credentials']['subscription_id'])
         network_client = NetworkManagementClient(credential=self._credential,
