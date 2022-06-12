@@ -80,6 +80,10 @@ class Azure():
         custom_data = '#cloud-config\nruncmd:\n  - curl -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text" | base64 --decode > install.sh\n  - . ./install.sh'
         custom_data = base64.b64encode(custom_data.encode('ascii')).decode('utf-8')
 
+        # Generate password
+        instance_password = generate_password(12)
+        logger.info('Admin password is %s', instance_password)
+
         # Provision the VM
         logger.info('Provisioning the instance...')
         instance_data = {
@@ -103,7 +107,7 @@ class Azure():
             "os_profile": {
                 "computer_name": name,
                 "admin_username": "prominence",
-                "admin_password": generate_password(12),
+                "admin_password": instance_password,
                 "custom_data": custom_data
             },
             "network_profile": {
