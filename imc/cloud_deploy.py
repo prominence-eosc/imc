@@ -90,7 +90,8 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
                                                      region=region,
                                                      token=worker_token,
                                                      uid_infra=unique_id,
-                                                     unique_uid_infra=unique_infra_id)
+                                                     unique_uid_infra=unique_infra_id,
+                                                     server_ip=CONFIG.get('server', 'ip'))
         except Exception as err:
             logger.critical('Error creating userdata from template due to: %s', err)
             return False
