@@ -1,0 +1,46 @@
+{
+  "name": "OpenStack",
+  "type": "cloud",
+  "resource_type": "OpenStack",
+  "enabled": true,
+  "source": "static",
+  "networks": [""],
+  "credentials": {
+    "auth_url": "",
+    "username": "",
+    "password": "",
+    "project_id": "",
+    "project_domain_id": "",
+    "user_domain_name": "",
+    "tenant_id": ""
+  },
+  "region": "",
+  "quotas": {
+    "cores": 500,
+    "instances": 150,
+    "memory": 2000
+  },
+  "supported_groups": [
+  ],
+  "flavour_filters": {
+    "blacklist": "(?:^l|^m)"
+  },
+  "default_images": [
+  ],
+  "image_templates": {
+    "ubuntu-bionic-18.04-nogui": {
+      "architecture": "x86_64",
+      "distribution": "ubuntu",
+      "type": "linux",
+      "version": "18.04"
+    },
+    "scientificlinux-7-nogui": {
+      "architecture": "x86_64",
+      "distribution": "centos",
+      "type": "linux",
+      "version": "7"
+    }    
+  },
+  "default_flavours": [
+  ]
+}
