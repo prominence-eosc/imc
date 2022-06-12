@@ -82,7 +82,6 @@ class Azure():
 
         # Generate custom data which will download and execute the user data
         custom_data = '#cloud-config\nruncmd:\n  - curl -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text" | base64 --decode > install.sh\n  - . ./install.sh'
-        custom_data = base64.b64encode(custom_data.encode('ascii')).decode('utf-8')
 
         # Generate password
         instance_password = generate_password(12)
@@ -112,7 +111,7 @@ class Azure():
                 "computer_name": name,
                 "admin_username": "prominence",
                 "admin_password": instance_password,
-                "custom_data": custom_data
+                "custom_data": base64.b64encode(custom_data.encode('ascii')).decode('utf-8')
             },
             "network_profile": {
                 "network_interfaces": [{
