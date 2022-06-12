@@ -58,6 +58,7 @@ class Azure():
                                                  subscription_id=self._info['credentials']['subscription_id'])
         network_client = NetworkManagementClient(credential=self._credential,
                                                  subscription_id=self._info['credentials']['subscription_id'])
+
         # Provision the NIC
         logger.info('Provisioning the NIC...')
         nic_data = {
@@ -66,6 +67,7 @@ class Azure():
                 "name": "prominence-ip-%s" % unique_infra_id,
                 "subnet": { "id": network }
             }]
+            }
         }
         try:
             poller = network_client.network_interfaces.begin_create_or_update(self._info['credentials']['resource_group'],
@@ -74,6 +76,10 @@ class Azure():
             nic_result = poller.result()
         except Exception as err:
             return None, str(err)
+
+        # Generate custom data which will download and execute the user data
+        custom_data = '#cloud-config\nruncmd:\n  - curl -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text" | base64 --decode > install.sh\n  - . ./install.sh'
+        custom_data = base64.b64encode(custom_data.encode('ascii')).decode('utf-8')
 
         # Provision the VM
         logger.info('Provisioning the instance...')
@@ -98,7 +104,8 @@ class Azure():
             "os_profile": {
                 "computer_name": name,
                 "admin_username": "prominence",
-                "admin_password": generate_password(12)
+                "admin_password": generate_password(12),
+                "custom_data": custom_data
             },
             "network_profile": {
                 "network_interfaces": [{
@@ -114,6 +121,13 @@ class Azure():
                                                                             instance_data)
             instance_result = poller.result()
         except Exception as err:
+            # Delete the NIC
+            try:
+                network_client.network_interfaces.begin_delete(self._info['credentials']['resource_group'],
+                                                               name.replace('prominence', 'prominence-nic'))
+            except Exception as error:
+                logger.error('Got exception deleting NIC: %s', error)
+
             return None, str(err)
 
         return instance_result.id, None
