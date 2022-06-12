@@ -68,6 +68,10 @@ class Azure():
                 "subnet": { "id": network }
             }]
         }
+        if security_groups:
+            nic_data['network_security_group'] = {}
+            nic_data['network_security_group']{'id'} = security_groups[0]
+
         try:
             poller = network_client.network_interfaces.begin_create_or_update(self._info['credentials']['resource_group'],
                                                                               "prominence-nic-%s" % unique_infra_id,
