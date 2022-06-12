@@ -67,7 +67,6 @@ class Azure():
                 "name": "prominence-ip-%s" % unique_infra_id,
                 "subnet": { "id": network }
             }]
-            }
         }
         try:
             poller = network_client.network_interfaces.begin_create_or_update(self._info['credentials']['resource_group'],
