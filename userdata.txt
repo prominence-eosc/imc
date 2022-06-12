@@ -1,0 +1,336 @@
+#!/bin/bash
+
+yum -y update
+yum -y install wget epel-release
+yum install -y https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el7.noarch.rpm
+sed -i 's/priority=90/priority=40/g' /etc/yum.repos.d/htcondor.repo
+
+yum -y install condor
+systemctl stop condor
+
+yum -y install singularity unzip bzip2 python2-pip python-devel gcc git openssl openssh-server python3 python3-pip
+
+pip3 install git+https://github.com/indigo-dc/udocker
+
+if [ -d "/mnt/resource" ]; then
+    # Azure VMs by default have data disks here
+    export PROMINENCE_DIR=/mnt/resource
+else
+    export PROMINENCE_DIR=/home/prominence
+fi
+
+mkdir -p $$PROMINENCE_DIR
+chmod a+xrw $$PROMINENCE_DIR
+mkdir -p $$PROMINENCE_DIR/condor
+chown condor:condor $$PROMINENCE_DIR/condor
+useradd user
+mkdir -p /home/user/mounts
+chmod a+xr /home/user
+
+iptables -F
+
+cat <<EOF03 >> /etc/condor/config.d/00-ports 
+USE_SHARED_PORT = True
+SHARED_PORT_ARGS = -p 9618
+EOF03
+
+cat <<EOF02 >> /etc/condor/config.d/000-static
+CONDOR_HOST = ${server_ip}
+COLLECTOR_HOST = \$$(CONDOR_HOST):9618
+CCB_ADDRESS = \$$(CONDOR_HOST):9618
+ProminenceCloud = "${cloud}"
+ProminenceRegion = "${region}"
+ProminenceNodes = 1
+ProminenceNodeGroup = "CCFE"
+ProminenceInfrastructureId = "${uid_infra}"
+ProminenceUniqueInfrastructureId = "${unique_uid_infra}"
+START = NODE_IS_HEALTHY =?= True
+
+STARTD_NOCLAIM_SHUTDOWN = 600
+MASTER.DAEMON_SHUTDOWN = STARTD_StartTime =?= 0 && MonitorSelfAge > 600
+EOF02
+
+cat <<EOF04 >> /etc/condor/config.d/22-security
+use SECURITY:Strong
+
+DENY_READ          = anonymous@*
+DENY_WRITE         = anonymous@*
+DENY_ADMINISTRATOR = anonymous@*
+DENY_DAEMON        = anonymous@*
+DENY_NEGOTIATOR    = anonymous@*
+DENY_CLIENT        = anonymous@*
+
+SEC_CLIENT_INTEGRITY  = REQUIRED
+SEC_CLIENT_ENCRYPTION = REQUIRED
+
+SEC_DAEMON_INTEGRITY  = REQUIRED
+SEC_DAEMON_ENCRYPTION = REQUIRED
+
+SEC_DEFAULT_INTEGRITY  = REQUIRED
+SEC_DEFAULT_ENCRYPTION = REQUIRED
+
+SEC_CLIENT_AUTHENTICATION  = REQUIRED
+SEC_DAEMON_AUTHENTICATION  = REQUIRED
+SEC_DEFAULT_AUTHENTICATION = REQUIRED
+
+SEC_CLIENT_AUTHENTICATION_METHODS  = FS, IDTOKENS, PASSWORD
+SEC_DAEMON_AUTHENTICATION_METHODS  = IDTOKENS, PASSWORD
+SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS = PASSWORD, IDTOKENS
+SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS = PASSWORD, IDTOKENS
+
+ALLOW_DAEMON = condor_pool@*
+EOF04
+
+cat <<EOF05 >> /etc/condor/config.d/10-worker
+DAEMON_LIST = MASTER, STARTD
+
+CCB_HEARTBEAT_INTERVAL = 120
+
+STARTER_ALLOW_RUNAS_OWNER = FALSE
+SLOT1_1_USER = user01
+SLOT1_2_USER = user02
+SLOT1_3_USER = user03
+SLOT1_4_USER = user04
+SLOT1_5_USER = user05
+SLOT1_6_USER = user06
+SLOT1_7_USER = user07
+SLOT1_8_USER = user08
+SLOT1_9_USER = user09
+SLOT1_10_USER = user10
+SLOT1_11_USER = user11
+SLOT1_12_USER = user12
+SLOT1_13_USER = user13
+SLOT1_14_USER = user14
+SLOT1_15_USER = user15
+SLOT1_16_USER = user16
+SLOT1_17_USER = user17
+SLOT1_18_USER = user18
+SLOT1_19_USER = user19
+SLOT1_20_USER = user20
+SLOT1_21_USER = user21
+SLOT1_22_USER = user22
+SLOT1_23_USER = user23
+SLOT1_24_USER = user24
+SLOT1_25_USER = user25
+SLOT1_26_USER = user26
+SLOT1_27_USER = user27
+SLOT1_28_USER = user28
+SLOT1_29_USER = user29
+SLOT1_30_USER = user30
+SLOT1_31_USER = user31
+SLOT1_32_USER = user32
+SLOT1_33_USER = user33
+SLOT1_34_USER = user34
+SLOT1_35_USER = user35
+SLOT1_36_USER = user36
+SLOT1_37_USER = user37
+SLOT1_38_USER = user38
+SLOT1_39_USER = user39
+SLOT1_40_USER = user40
+SLOT1_41_USER = user41
+SLOT1_42_USER = user42
+SLOT1_43_USER = user43
+SLOT1_44_USER = user44
+SLOT1_45_USER = user45
+SLOT1_46_USER = user46
+SLOT1_47_USER = user47
+SLOT1_48_USER = user48
+SLOT1_49_USER = user49
+SLOT1_50_USER = user50
+SLOT1_51_USER = user51
+SLOT1_52_USER = user52
+SLOT1_53_USER = user53
+SLOT1_54_USER = user54
+SLOT1_55_USER = user55
+SLOT1_56_USER = user56
+SLOT1_57_USER = user57
+SLOT1_58_USER = user58
+SLOT1_59_USER = user59
+SLOT1_60_USER = user60
+SLOT1_61_USER = user61
+SLOT1_62_USER = user62
+SLOT1_63_USER = user63
+SLOT1_64_USER = user64
+SLOT1_65_USER = user65
+SLOT1_66_USER = user66
+SLOT1_67_USER = user67
+SLOT1_68_USER = user68
+SLOT1_69_USER = user69
+SLOT1_70_USER = user70
+SLOT1_71_USER = user71
+SLOT1_72_USER = user72
+SLOT1_73_USER = user73
+SLOT1_74_USER = user74
+SLOT1_75_USER = user75
+SLOT1_76_USER = user76
+SLOT1_77_USER = user77
+SLOT1_78_USER = user78
+SLOT1_79_USER = user79
+SLOT1_80_USER = user80
+SLOT1_81_USER = user81
+SLOT1_82_USER = user82
+SLOT1_83_USER = user83
+SLOT1_84_USER = user84
+SLOT1_85_USER = user85
+SLOT1_86_USER = user86
+SLOT1_87_USER = user87
+SLOT1_88_USER = user88
+SLOT1_89_USER = user89
+SLOT1_90_USER = user90
+SLOT1_91_USER = user91
+SLOT1_92_USER = user92
+SLOT1_93_USER = user93
+SLOT1_94_USER = user94
+SLOT1_95_USER = user95
+SLOT1_96_USER = user96
+DEDICATED_EXECUTE_ACCOUNT_REGEXP = user
+
+TRUST_UID_DOMAIN = True
+
+NUM_SLOTS = 1
+NUM_SLOTS_TYPE_1 = 1
+SLOT_TYPE_1 = cpus=100%,mem=100%,auto
+SLOT_TYPE_1_PARTITIONABLE = TRUE
+
+STARTD_ATTRS = \$$(STARTD_ATTRS), ProminenceCloud, ProminenceRegion, ProminenceInfrastructureId, ProminenceUniqueInfrastructureId
+
+EXECUTE = $$PROMINENCE_DIR/condor
+
+BASE_CGROUP = 
+CGROUP_MEMORY_LIMIT_POLICY = none
+
+DOCKER_DROP_ALL_CAPABILITIES = False
+
+MOUNT_UNDER_SCRATCH = ""
+
+UPDATE_OFFSET = \$$RANDOM_INTEGER(0, 20)
+UPDATE_INTERVAL = 200
+
+MEMORY = quantize( \$$(DETECTED_MEMORY), 1000 )
+
+TCP_KEEPALIVE_INTERVAL = 60
+
+PREEMPT = False
+SUSPEND = False
+KILL = False
+
+MASTER_NEW_BINARY_RESTART = PEACEFUL
+
+MAXJOBRETIREMENTTIME = 3600 * 24 * 80
+
+RANK = 0
+
+STARTD_CRON_JOBLIST = \$$(STARTD_CRON_JOBLIST), WORKER_HEALTH_CHECK
+STARTD_CRON_WORKER_HEALTH_CHECK_EXECUTABLE = /usr/local/bin/worker_health_check.py
+STARTD_CRON_WORKER_HEALTH_CHECK_KILL = True
+STARTD_CRON_WORKER_HEALTH_CHECK_MODE = periodic
+STARTD_CRON_WORKER_HEALTH_CHECK_PERIOD = 10m
+STARTD_CRON_WORKER_HEALTH_CHECK_RECONFIG_RERUN = False
+
+STARTD_ATTRS = \$$(STARTD_ATTRS), NODE_IS_HEALTHY, NODE_STATUS
+EOF05
+
+cat <<EOF07 >>/usr/local/bin/write-resources.py
+import json
+import math
+import sys
+
+cpus = 0
+with open('/proc/cpuinfo') as f:
+    for line in f:
+        if 'processor' in line:
+            cpus += 1
+
+meminfo = {}
+with open('/proc/meminfo') as f:
+    for line in f:
+        meminfo[line.split(':')[0]] = line.split(':')[1].strip()
+
+memory = int(meminfo['MemTotal'].split(' ')[0])/1000
+memory = int(math.floor(memory / 1000.0))
+
+info = {'cpus':cpus, 'memory':memory, 'site':sys.argv[1]}
+with open('/etc/prominence.json', 'w') as file:
+    json.dump(info, file)
+EOF07
+python3 /usr/local/bin/write-resources.py ${cloud}
+
+cat <<EOF08 >>/usr/local/bin/worker_health_check.py
+#!/usr/bin/python3
+import distutils.spawn
+import pwd
+import os
+import shutil
+import multiprocessing
+
+# Check for udocker
+if not os.path.exists('/usr/local/bin/udocker'):
+    print('NODE_IS_HEALTHY = False')
+    print('NODE_STATUS = "Udocker_Missing"')
+    exit(0)
+
+# Check for /etc/prominence.json
+if not os.path.exists('/etc/prominence.json'):
+    print('NODE_IS_HEALTHY = False')
+    print('NODE_STATUS = "ProminenceJson_Missing"')
+    exit(0)
+
+# Check disk size and usage
+total, used, free = shutil.disk_usage("$$PROMINENCE_DIR")
+
+cpus = multiprocessing.cpu_count()
+if total/(2**30) < 10 + 2*cpus:
+    print('NODE_IS_HEALTHY = False')
+    print('NODE_STATUS = "Total_Disk"')
+    exit(0)
+
+if used/total > 0.90:
+    print('NODE_IS_HEALTHY = False')
+    print('NODE_STATUS = "Disk_Usage"')
+    exit(0)
+
+# Check users
+users = []
+for user in pwd.getpwall():
+    if 'user' in user[0]:
+        users.append(user[0])
+
+for count in range(1, cpus):
+    if 'user%02d' % count not in users:
+        print('NODE_IS_HEALTHY = False')
+        print('NODE_STATUS = "Host_Users"')
+        exit(0)
+
+# Check load
+load = os.getloadavg()[0]
+if load > 2*cpus:
+    print('NODE_IS_HEALTHY = False')
+    print('NODE_STATUS = "System_Load"')
+    exit(0)
+
+# All is ok
+print('NODE_IS_HEALTHY = True')
+print('NODE_STATUS = "OK"')
+EOF08
+chmod a+xr /usr/local/bin/worker_health_check.py
+
+echo user_allow_other >> /etc/fuse.conf
+
+num_cpus=`/usr/bin/nproc`
+
+for (( i = 1; i <= $$num_cpus; i++ ))
+do
+   id=$$(printf "user%02d" $$i)
+   useradd $$id
+done
+
+for (( i = 1; i <= $$num_cpus; i++ ))
+do
+   id=$$(printf "user%02d" $$i)
+   su $$id -c "/usr/local/bin/udocker install"
+done
+
+echo -n ${token} > /etc/condor/tokens.d/token.jwt
+chmod 600 /etc/condor/tokens.d/token.jwt
+
+service condor start
