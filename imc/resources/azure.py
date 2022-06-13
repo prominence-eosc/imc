@@ -11,6 +11,14 @@ from azure.mgmt.network import NetworkManagementClient
 # Logging
 logger = logging.getLogger(__name__)
 
+CUSTOM_DATA = \
+"""
+#cloud-config
+runcmd:
+  - curl -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text" | base64 --decode > install.sh
+  - . ./install.sh
+"""
+
 def status_map(status):
     """
     Map Azure status
@@ -80,9 +88,6 @@ class Azure():
         except Exception as err:
             return None, str(err)
 
-        # Generate custom data which will download and execute the user data
-        custom_data = '#cloud-config\nruncmd:\n  - curl -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance/compute/userData?api-version=2021-01-01&format=text" | base64 --decode > install.sh\n  - . ./install.sh'
-
         # Generate password
         instance_password = generate_password(12)
         logger.info('Admin password is %s', instance_password)
@@ -111,7 +116,7 @@ class Azure():
                 "computer_name": name,
                 "admin_username": "prominence",
                 "admin_password": instance_password,
-                "custom_data": base64.b64encode(custom_data.encode('ascii')).decode('utf-8')
+                "custom_data": base64.b64encode(CUSTOM_DATA.encode('ascii')).decode('utf-8')
             },
             "network_profile": {
                 "network_interfaces": [{
