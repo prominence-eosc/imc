@@ -165,12 +165,12 @@ def deployment_get_infra_id(self, infra_id):
         logger.critical('Unable to execute query in deployment_get_infra_id due to: %s', err)
     return (cloud_infra_id, status, cloud, created, updated)
 
-def create_cloud_deployment(self, infra_id, unique_infra_id, cloud):
+def create_cloud_deployment(self, infra_id, unique_infra_id, cloud, identity):
     """
     Log deployment
     """
-    return self.execute("INSERT INTO deployment_log (id, unique_infra_id, cloud, created) VALUES (%s,%s,%s,%s)",
-                        (infra_id, unique_infra_id, cloud, time.time()))
+    return self.execute("INSERT INTO deployment_log (id, unique_infra_id, cloud, identity, created) VALUES (%s,%s,%s,%s,%s)",
+                        (infra_id, unique_infra_id, cloud, identity, time.time()))
 
 def update_cloud_deployment(self, unique_infra_id, cloud_infra_id):
     """
@@ -263,7 +263,7 @@ def deployment_update_status(self, infra_id, status=None, cloud=None, cloud_infr
 
 def deployment_update_status_reason(self, infra_id, status_reason):
     """
-    Update deploymeny status reason
+    Update deployment status reason
     """
     return self.execute("UPDATE deployments SET status_reason='%s' WHERE id='%s'" % (status_reason, infra_id))
 
@@ -300,8 +300,8 @@ def get_used_resources(self, identity, cloud, creating=None):
         logger.critical('Unable to execute query in get_used_resources due to: %s', err)
     return (used_instances, used_cpus, used_memory)
 
-def set_deployment_stats(self, cloud, identity, reason, duration=-1):
+def set_deployment_stats(self, unique_infra_id, reason):
     """
     Set deployment failure reason
     """
-    return self.execute("INSERT INTO deployment_stats (cloud, identity, reason, time, duration) VALUES (%s,%s,%s,%s,%s)", (cloud, identity, reason, time.time(), duration))
+    return self.execute("UPDATE deployment_log SET reason=%s WHERE unique_infra_id='%s'" % (reason, unique_infra_id))

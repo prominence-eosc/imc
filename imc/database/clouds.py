@@ -70,7 +70,7 @@ def get_deployment_stats(self, identity, interval, successes=False):
     output = {}
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT COUNT(*), cloud FROM deployment_stats WHERE identity='%s' %s AND time > %s GROUP BY cloud" % (identity, where, time.time() - interval))
+        cursor.execute("SELECT COUNT(*), cloud FROM deployment_log WHERE identity='%s' %s AND time > %s GROUP BY cloud" % (identity, where, time.time() - interval))
         for row in cursor:
             output[row[1]] = row[0]
         cursor.close()
@@ -79,12 +79,6 @@ def get_deployment_stats(self, identity, interval, successes=False):
         return output
 
     return output
-
-def del_old_deployment_stats(self, interval):
-    """
-    Delete old deployment failures
-    """
-    return self.execute("DELETE FROM deployment_stats WHERE time < %s" % (time.time() - interval))
 
 def set_resources_update(self, identity):
     """
@@ -113,6 +107,6 @@ def get_resources_update(self, identity):
         updated = int(result[1])
         cursor.close()
     except Exception as err:
-        logger.critical('Unable to execute query in get_deployment_stats due to: %s', err)
+        logger.critical('Unable to execute query in get_resources_update due to: %s', err)
 
     return update_start, updated

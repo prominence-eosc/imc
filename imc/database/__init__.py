@@ -87,7 +87,6 @@ class Database(object):
                         set_cloud_status, \
                         init_cloud_info, \
                         get_deployment_stats, \
-                        del_old_deployment_stats, \
                         set_resources_update, \
                         get_resources_update, \
                         set_resources_update_start
@@ -153,20 +152,14 @@ class Database(object):
                                              cloud TEXT NOT NULL,
                                              cloud_infra_id TEXT,
                                              id TEXT NOT NULL,
+                                             identity TEXT NOT NULL,
                                              created INT NOT NULL,
+                                             reason INT,
                                              CONSTRAINT fk_infra
                                              FOREIGN KEY(id)
                                              REFERENCES deployments(id)
                                              )''')
 
-            # Create deployment stats table
-            cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              deployment_stats(cloud TEXT NOT NULL,
-                                               identity TEXT NOT NULL,
-                                               reason INT NOT NULL,
-                                               time INT NOT NULL,
-                                               duration INT DEFAULT -1
-                                               )''')
             # Reasons:
             # 0 = Success
             # 1 = VMs failed
