@@ -34,6 +34,9 @@ class OpenStack():
         if 'password' in info['credentials']:
             loader = loading.get_plugin_loader('password')
             logger.info('Using password for authentication with OpenStack')
+        elif 'application_credential_secret' in info['credentials']:
+            loader = loading.get_plugin_loader('v3applicationcredential')
+            logger.info('Using application credential for authentication with OpenStack')
         else:
             loader = loading.get_plugin_loader('token')
             logger.info('Using token for authentication with OpenStack')
