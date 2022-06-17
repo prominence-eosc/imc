@@ -10,6 +10,7 @@ import configparser
 import uuid
 
 from imc import config
+from imc import create_worker_credentials
 from imc import database
 from imc import tokens
 from imc import utilities
@@ -23,7 +24,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, unique_id, identity, db, worker_token, used_cpus=1, used_memory=1):
+def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, unique_id, identity, db, used_cpus=1, used_memory=1):
     """
     Deploy infrastructure on the specified cloud
     """
@@ -77,6 +78,9 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
         db.create_cloud_deployment(unique_id, unique_infra_id, cloud, identity)
         name = 'prominence-%s' % unique_infra_id
         time_created = time.time()
+
+        # Worker token
+        worker_token = create_worker_credentials.create_worker_credentials()
 
         # Update userdata
         try:
