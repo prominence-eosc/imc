@@ -182,7 +182,7 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
         else:
             logger.warning('Deployment failure on cloud %s with id %s with msg="%s"', cloud, infrastructure_id, msg)
 
-            if 'Quota exceeded' in msg or 'LimitExceeded' in msg:
+            if 'Quota exceeded' in msg or 'LimitExceeded' in msg or 'quota' in msg:
                 logger.info('Infrastructure creation failed due to quota exceeded on cloud %s, our id=%s', cloud, unique_id)
                 db.set_deployment_stats(unique_infra_id, enums.DeploymentStatus.QUOTA_EXCEEDED.value)
                 fatal_failure = True
