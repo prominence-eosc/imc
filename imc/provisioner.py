@@ -150,7 +150,6 @@ def deploy_job(db, unique_id):
                                                      unique_id,
                                                      identity,
                                                      db,
-                                                     description['token'],
                                                      flavour_cpus,
                                                      flavour_memory)
 
@@ -166,7 +165,7 @@ def deploy_job(db, unique_id):
                     return False
                 else:
                     # Set status
-                    db.deployment_update_status(unique_id, 'configured')
+                    db.deployment_update_status(unique_id, 'running')
                 break # Leave loop over flavours
 
     if unique_id and not infra_id:
