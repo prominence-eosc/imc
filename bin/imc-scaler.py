@@ -40,10 +40,10 @@ def create_json(job):
     data = {}
     data['requirements'] = {}
     data['requirements']['image'] = {}
-    data['requirements']['image']['distribution'] = 'centos'
-    data['requirements']['image']['version'] = '7'
-    data['requirements']['image']['type'] = 'linux'
-    data['requirements']['image']['architecture'] = 'x86_64'
+    data['requirements']['image']['distribution'] = CONFIG.get('workers.image', 'distribution')
+    data['requirements']['image']['version'] = CONFIG.get('workers.image', 'version')
+    data['requirements']['image']['type'] = CONFIG.get('workers.image', 'type')
+    data['requirements']['image']['architecture'] = CONFIG.get('workers.image', 'architecture')
     data['requirements']['resources'] = {}
     data['requirements']['resources']['cores'] = cpus
     data['requirements']['resources']['memory'] = memory
@@ -53,71 +53,12 @@ def create_json(job):
     logger.info('Will deploy node with cpus=%d, memory=%dGB, disk=%dGB for job %d', cpus, memory, disk, job['id'])
 
     data['requirements']['regions'] = []
-    data['requirements']['sites'] = ['Azure-1']
+    data['requirements']['sites'] = CONFIG.get('workers.placement', 'sites_requirements').split(',')
     data['preferences'] = {}
     data['preferences']['regions'] = []
     data['preferences']['sites'] = []
    
     return data
-
-def create_infrastructure(identity, identifier, data):
-    """
-    Create infrastructure
-    """
-    uid = str(uuid.uuid4())
-
-    db = database.get_db()
-    if db.connect():
-        success = db.deployment_create(uid, data, identity, identifier)
-        db.close()
-        if success:
-            logger.info('Infrastructure creation request successfully initiated')
-            return uid
-    return None
-
-def get_infrastructures(status):
-    """
-    Get list of infrastructures in the specified status
-    """
-    db = database.get_db()
-    if db.connect():
-        infra = db.deployment_get_infra_in_state_cloud(status)
-        db.close()
-        return infra
-        
-    return None
-
-def get_infrastructure(infra_id):
-    """
-    Get current status of specified infrastructure
-    """
-    resource_infra_id = None
-    status = None
-    status_reason = None
-    cloud = None
-
-    db = database.get_db()
-    if db.connect():
-        (resource_infra_id, status, cloud, _, _) = db.deployment_get_infra_id(infra_id)
-        if status in ('unable', 'failed', 'waiting'):
-            status_reason = db.deployment_get_status_reason(infra_id)
-    db.close()
-    if status:
-        return {'status':status, 'status_reason':status_reason, 'cloud':cloud, 'infra_id':resource_infra_id}
-    return None
-
-def delete_infrastructure(infra_id):
-    """
-    Delete the specified infrastructure
-    """
-    db = database.get_db()
-    if db.connect():
-        success = db.deployment_update_status(infra_id, 'deletion-requested')
-        if success:
-            db.close()
-            logger.info('Infrastructure deletion request successfully initiated')
-            return True
-    return None
 
 def scaler(db):
     """
