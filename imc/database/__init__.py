@@ -31,6 +31,10 @@ class Database(object):
     """
     Database access
     """
+    from .jobs import add_job, \
+                      update_job, \
+                      get_job
+
     from .flavours import get_flavour, \
                           set_flavour, \
                           get_flavours, \
@@ -111,6 +115,13 @@ class Database(object):
         # Setup tables if necessary
         try:
             cursor = self._connection.cursor()
+
+            # Create the jobs table
+            cursor.execute('''CREATE TABLE IF NOT EXISTS
+                              jobs(id INT PRIMARY KEY,
+                                   creation INT NOT NULL,
+                                   updated INT NOT NULL,
+                                   status INT NOT NULL)''')
 
             # Create user credentials table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
