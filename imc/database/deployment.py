@@ -255,7 +255,7 @@ def deployment_update_status(self, infra_id, status=None, cloud=None, cloud_infr
     elif infra_id and cloud and not status:
         return self.execute("UPDATE deployments SET resource_type='%s',cloud='%s',cloud_infra_id='%s',updated=%d WHERE id='%s'" % (resource_type, cloud, cloud_infra_id, time.time(), infra_id))
     elif status:
-        if status in ('configured', 'waiting', 'unable', 'creating'):
+        if status in ('left', 'visible', 'running', 'waiting', 'unable', 'creating'):
             return self.execute("UPDATE deployments SET resource_type='%s',status='%s',updated=%d WHERE id='%s' AND status NOT IN ('deleted', 'deleting', 'deletion-requested', 'deletion-failed')" % (resource_type, status, time.time(), infra_id))
         else:
             return self.execute("UPDATE deployments SET resource_type='%s',status='%s',updated=%d WHERE id='%s'" % (resource_type, status, time.time(), infra_id))
@@ -282,9 +282,9 @@ def get_used_resources(self, identity, cloud, creating=None):
     used_memory = 0
 
     if creating:
-        states = "'configured', 'creating'"
+        states = "'left', 'visible', 'running', 'creating'"
     else:
-        states = "'configured'"
+        states = "'left', 'visible', 'running'"
 
     try:
         cursor = self._connection.cursor()
