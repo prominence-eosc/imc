@@ -15,6 +15,7 @@ from imc import database
 from imc import destroy
 from imc import tokens
 from imc import utilities
+from imc import workers
 from imc import resources
 
 # Configuration
@@ -66,34 +67,54 @@ def delete_stuck_infras(db, state):
             db.deployment_update_status(infra['id'], 'deletion-requested')
             db.deployment_update_status_reason(infra['id'], 'DeploymentFailed')
 
-def find_and_delete_phantoms(db):
+def find_and_delete_phantoms(db, workers):
     """
     Find and delete any phantom infrastructures on each resource
     """
-    # Get full list of cloud info
-    clouds_info_list = cloud_utils.create_clouds_list(db, 'static', True)
+    # Get list of all identities which have run jobs recently
+    identities = db.deployment_get_identities()
 
-    for cloud in clouds_info_list:
-        # Get a token if necessary
-        logger.info('Getting a new token if necessary')
-        token = tokens.get_token(cloud['name'], 'static', db, clouds_info_list)
-        cloud = tokens.get_openstack_token(token, cloud)
+    for identity in identities:
+        # Get full list of cloud info
+        clouds_info_list = cloud_utils.create_clouds_list(db, identity, True)
 
-        # Get list of VMs on the resource
-        client = resources.Resource(config)
-        instances = client.list_instances()
+        for cloud in clouds_info_list:
+            # Get a token if necessary
+            logger.info('Getting a new token if necessary for cloud %s', cloud['name'])
+            token = tokens.get_token(cloud['name'], identity, db, clouds_info_list)
+            cloud = tokens.get_openstack_token(token, cloud)
+
+            # Get list of VMs on the resource
+            client = resources.Resource(cloud)
+            instances = client.list_instances()
+            logger.info('Found %d instances on cloud %s', len(instances), cloud['name'])
         
-        for instance in instances:
-            # Check if we know about the instance
-            (infra_id, status, cloud) = db.get_infra_from_im_infra_id(instance['id'])
+            for instance in instances:
+                infra_id_from_cloud = None
+                unique_infra_id_from_cloud = None
+                if 'prominence-infra-id' in instance['metadata']:
+                    infra_id_from_cloud = instance['metadata']['prominence-infra-id']
+                if 'prominence-unique-infra-id' in instance['metadata']:
+                    unique_infra_id_from_cloud = instance['metadata']['prominence-unique-infra-id']
 
-            # Ignore valid instances
-            if infra_id and status in ('configured', 'creating'):
-                logger.info('Found valid instance with id %s associated with cloud %s with status %s', infra_id, cloud, status)
-                continue
+                if infra_id_from_cloud and unique_infra_id_from_cloud:
+                    (_, status, _, _, _) = db.deployment_get_infra_id(infra_id_from_cloud)
 
-            if not infra_id:
-                logger.info('Found unknown instance %s, %s on cloud %s', instance['name'], instance['id'], cloud['name'])
+                    if status not in ('creating', 'running', 'visible', 'left', 'deletion-requested', 'deleting'):
+                        logger.info('Found unexpected infrastructure on cloud %s with status %s', cloud['name'], status)
+
+                        # Check if the instance is in the pool
+                        found = False
+                        for worker in workers:
+                            if worker['ProminenceUniqueInfrastructureId'] == unique_infra_id_from_cloud:
+                                found = True
+
+                        # If not in the pool, delete the instance
+                        if not found:
+                            logger.info('Unexpected instance with name %s and id %s will be deleted',
+                                        instance['name'],
+                                        instance['id'])
+                            db.deployment_update_status(infra_id_from_cloud, 'deletion-requested')
 
 if __name__ == "__main__":
     while True:
@@ -101,14 +122,11 @@ if __name__ == "__main__":
         db = database.get_db()
         if db.connect():
             logger.info('Removing any old entries from the DB')
-            remove_old_entries(db, 'deleted')
+            remove_old_entries(db, 'deleted-validated')
             remove_old_entries(db, 'unable')
 
             logger.info('Checking for infrastructure stuck in the creating state')
             delete_stuck_infras(db, 'creating')
-
-            logger.info('Removing old failures from database')
-            db.del_old_deployment_failures(24*60*60)
 
             logger.info('Retrying any incomplete deletions')
             retry_incomplete_deletions(db, 'deletion-failed')
@@ -116,7 +134,8 @@ if __name__ == "__main__":
             retry_incomplete_deletions(db, 'deletion-requested')
 
             logger.info('Finding any phantom infrastructures')
-            find_and_delete_phantoms(db)
+            workers_list = workers.get_workers()
+            find_and_delete_phantoms(db, workers_list)
 
             db.close()
         else:
