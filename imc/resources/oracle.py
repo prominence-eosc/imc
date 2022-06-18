@@ -51,9 +51,9 @@ class Oracle():
             compartment_id=self._info['compartment_id'],
             availability_domain=self._info['availability_domain_name'],
             display_name=name,
-            freeform_tags={'Creator': 'Prominence',
-                           'ProminenceInfrastructureId': infra_id,
-                           'ProminenceUniqueInfrastructureId': unique_infra_id},
+            freeform_tags={'creator': 'prominence',
+                           'prominence-infra-id': infra_id,
+                           'prominence-unique-infra-id': unique_infra_id},
             metadata={'user_data': base64.b64encode(userdata.encode('ascii')).decode('utf-8')},
             shape=flavor,
             create_vnic_details=oci.core.models.CreateVnicDetails(subnet_id=network),
@@ -98,8 +98,8 @@ class Oracle():
         data = []
         for instance in response.data:
             if len(instance.freeform_tags) > 0:
-                if 'Creator' in instance.freeform_tags:
-                    if instance.freeform_tags['Creator'] == 'Prominence':
+                if 'creator' in instance.freeform_tags:
+                    if instance.freeform_tags['creator'] == 'prominence':
                         data.append({'id': instance.id,
                                      'name': instance.display_name,
                                      'status': status_map(instance.lifecycle_state),

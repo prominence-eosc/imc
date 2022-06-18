@@ -69,8 +69,8 @@ class OpenStack():
             nova = client.Client("2.52", session=self._session)
             server = nova.servers.create(name,
                                          tags=['CreatedByProminence'],
-                                         meta={'ProminenceInfrastructureId': infra_id,
-                                               'ProminenceUniqueInfrastructureId': unique_infra_id},
+                                         meta={'prominence-infra-id': infra_id,
+                                               'prominence-unique-infra-id': unique_infra_id},
                                          image=image,
                                          flavor=flavor,
                                          nics=[{'net-id': network}],

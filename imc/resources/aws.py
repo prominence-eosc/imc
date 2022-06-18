@@ -60,11 +60,11 @@ class AWS():
                 'TagSpecifications': [{'ResourceType': 'instance',
                                        'Tags': [{'Key': 'Name',
                                                  'Value': name},
-                                                {'Key': 'Creator',
-                                                 'Value': 'Prominence'},
-                                                {'Key': 'ProminenceInfrastructureId',
+                                                {'Key': 'creator',
+                                                 'Value': 'prominence'},
+                                                {'Key': 'prominence-infra-id',
                                                  'Value': infra_id},
-                                                {'Key': 'ProminenceUniqueInfrastructureId',
+                                                {'Key': 'prominence-unique-infra-id',
                                                  'Value': unique_infra_id}]}],
                 'BlockDeviceMappings': [{'DeviceName': '/dev/sda1',
                                          'Ebs': {'VolumeSize': disk}}],
@@ -105,8 +105,8 @@ class AWS():
         """
         data = []
         try:
-            for instance in self._ec2.resource('ec2').instances.filter(Filters=[{'Name': 'tag:Creator',
-                                                                                 'Values': ['Prominence']}]):
+            for instance in self._ec2.resource('ec2').instances.filter(Filters=[{'Name': 'tag:creator',
+                                                                                 'Values': ['prominence']}]):
                 data.append({'id': instance.id,
                              'status': instance.state['Name'],
                              'name': get_name(instance.tags),

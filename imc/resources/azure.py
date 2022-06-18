@@ -97,9 +97,9 @@ class Azure():
         instance_data = {
             "location": self._info['cloud_region'],
             "tags": {
-                "Creator": "Prominence",
-                "ProminenceInfrastructureId": infra_id,
-                "ProminenceUniqueInfrastructureId": unique_infra_id,
+                "creator": "prominence",
+                "prominence-infra-id": infra_id,
+                "prominence-unique-infra-id": unique_infra_id,
             },
             "storage_profile": {
                 "image_reference": {
@@ -192,7 +192,7 @@ class Azure():
         try:
             for instance in client.virtual_machines.list_all():
                 if 'Creator' in instance.tags:
-                    if instance.tags['Creator'] == 'Prominence':
+                    if instance.tags['creator'] == 'prominence':
                         data.append({'id': instance.id,
                                      'status': instance.provisioning_state,
                                      'name': instance.name,
