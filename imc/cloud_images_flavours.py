@@ -98,26 +98,6 @@ def update_flavours(db, cloud, identity, flavours):
                        flavour['memory'],
                        flavour['disk'])
 
-def is_power2(num):
-    """
-    Check if a number is a power of 2
-    """
-    return num != 0 and ((num & (num - 1)) == 0)
-
-def memory_convert(value):
-    """
-    Different OpenStack admins define memory units differently, try to 
-    handle this
-    """
-    m1 = int(value/1000.0)
-    m2 = int(value/1024.0)
-    m = m2
-    if is_power2(m1):
-        m = m1
-    if is_power2(m2):
-        m = m2
-    return m
-
 def compare_dicts(cloud1, cloud2):
     """
     Compare the dicts containing cloud images or flavours
