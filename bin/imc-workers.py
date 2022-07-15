@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Worker consistency"""
+"""Worker lifecycle management"""
 
 import configparser
 import logging
