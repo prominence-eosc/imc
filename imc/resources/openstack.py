@@ -8,6 +8,26 @@ from neutronclient.v2_0 import client as neutronclient
 # Logging
 logger = logging.getLogger(__name__)
 
+def is_power2(num):
+    """
+    Check if a number is a power of 2
+    """
+    return num != 0 and ((num & (num - 1)) == 0)
+
+def memory_convert(value):
+    """
+    Different OpenStack admins define memory units differently, try to 
+    handle this
+    """
+    m1 = int(value/1000.0)
+    m2 = int(value/1024.0)
+    m = m2
+    if is_power2(m1):
+        m = m1
+    if is_power2(m2):
+        m = m2
+    return m
+
 def status_map(status):
     """
     Map OpenStack status
@@ -160,7 +180,7 @@ class OpenStack():
                 data.append({'id': flavor_dict['id'],
                              'name': flavor_dict['name'],
                              'cpus': flavor_dict['vcpus'],
-                             'memory': flavor_dict['ram'],
+                             'memory': memory_convert(flavor_dict['ram']),
                              'disk': flavor_dict['disk']})
         except Exception as err:
             logger.error('Got exception listing flavours: %s', err)
