@@ -7,7 +7,7 @@ Clouds are selected based on specified requirements and clouds are ranked based 
 
 Supported clouds:
 * OpenStack
-* EGI Federated Cloud (OpenStack)
+* EGI Federated Cloud (OpenStack), including automatic discovery of clouds
 * AWS
 * Google Cloud
 * Oracle Cloud
