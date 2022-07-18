@@ -1,4 +1,18 @@
+import json
 import htcondor
+
+def get_json(iwd):
+    """
+    Get the JSON job description
+    """
+    job = {}
+    try:
+        with open(job['Iwd'] + '/.job.json') as json_file:
+            job = json.load(json_file)
+    except:
+        continue
+
+    return job
 
 def get_idle_jobs():
     """
