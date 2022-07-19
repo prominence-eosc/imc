@@ -19,5 +19,3 @@ def create_worker_credentials():
         raise Exception('condor_token_create failed with invalid return code')
 
     return token
-
-print(create_worker_credentials())
