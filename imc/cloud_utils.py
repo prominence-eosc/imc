@@ -67,7 +67,7 @@ def create_clouds_list(db, identity, static=True):
         list_egi = []
 
     if static:
-        logger.info('Getting list of clouds from static JSON files')
+        logger.info('Getting lists of clouds from database')
         list_static = create_clouds_list_static(db, identity)
     else:
         list_static = []
