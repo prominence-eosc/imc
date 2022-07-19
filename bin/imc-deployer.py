@@ -77,7 +77,7 @@ def find_new_infra_for_creation(db, executor):
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_signal)
 
-    executor_deployers = ThreadPoolExecutor(int(CONFIG.get('pool', 'deployers')))
+    executor = ThreadPoolExecutor(int(CONFIG.get('pool', 'deployers')))
 
     logger.info('Entering main polling loop')
     while True:
@@ -87,7 +87,7 @@ if __name__ == "__main__":
  
         db = database.get_db()
         if db.connect():
-            find_new_infra_for_creation(db, executor_deployers)
+            find_new_infra_for_creation(db, executor)
             db.close()
         else:
             logger.critical('Unable to connect to database')
