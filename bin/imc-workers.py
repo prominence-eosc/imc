@@ -1,22 +1,13 @@
 #!/usr/bin/env python
 """Worker lifecycle management"""
 
-import configparser
 import logging
 from logging.handlers import RotatingFileHandler
-import re
-import os
-import sys
 import time
 
 from imc import config
-from imc import cloud_utils
 from imc import database
-from imc import destroy
-from imc import tokens
-from imc import utilities
 from imc import workers
-from imc import resources
 
 # Configuration
 CONFIG = config.get_config()
