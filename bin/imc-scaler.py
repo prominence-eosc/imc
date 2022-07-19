@@ -39,7 +39,10 @@ def create_json(job):
     disk = int(job['disk']/1000.0/1000.0) + 10
     nodes = job['nodes']
 
-    job_json = jobs.get_json(job['iwd'])
+    if 'iwd' in job:
+        job_json = jobs.get_json(job['iwd'])
+    else:
+        job_json = {}
 
     data = {}
     data['requirements'] = {}
@@ -58,6 +61,10 @@ def create_json(job):
 
     data['requirements']['regions'] = []
     data['requirements']['sites'] = CONFIG.get('workers.placement', 'sites_requirements').split(',')
+
+    if 'group' in job:
+        data['requirements']['groups'] = [job['group']]
+
     data['preferences'] = {}
     data['preferences']['regions'] = []
     data['preferences']['sites'] = []
@@ -77,7 +84,7 @@ def create_json(job):
 
     return data
 
-def scaler(db, shared_workers_deployed):
+def scaler(db):
     """
     Scaler: create new workers as needed
     """
@@ -90,6 +97,7 @@ def scaler(db, shared_workers_deployed):
         if job['cpus'] > int(CONFIG.get('workers', 'shared_worker_cpu_threshold')):
             # Job should have a dedicated worker
             if not job_db:
+                logger.info('Deploying dedicated worker for job %d', job['id'])
                 data = create_json(job)
                 success = db.deployment_create(str(uuid.uuid4()), data, job['identity'], job['id'])
 
@@ -101,46 +109,44 @@ def scaler(db, shared_workers_deployed):
         else:
             # Job should have a shared worker
             if job['group'] not in shared_cpus:
-                shared_cpus['group'] = 0
+                shared_cpus[job['group']] = 0
 
-            shared_cpus['group'] += job['cpus']
-
-    if shared_workers_deployed[0] > 0:
-        status = True
-        infras = db.deployment_get_deployments_for_identity('shared')
-        for infra in infras:
-            if infra['status'] in ('creating', 'running'):
-                status = False
-        if status:
-            shared_workers_deployed = (shared_workers_deployed[0], shared_workers_deployed[1], True)
+            shared_cpus[job['group']] += job['cpus']
 
     # Need to deploy new shared workers
     if shared_cpus:
         for group in shared_cpus:
-            if shared_workers_deployed[0] == 0 or (shared_workers_deployed[0] > 0 and shared_workers_deployed[1]):
+            # Get current status of infrastructures
+            status = True
+            infras = db.deployment_get_deployments_for_identity('shared-%s' % group)
+            for infra in infras:
+                if infra['status'] in ('creating', 'running'):
+                    status = False
+
+            if not status:
+                logger.info('Previous deployments for group %s not yet ready', group)
+            else:
                 workers_needed = int(math.ceil(float(shared_cpus[group])/float(CONFIG.get('workers', 'shared_worker_cpu_threshold'))))
-                logger.info('Number of worker nodes needed for small jobs: %d', workers_needed)
-                shared_workers_deployed = (workers_needed, shared_cpus, False)
+                logger.info('Number of worker nodes needed for small jobs: %d for group %s', workers_needed, group)
 
                 for counter in range(0, workers_needed):
                     data = create_json({'cpus': int(CONFIG.get('workers', 'shared_worker_cpus')),
                                         'memory': 1000*int(CONFIG.get('workers', 'shared_worker_memory')),
                                         'disk': 1000*1000*int(CONFIG.get('workers', 'shared_worker_disk')),
                                         'nodes': 1,
-                                        'id': 0})
-                    db.deployment_create(str(uuid.uuid4()), data, 'shared', 0)
+                                        'id': 0,
+                                        'groups': [group]})
+                    db.deployment_create(str(uuid.uuid4()), data, 'shared-%s' % group, 0)
 
     logger.info('Ended scaling cycle')
-    return shared_workers_deployed
+    return
 
 if __name__ == "__main__":
-    shared_workers_deployed = (0, 0, False)
     while True:
         logger.info('Connecting to the DB')
         db = database.get_db()
         if db.connect():
-            shared_workers_deployed = scaler(db, shared_workers_deployed)
-            logger.info('Shared workers deployed=%d,%d,%d', shared_workers_deployed[0], shared_workers_deployed[1], shared_workers_deployed[2])
+            scaler(db)
             db.close()
         else:
             logger.critical('Unable to connect to database')
