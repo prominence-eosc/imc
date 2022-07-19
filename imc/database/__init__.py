@@ -95,6 +95,11 @@ class Database(object):
                         get_resources_update, \
                         set_resources_update_start
 
+    from .resources import create_resource, \
+                           list_resources, \
+                           describe_resource, \
+                           delete_resource
+
     def __init__(self, host, port, db, username, password):
         self._host = host
         self._db = db
@@ -122,6 +127,13 @@ class Database(object):
                                    creation INT NOT NULL,
                                    updated INT NOT NULL,
                                    status INT NOT NULL)''')
+
+            # Create the resources table
+            cursor.execute('''CREATE TABLE IF NOT EXISTS
+                              resources(name TEXT,
+                                        identity TEXT,
+                                        description JSON NOT NULL,
+                                        PRIMARY KEY(name, identity))''')
 
             # Create user credentials table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
