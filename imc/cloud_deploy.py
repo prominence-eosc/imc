@@ -114,6 +114,8 @@ def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, uni
 
         if infrastructure_id:
             logger.info('Created infrastructure on cloud %s with id %s and waiting for it to be deployed', cloud, infrastructure_id)
+
+            # Update the log
             db.update_cloud_deployment(unique_infra_id, infrastructure_id)
 
             # Set the cloud & infrastructure ID
