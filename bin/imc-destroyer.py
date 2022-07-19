@@ -67,7 +67,7 @@ def find_new_infra_for_deletion(db, executor):
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_signal)
 
-    executor_deleters = ThreadPoolExecutor(int(CONFIG.get('pool', 'deleters')))
+    executor = ThreadPoolExecutor(int(CONFIG.get('pool', 'deleters')))
 
     logger.info('Entering main polling loop')
     while True:
@@ -77,7 +77,7 @@ if __name__ == "__main__":
  
         db = database.get_db()
         if db.connect():
-            find_new_infra_for_deletion(db, executor_deleters)
+            find_new_infra_for_deletion(db, executor)
             db.close()
         else:
             logger.critical('Unable to connect to database')
