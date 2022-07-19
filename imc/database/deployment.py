@@ -226,6 +226,22 @@ def get_deployment(self, infra_id):
 
     return infra, unique_id, cloud
 
+def deployment_get_deployments_for_identity(self, identity):
+    """
+    """
+    infras = []
+
+    try:
+        cursor = self._connection.cursor()
+        cursor.execute("SELECT id,creation,updated,status FROM deployments WHERE identity='%s'" % identity)
+        for row in cursor:
+            infras.append({'id': row[0], 'creation': row[1], 'updated': row[2], 'status': row[3]})
+        cursor.close()
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get_deployments_for_identity due to: %s', err)
+
+    return infras
+
 def deployment_create(self, infra_id, description, identity, identifier):
     """
     Create deployment
