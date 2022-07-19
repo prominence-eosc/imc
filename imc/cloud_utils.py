@@ -4,6 +4,7 @@ import json
 import logging
 
 from imc import config
+from imc import database
 
 # Configuration
 CONFIG = config.get_config()
@@ -48,24 +49,11 @@ def create_clouds_list_egi(db, identity):
 
     return clouds
 
-def create_clouds_list_static(path):
+def create_clouds_list_static(db, identity):
     """
     Generate list of static clouds
     """
-    clouds = []
-
-    cloud_files = glob.glob('%s/*.json' % path)
-    for cloud_file in cloud_files:
-        data = {}
-        try:
-            with open(cloud_file) as fd:
-                data = json.load(fd)
-        except Exception as err:
-            logger.error('Unable to read static cloud file %s due to: %s', cloud_file, err)
-
-        if data:
-            clouds.append(data)
-
+    clouds = db.list_resources(identity)
     return clouds
 
 def create_clouds_list(db, identity, static=True):
@@ -80,7 +68,7 @@ def create_clouds_list(db, identity, static=True):
 
     if static:
         logger.info('Getting list of clouds from static JSON files')
-        list_static = create_clouds_list_static(CONFIG.get('clouds', 'path'))
+        list_static = create_clouds_list_static(db, identity)
     else:
         list_static = []
 
