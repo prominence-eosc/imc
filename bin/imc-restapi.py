@@ -56,12 +56,51 @@ def requires_auth(function):
             return authenticate()
         if not auth.username or not auth.password or not valid_credentials(auth.username, auth.password):
             return authenticate()
-        return function(*args, **kwargs)
+        return function(auth.username, *args, **kwargs)
     return wrapper
+
+@app.route('/resources', methods=['POST'])
+@requires_auth
+def create_resource(username):
+    """
+    Create resource
+    """
+    description = request.get_json()
+
+    name = None
+    if 'name' in description:
+        name = description['name']
+    else:
+        return jsonify({'error': 'no resource name specified'}), 400
+
+    db = database.get_db()
+    if db.connect():
+        status = db.create_resource(username, name, description)
+        db.close()
+
+    if status:
+        return jsonify({}), 201
+
+    return jsonify({}), 400
+
+@app.route('/resources', methods=['GET'])
+@requires_auth
+def list_resources(username):
+    """
+    List resources
+    """
+    db = database.get_db()
+    if db.connect():
+        resources = db.list_resources(username)
+        db.close()
+
+        return jsonify(resources), 200
+
+    return jsonify({}), 400
 
 @app.route('/infrastructures', methods=['POST'])
 @requires_auth
-def create_infrastructure():
+def create_infrastructure(username):
     """
     Create infrastructure
     """
@@ -112,7 +151,7 @@ def create_infrastructure():
 
 @app.route('/infrastructures/', methods=['GET'])
 @requires_auth
-def get_infrastructures():
+def get_infrastructures(username):
     """
     Get list of infrastructures in the specified state or type
     """
@@ -141,7 +180,7 @@ def get_health():
 
 @app.route('/infrastructures/<string:infra_id>', methods=['GET'])
 @requires_auth
-def get_infrastructure(infra_id):
+def get_infrastructure(username, infra_id):
     """
     Get current status of specified infrastructure
     """
@@ -165,7 +204,7 @@ def get_infrastructure(infra_id):
 
 @app.route('/infrastructures/<string:infra_id>', methods=['DELETE'])
 @requires_auth
-def delete_infrastructure(infra_id):
+def delete_infrastructure(username, infra_id):
     """
     Delete the specified infrastructure
     """
@@ -198,7 +237,7 @@ def delete_infrastructure(infra_id):
 
 @app.route('/credentials', methods=['POST'])
 @requires_auth
-def create_user_credentials():
+def create_user_credentials(username):
     """
     Insert or update user credentials
     """
