@@ -13,7 +13,7 @@ from imc import workers
 CONFIG = config.get_config()
 
 # Logging
-handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-workers.log'),
+handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-worker-updater.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
