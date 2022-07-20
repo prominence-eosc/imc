@@ -166,6 +166,26 @@ class PolicyEngine():
 
         return clouds_out
 
+    def satisfies_identity(self):
+        """
+        Returns list of clouds satisfying identity requirements
+        """
+        clouds_out = self._clouds.copy()
+
+        for cloud in self._clouds:
+            found = False
+            if 'supported_identities' in self._config[cloud]:
+                if self._config[cloud]['supported_identities']:
+                    for identity in self._config[cloud]['supported_identities']:
+                        if self._identity == identity or identity == 'admin':
+                            found = True
+
+            if not found:
+                clouds_out.remove(cloud)
+
+        return clouds_out
+
+
     def satisfies_group(self):
         """
         Returns list of clouds satisfying group requirements
@@ -257,6 +277,7 @@ class PolicyEngine():
                   self.satisfies_image(),
                   self.satisfies_flavour(),
                   self.satisfies_group(),
+                  self.satisfies_identity(),
                   self.satisfies_static_quotas(),
                   self.satisfies_status()]
 
@@ -271,6 +292,7 @@ class PolicyEngine():
         logger.info('Clouds matching regions: %s', ','.join(self.satisfies_regions()))
         logger.info('Clouds matching image: %s', ','.join(self.satisfies_image()))
         logger.info('Clouds matching flavour: %s', ','.join(self.satisfies_flavour()))
+        logger.info('Clouds matching identity: %s', ','.join(self.satisfies_identity()))
         logger.info('Clouds matching group: %s', ','.join(self.satisfies_group()))
         logger.info('Clouds matching static quotas: %s', ','.join(self.satisfies_static_quotas()))
         logger.info('Clouds matching status: %s', ','.join(self.satisfies_status()))
