@@ -9,6 +9,9 @@ def create_resource(self, identity, name, description):
     """
     Create resource
     """
+    if 'supported_identities' not in description:
+        description['supported_identities'] = [identity]
+
     return self.execute("INSERT INTO resources (identity,name,description) VALUES (%s,%s,%s)", (identity, name, Json(description)))
 
 def list_resources(self, identity=None):
