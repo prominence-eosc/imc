@@ -10,7 +10,7 @@ def get_json(iwd):
         with open(job['Iwd'] + '/.job.json') as json_file:
             job = json.load(json_file)
     except:
-        continue
+        pass
 
     return job
 
