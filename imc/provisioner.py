@@ -176,5 +176,15 @@ def deploy_job(db, unique_id):
         else:
             db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
 
+    if success is None:
+        logger.info('Setting status to unable due to a permanent failure')
+        db.deployment_update_status(infra_id, 'unable')
+    elif not success:
+        logger.info('Setting status to waiting due to a temporary failure')
+        db.deployment_update_status(infra_id, 'waiting')
+
+    if not success:
+        logger.critical('Unable to deploy infrastructure on any cloud')
+
     return success
 
