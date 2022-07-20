@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """Worker lifecycle management"""
 
+# TODO: If infrastructure not yet deployed, see if still needed
+
 import logging
 from logging.handlers import RotatingFileHandler
 import time
@@ -13,7 +15,7 @@ from imc import workers
 CONFIG = config.get_config()
 
 # Logging
-handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-worker-updater.log'),
+handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('imc.log', 'worker-updater.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')

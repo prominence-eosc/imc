@@ -18,7 +18,7 @@ from imc import deployer
 CONFIG = config.get_config()
 
 # Logging
-handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-deployer.log'),
+handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('imc.log', 'deployer.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(threadName)s %(name)s] %(message)s')

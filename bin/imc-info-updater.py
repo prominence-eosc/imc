@@ -20,7 +20,7 @@ from imc import cloud_utils
 CONFIG = config.get_config()
 
 # Logging
-handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-info-updater.log'),
+handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('imc.log', 'info-updater.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(threadName)s %(name)s] %(message)s')

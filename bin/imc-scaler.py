@@ -17,7 +17,7 @@ from imc import jobs
 CONFIG = config.get_config()
 
 # Setup handlers for the root logger
-handler = RotatingFileHandler(CONFIG.get('logs', 'filename').replace('.log', '-scaler.log'),
+handler = RotatingFileHandler(CONFIG.get('logs', 'filename').replace('imc.log', 'scaler.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
@@ -91,6 +91,7 @@ def scaler(db):
     logger.info('Started scaling cycle')
 
     shared_cpus = {}
+    group_mapping = {}
     for job in jobs.get_idle_jobs():
         job_db = db.get_job(job['id'])
 
@@ -108,26 +109,30 @@ def scaler(db):
 
         else:
             # Job should have a shared worker
-            if job['group'] not in shared_cpus:
-                shared_cpus[job['group']] = 0
+            identity = job['identity']
+            if identity not in shared_cpus:
+                shared_cpus[identity] = 0
 
-            shared_cpus[job['group']] += job['cpus']
+            shared_cpus[identity] += job['cpus']
+
+            if identity not in group_mapping:
+                group_mapping[identity] = job['group']
 
     # Need to deploy new shared workers
     if shared_cpus:
-        for group in shared_cpus:
+        for identity in shared_cpus:
             # Get current status of infrastructures
             status = True
-            infras = db.deployment_get_deployments_for_identity('shared-%s' % group)
+            infras = db.deployment_get_deployments_for_identity(identity)
             for infra in infras:
                 if infra['status'] in ('creating', 'running'):
                     status = False
 
             if not status:
-                logger.info('Previous deployments for group %s not yet ready', group)
+                logger.info('Previous deployments for identity %s not yet ready', identity)
             else:
-                workers_needed = int(math.ceil(float(shared_cpus[group])/float(CONFIG.get('workers', 'shared_worker_cpu_threshold'))))
-                logger.info('Number of worker nodes needed for small jobs: %d for group %s', workers_needed, group)
+                workers_needed = int(math.ceil(float(shared_cpus[identity])/float(CONFIG.get('workers', 'shared_worker_cpu_threshold'))))
+                logger.info('Number of worker nodes needed for small jobs %d for identity %s', workers_needed, identity)
 
                 for counter in range(0, workers_needed):
                     data = create_json({'cpus': int(CONFIG.get('workers', 'shared_worker_cpus')),
@@ -135,8 +140,8 @@ def scaler(db):
                                         'disk': 1000*1000*int(CONFIG.get('workers', 'shared_worker_disk')),
                                         'nodes': 1,
                                         'id': 0,
-                                        'groups': [group]})
-                    db.deployment_create(str(uuid.uuid4()), data, 'shared-%s' % group, 0)
+                                        'groups': [group_mapping[identity]]})
+                    db.deployment_create(str(uuid.uuid4()), data, identity, 0)
 
     logger.info('Ended scaling cycle')
     return

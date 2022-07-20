@@ -20,7 +20,7 @@ from imc import health
 CONFIG = config.get_config()
 
 # Setup handlers for the root logger
-handler = RotatingFileHandler(CONFIG.get('logs', 'filename').replace('.log', '-restapi.log'),
+handler = RotatingFileHandler(CONFIG.get('logs', 'filename').replace('imc.log', 'restapi.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')

@@ -18,7 +18,7 @@ from imc import destroyer
 CONFIG = config.get_config()
 
 # Logging
-handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('.log', '-destroyer.log'),
+handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('imc.log', 'destroyer.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
 formatter = logging.Formatter('%(asctime)s %(levelname)s [%(threadName)s %(name)s] %(message)s')
