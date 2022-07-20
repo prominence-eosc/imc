@@ -74,7 +74,8 @@ class Database(object):
                             create_cloud_deployment, \
                             update_cloud_deployment, \
                             get_deployments, \
-                            get_used_resources
+                            get_used_resources, \
+                            deployment_get_deployments_for_identity
 
     from .egi import set_egi_cloud, \
                      get_egi_clouds, \
