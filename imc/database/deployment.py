@@ -165,12 +165,12 @@ def deployment_get_infra_id(self, infra_id):
         logger.critical('Unable to execute query in deployment_get_infra_id due to: %s', err)
     return (cloud_infra_id, status, cloud, created, updated)
 
-def create_cloud_deployment(self, infra_id, unique_infra_id, cloud, identity):
+def create_cloud_deployment(self, infra_id, instance, unique_infra_id, cloud, identity):
     """
     Log deployment
     """
-    return self.execute("INSERT INTO deployment_log (id, unique_infra_id, cloud, identity, created) VALUES (%s,%s,%s,%s,%s)",
-                        (infra_id, unique_infra_id, cloud, identity, time.time()))
+    return self.execute("INSERT INTO deployment_log (id, instance, unique_infra_id, cloud, identity, created) VALUES (%s, %s,%s,%s,%s,%s)",
+                        (infra_id, instance, unique_infra_id, cloud, identity, time.time()))
 
 def update_cloud_deployment(self, unique_infra_id, cloud_infra_id):
     """
@@ -197,9 +197,9 @@ def get_deployments(self, infra_id):
     infra = []
     try:
         cursor = self._connection.cursor()
-        cursor.execute("SELECT cloud_infra_id,cloud FROM deployment_log WHERE id='%s'" % infra_id)
+        cursor.execute("SELECT cloud_infra_id,cloud,unique_infra_id FROM deployment_log WHERE id='%s'" % infra_id)
         for row in cursor:
-            infra.append({'id': row[0], 'cloud': row[1]})
+            infra.append({'id': row[0], 'cloud': row[1], 'unique_id': row[2]})
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in get_deployments due to: %s', err)
