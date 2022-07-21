@@ -21,7 +21,7 @@ CONFIG = config.get_config()
 handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('imc.log', 'deployer.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
-formatter = logging.Formatter('%(asctime)s %(levelname)s [%(processName)s %(name)s] %(message)s')
+formatter = logging.Formatter('%(asctime)s %(levelname)s [%(processName)s %(threadName)s %(name)s] %(message)s')
 handler.setFormatter(formatter)
 logger = logging.getLogger('imc')
 logger.addHandler(handler)
