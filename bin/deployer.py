@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Deploy infrastructure"""
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 import logging
 from logging.handlers import RotatingFileHandler
 import random
@@ -21,7 +21,7 @@ CONFIG = config.get_config()
 handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('imc.log', 'deployer.log'),
                               maxBytes=int(CONFIG.get('logs', 'max_bytes')),
                               backupCount=int(CONFIG.get('logs', 'num')))
-formatter = logging.Formatter('%(asctime)s %(levelname)s [%(threadName)s %(name)s] %(message)s')
+formatter = logging.Formatter('%(asctime)s %(levelname)s [%(processName)s %(name)s] %(message)s')
 handler.setFormatter(formatter)
 logger = logging.getLogger('imc')
 logger.addHandler(handler)
@@ -77,19 +77,19 @@ def find_new_infra_for_creation(db, executor):
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_signal)
 
-    executor = ThreadPoolExecutor(int(CONFIG.get('pool', 'deployers')))
-
-    logger.info('Entering main polling loop')
-    while True:
-        if EXIT_NOW:
-            logger.info('Exiting')
-            sys.exit(0)
+    logger.info('Creating process pool')
+    with ProcessPoolExecutor(int(CONFIG.get('pool', 'deployers'))) as executor:
+        logger.info('Entering main polling loop')
+        while True:
+            if EXIT_NOW:
+                logger.info('Exiting')
+                sys.exit(0)
  
-        db = database.get_db()
-        if db.connect():
-            find_new_infra_for_creation(db, executor)
-            db.close()
-        else:
-            logger.critical('Unable to connect to database')
+            db = database.get_db()
+            if db.connect():
+                find_new_infra_for_creation(db, executor)
+                db.close()
+            else:
+                logger.critical('Unable to connect to database')
 
-        time.sleep(int(CONFIG.get('polling', 'deployer')))
+            time.sleep(int(CONFIG.get('polling', 'deployer')))

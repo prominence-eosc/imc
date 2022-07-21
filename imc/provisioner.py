@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from string import Template
 import time
 from random import shuffle
@@ -16,7 +17,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def deploy_job(db, unique_id):
+def provisioner(db, unique_id):
     """
     Find an appropriate resource to deploy infrastructure
     """
@@ -86,6 +87,7 @@ def deploy_job(db, unique_id):
     time_begin = time.time()
     success = False
     reason = None
+    results = []
 
     for cloud in clouds_ranked:
         # If we have already successfully deployed infrastructure we don't need to continue
@@ -136,22 +138,38 @@ def deploy_job(db, unique_id):
             flavour_cpus = flavour[2]
             flavour_memory = flavour[3]
 
-            logger.info('Attempting to deploy on cloud %s with image %s and flavour %s', cloud, image_name, flavour_name)
+            logger.info('Attempting to deploy on %d instances on cloud %s with image %s and flavour %s', requirements['resources']['instances'], cloud, image_name, flavour_name)
 
             # Deploy infrastructure
-            reason = None
-            (infra_id, reason) = cloud_deploy.deploy(image_id,
-                                                     flavour_id,
-                                                     requirements['resources']['disk'],
-                                                     cloud,
-                                                     region,
-                                                     clouds_info_list,
-                                                     time_begin,
-                                                     unique_id,
-                                                     identity,
-                                                     db,
-                                                     flavour_cpus,
-                                                     flavour_memory)
+            results = []
+            with ThreadPoolExecutor(requirements['resources']['instances']) as executor:
+                futures = []
+
+                # Create infrastructure for each instance
+                for instance in range(0, requirements['resources']['instances']):
+                    futures.append(executor.submit(cloud_deploy.deploy,
+                                                   instance,
+                                                   image_id,
+                                                   flavour_id,
+                                                   requirements['resources']['disk'],
+                                                   cloud,
+                                                   region,
+                                                   clouds_info_list,
+                                                   time_begin,
+                                                   unique_id,
+                                                   identity,
+                                                   db,
+                                                   flavour_cpus,
+                                                   flavour_memory))
+
+                # Handle results
+                for future in futures:
+                    results.append(future.result())
+
+            logger.info('Infrastructure creation threadpool completed')
+ 
+            infra_id = results[0][0]
+            reason = results[0][1]
 
             if infra_id:
                 success = True

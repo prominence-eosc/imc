@@ -24,7 +24,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def deploy(image, flavor, disk, cloud, region, clouds_info_list, time_begin, unique_id, identity, db, used_cpus=1, used_memory=1):
+def deploy(instance, image, flavor, disk, cloud, region, clouds_info_list, time_begin, unique_id, identity, db, used_cpus=1, used_memory=1):
     """
     Deploy infrastructure on the specified cloud
     """
