@@ -19,52 +19,55 @@ logger = logging.getLogger(__name__)
 
 def delete(db, infra_id):
     """
-    Delete the infrastructure with the specified id
+    Delete the infrastructure(s) with the specified id
     """
-    logger.info('Deleting infrastructure with id %s', infra_id)
-
-    # Get cloud and resource infra id
-    (resource_infra_id, infra_status, cloud, _, _) = db.deployment_get_infra_id(infra_id)
-    logger.info('Obtained cloud infrastructure id %s and cloud %s and status %s', resource_infra_id, cloud, infra_status)
-
-    # Get infra unique id
-    (_, unique_infra_id, _) = db.get_deployment(resource_infra_id)
-    name = 'prominence-%s' % unique_infra_id
-    logger.info('Obtained infrastructure unique id %s', unique_infra_id)
-
-    if not resource_infra_id or not cloud or not unique_infra_id:
-        logger.info('No need to destroy infrastructure because resource infrastructure id is %s, resource name is %s', resource_infra_id, cloud)
-        db.deployment_update_status(infra_id, 'deleted')
-        return True
-
-    logger.info('Deleting cloud infrastructure with infrastructure id %s', resource_infra_id)
-
     # Get the identity of the user who created the infrastructure
     identity = db.deployment_get_identity(infra_id)
 
     # Get cloud details
     clouds_info_list = cloud_utils.create_clouds_list(db, identity)
-    for cloud_info in clouds_info_list:
-        if cloud_info['name'] == cloud:
-            info = cloud_info
-            break
+
+    logger.info('Deleting infrastructure(s) with id %s for identity %s', infra_id, identity)
+
+    overall_status = True
+
+    infrastructures = db.get_deployments(infra_id)
+    for infrastructure in infrastructures:
+        if not infrastructure['id'] or not infrastructure['cloud']:
+            logger.info('No need to destroy infrastructure with unique id %s because it was never successfully created', infrastructure['unique_id'])
+        else:
+            logger.info('Obtained cloud infrastructure id %s and cloud %s and unique id %s', infrastructure['id'], infrastructure['cloud'], infrastructure['unique_id'])
+            
+            name = 'prominence-%s' % infrastructure['unique_id']
+
+            # Get details of the required cloud
+            info = None
+            for cloud_info in clouds_info_list:
+                if cloud_info['name'] == infrastructure['cloud']:
+                    info = cloud_info
+                    break
      
-    # Check & get auth token if necessary
-    token = tokens.get_token(cloud, identity, db, clouds_info_list)
-    info = tokens.get_openstack_token(token, info)
+            # Check & get auth token if necessary
+            token = tokens.get_token(infrastructure['cloud'], identity, db, clouds_info_list)
+            info = tokens.get_openstack_token(token, info)
 
-    # Setup Resource client
-    client = resources.Resource(info)
+            # Setup Resource client
+            client = resources.Resource(info)
 
-    # Delete the infrastructure
-    status = client.delete_instance(name, resource_infra_id)
+            # Delete the infrastructure
+            status = client.delete_instance(name, infrastructure['id'])
+            if not status:
+                overall_status = False
+                logger.critical('Unable to destroy infrastructure with infrastructure id %s', infrastructure['id'])
+            else:
+                logger.info('Destroyed infrastructure with name %s and infrastructure id %s', name, infrastructure['id'])
 
-    if status:
+    if overall_status:
         db.deployment_update_status(infra_id, 'deleted')
-        logger.info('Destroyed infrastructure with infrastructure id %s', resource_infra_id)
+        logger.info('Destroyed infrastructure %s', infra_id)
     else:
         db.deployment_update_status(infra_id, 'deletion-failed')
-        logger.critical('Unable to destroy infrastructure with infrastructure id %s', resource_infra_id)
+        logger.critical('Deletion of infrastructure %s failed', infra_id)
         return False
 
     return True
