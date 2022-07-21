@@ -2,7 +2,6 @@
 import time
 import random
 import logging
-from logging.handlers import RotatingFileHandler
 
 from imc import config
 from imc import database
@@ -13,14 +12,7 @@ from imc import utilities
 CONFIG = config.get_config()
 
 # Logging
-handler = RotatingFileHandler(filename=CONFIG.get('logs', 'filename').replace('imc.log', 'provisioner.log'),
-                              maxBytes=int(CONFIG.get('logs', 'max_bytes')),
-                              backupCount=int(CONFIG.get('logs', 'num')))
-formatter = logging.Formatter('%(asctime)s %(levelname)s [%(processName)s %(threadName)s %(name)s] %(message)s')
-handler.setFormatter(formatter)
-logger = logging.getLogger('imc')
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 def deployer(infra_id):
     """
