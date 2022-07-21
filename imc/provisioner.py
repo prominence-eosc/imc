@@ -198,12 +198,13 @@ def provisioner(db, unique_id):
             if success:
                 break # Leave loop over flavours
 
-    logger.info('Setting status to waiting with reason DeploymentFailed')
-    db.deployment_update_status(unique_id, 'waiting')
-    if reason:
-        db.deployment_update_status_reason(unique_id, 'DeploymentFailed_%s' % reason)
-    else:
-        db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
+    if not success:
+        logger.info('Setting status to waiting with reason DeploymentFailed')
+        db.deployment_update_status(unique_id, 'waiting')
+        if reason:
+            db.deployment_update_status_reason(unique_id, 'DeploymentFailed_%s' % reason)
+        else:
+            db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
 
     if success is None:
         logger.info('Setting status to unable due to a permanent failure')
