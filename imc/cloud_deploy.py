@@ -24,7 +24,7 @@ CONFIG = config.get_config()
 # Logging
 logger = logging.getLogger(__name__)
 
-def deploy(instance, image, flavor, disk, cloud, region, clouds_info_list, time_begin, unique_id, identity, db, used_cpus=1, used_memory=1):
+def deploy(instance, image, flavor, disk, cloud, region, clouds_info_list, time_begin, unique_id, identity, db):
     """
     Deploy infrastructure on the specified cloud
     """
@@ -75,7 +75,7 @@ def deploy(instance, image, flavor, disk, cloud, region, clouds_info_list, time_
 
         # Prepare for creating infrastructure
         unique_infra_id = str(uuid.uuid4())
-        db.create_cloud_deployment(unique_id, unique_infra_id, cloud, identity)
+        db.create_cloud_deployment(unique_id, instance, unique_infra_id, cloud, identity)
         name = 'prominence-%s' % unique_infra_id
         time_created = time.time()
 
@@ -117,15 +117,6 @@ def deploy(instance, image, flavor, disk, cloud, region, clouds_info_list, time_
 
             # Update the log
             db.update_cloud_deployment(unique_infra_id, infrastructure_id)
-
-            # Set the cloud & infrastructure ID
-            db.deployment_update_status(unique_id, None, cloud, infrastructure_id)
-
-            # Set the resources used by this infrastructure
-            db.deployment_update_resources(unique_id, 1, used_cpus, used_memory)
-
-            # Change the status
-            db.deployment_update_status(unique_id, 'creating')
 
             state_previous = None
 

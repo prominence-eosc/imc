@@ -131,6 +131,9 @@ def provisioner(db, unique_id):
             logger.info('Deletion requested of infrastructure, aborting deployment')
             return False
 
+        # Change the status
+        db.deployment_update_status(unique_id, 'creating')
+
         # Loop over flavours
         for flavour in flavours:
             flavour_id = flavour[0]
@@ -139,6 +142,9 @@ def provisioner(db, unique_id):
             flavour_memory = flavour[3]
 
             logger.info('Attempting to deploy on %d instances on cloud %s with image %s and flavour %s', requirements['resources']['instances'], cloud, image_name, flavour_name)
+
+            # Set the resources used by this infrastructure
+            db.deployment_update_resources(unique_id, requirements['resources']['instances'], flavour_cpus, flavour_memory)
 
             # Deploy infrastructure
             results = []
@@ -158,9 +164,7 @@ def provisioner(db, unique_id):
                                                    time_begin,
                                                    unique_id,
                                                    identity,
-                                                   db,
-                                                   flavour_cpus,
-                                                   flavour_memory))
+                                                   db))
 
                 # Handle results
                 for future in futures:
@@ -168,38 +172,45 @@ def provisioner(db, unique_id):
 
             logger.info('Infrastructure creation threadpool completed')
  
-            infra_id = results[0][0]
-            reason = results[0][1]
+            success = True
+            reason = None
+            for result in results:
+                if not result[0]:
+                    if result[0] is None:
+                        success = result[0]
+                    elif success is not None:
+                        success = False
+                    reason = result[1]
 
-            if infra_id:
-                success = True
-                # Set cloud and infra id
-                db.deployment_update_status(unique_id, None, cloud, infra_id)
+            if success:
+                # Set cloud
+                db.deployment_update_status(unique_id, cloud=cloud)
 
-                # Final check if we should delete the infrastructure
-                (_, infra_status_new, _, _, _) = db.deployment_get_infra_id(unique_id)
-                if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
-                    logger.info('Deletion requested of infrastructure, aborting deployment')
-                    return False
-                else:
-                    # Set status
+            # Final check if we should delete the infrastructure
+            (_, infra_status_new, _, _, _) = db.deployment_get_infra_id(unique_id)
+            if infra_status_new in ('deletion-requested', 'deleted', 'deletion-failed', 'deleting'):
+                logger.info('Deletion requested of infrastructure, aborting deployment')
+                return False
+            else:
+                if success:
                     db.deployment_update_status(unique_id, 'running')
+
+            if success:
                 break # Leave loop over flavours
 
-    if unique_id and not infra_id:
-        logger.info('Setting status to waiting with reason DeploymentFailed')
-        db.deployment_update_status(unique_id, 'waiting')
-        if reason:
-            db.deployment_update_status_reason(unique_id, 'DeploymentFailed_%s' % reason)
-        else:
-            db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
+    logger.info('Setting status to waiting with reason DeploymentFailed')
+    db.deployment_update_status(unique_id, 'waiting')
+    if reason:
+        db.deployment_update_status_reason(unique_id, 'DeploymentFailed_%s' % reason)
+    else:
+        db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
 
     if success is None:
         logger.info('Setting status to unable due to a permanent failure')
-        db.deployment_update_status(infra_id, 'unable')
+        db.deployment_update_status(unique_id, 'unable')
     elif not success:
         logger.info('Setting status to waiting due to a temporary failure')
-        db.deployment_update_status(infra_id, 'waiting')
+        db.deployment_update_status(unique_id, 'waiting')
 
     if not success:
         logger.critical('Unable to deploy infrastructure on any cloud')
