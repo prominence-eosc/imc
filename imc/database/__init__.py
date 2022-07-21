@@ -154,7 +154,7 @@ class Database(object):
 
             # Create deployments table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
-                              deployments(id TEXT NOT NULL PRIMARY KEY,
+                              deployments(id TEXT PRIMARY KEY,
                                           description JSON NOT NULL,
                                           status TEXT NOT NULL,
                                           status_reason TEXT,
@@ -173,6 +173,7 @@ class Database(object):
             # Create deployments log table
             cursor.execute('''CREATE TABLE IF NOT EXISTS
                               deployment_log(unique_infra_id TEXT NOT NULL PRIMARY KEY,
+                                             instance INT NOT NULL,
                                              cloud TEXT NOT NULL,
                                              cloud_infra_id TEXT,
                                              id TEXT NOT NULL,
