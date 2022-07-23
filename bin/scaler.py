@@ -57,7 +57,7 @@ def create_json(job):
     data['requirements']['resources']['disk'] = disk
     data['requirements']['resources']['instances'] = nodes
 
-    logger.info('Will deploy node with cpus=%d, memory=%dGB, disk=%dGB for job %d', cpus, memory, disk, job['id'])
+    logger.info('Will deploy %d node(s) with cpus=%d, memory=%dGB, disk=%dGB for job %d', nodes, cpus, memory, disk, job['id'])
 
     data['requirements']['regions'] = []
     data['requirements']['sites'] = CONFIG.get('workers.placement', 'sites_requirements').split(',')
