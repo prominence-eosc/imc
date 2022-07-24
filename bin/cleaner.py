@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """Periodic cleaning of infrastructure and the database"""
 
+# TODO: Handle old phantom infras in creating/running states
+
 import configparser
 import logging
 from logging.handlers import RotatingFileHandler
@@ -98,23 +100,33 @@ def find_and_delete_phantoms(db, workers):
                     unique_infra_id_from_cloud = instance['metadata']['prominence-unique-infra-id']
 
                 if infra_id_from_cloud and unique_infra_id_from_cloud:
-                    (_, status, _, _, _) = db.deployment_get_infra_id(infra_id_from_cloud)
+                    logger.info('Found from metadata id=%s, unique_id=%s', infra_id_from_cloud, unique_infra_id_from_cloud)
 
-                    if status not in ('creating', 'running', 'visible', 'left', 'deletion-requested', 'deleting'):
-                        logger.info('Found unexpected infrastructure on cloud %s with status %s', cloud['name'], status)
+                    # Check if the instance is in the pool
+                    found = False
+                    for worker in workers:
+                        if worker['ProminenceUniqueInfrastructureId'] == unique_infra_id_from_cloud:
+                            found = True
 
-                        # Check if the instance is in the pool
-                        found = False
-                        for worker in workers:
-                            if worker['ProminenceUniqueInfrastructureId'] == unique_infra_id_from_cloud:
-                                found = True
+                    details = db.deployment_get(unique_infra_id_from_cloud)
+                    if details:
+                        if details['status'] not in ('creating', 'running', 'visible', 'left', 'deletion-requested', 'deleting'):
+                            if not found:
+                                logger.info('Unexpected instance with name %s and id %s will be deleted',
+                                            instance['name'],
+                                            instance['id'])
+                                db.deployment_update_status(infra_id_from_cloud, 'deletion-requested')
 
-                        # If not in the pool, delete the instance
-                        if not found:
-                            logger.info('Unexpected instance with name %s and id %s will be deleted',
-                                        instance['name'],
-                                        instance['id'])
-                            db.deployment_update_status(infra_id_from_cloud, 'deletion-requested')
+                        if details['status'] in ('creating', 'running') and not found and details:
+                            if time.time() - details['updated'] > 3600:
+                                logger.info('Unexpected instance in status %s with name %s and id %s will be deleted',
+                                            status,
+                                            instance['name'],
+                                            instance['id'])
+                                db.deployment_update_status(infra_id_from_cloud, 'deletion-requested')
+                    else:
+                        logger.info('Instance is not in db, deleting...')
+                        db.deployment_update_status(infra_id_from_cloud, 'deletion-requested')
 
 if __name__ == "__main__":
     while True:
