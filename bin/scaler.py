@@ -30,6 +30,21 @@ logger.setLevel(logging.INFO)
 dbi = database.get_db()
 dbi.init()
 
+def get_placement(job):
+    """
+    Return placement policies
+    """
+    if 'iwd' in job:
+        job_json = jobs.get_json(job['iwd'])
+    else:
+        job_json = {}
+
+    if 'policies' in job_json:
+        if 'placement' in job_json['policies']:
+            return job_json['policies']['placement']
+
+    return {}
+
 def create_json(job):
     """
     Create json describing required worker
@@ -38,11 +53,6 @@ def create_json(job):
     memory = int(job['memory']/1000.0)
     disk = int(job['disk']/1000.0/1000.0) + 10
     nodes = job['nodes']
-
-    if 'iwd' in job:
-        job_json = jobs.get_json(job['iwd'])
-    else:
-        job_json = {}
 
     data = {}
     data['requirements'] = {}
@@ -69,18 +79,17 @@ def create_json(job):
     data['preferences']['regions'] = []
     data['preferences']['sites'] = []
 
-    if 'policies' in job_json:
-        if 'placement' in job_json['policies']:
-            if 'requirements' in job_json['policies']['placement']:
-                if 'sites' in job_json['policies']['placement']['requirements']:
-                    data['requirements']['sites'] = job_json['policies']['placement']['requirements']['sites']
-                if 'regions' in job_json['policies']['placement']['requirements']:
-                    data['requirements']['regions'] = job_json['policies']['placement']['requirements']['regions']
-            if 'preferences' in job_json['policies']['placement']:
-                if 'sites' in job_json['policies']['placement']['preferences']:
-                    data['preferences']['sites'] = job_json['policies']['placement']['preferences']['sites']
-                if 'regions' in job_json['policies']['placement']['preferences']:
-                    data['preferences']['regions'] = job_json['policies']['placement']['preferences']['regions']
+    placement = get_placement(job)
+    if 'requirements' in placement:
+        if 'sites' in placement['requirements']:
+            data['requirements']['sites'] = placement['requirements']['sites']
+        if 'regions' in placement['requirements']:
+            data['requirements']['regions'] = placement['requirements']['regions']
+    if 'preferences' in placement:
+        if 'sites' in placement['preferences']:
+            data['preferences']['sites'] = placement['preferences']['sites']
+        if 'regions' in placement['preferences']:
+            data['preferences']['regions'] = placement['preferences']['regions']
 
     return data
 
@@ -110,8 +119,11 @@ def scaler(db):
         else:
             # Job should have a shared worker
             identity = job['identity']
+            placement = get_placement(job)
             if identity not in shared_cpus:
                 shared_cpus[identity] = 0
+
+            placement = job
 
             shared_cpus[identity] += job['cpus']
 
