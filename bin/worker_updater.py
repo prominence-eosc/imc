@@ -2,6 +2,7 @@
 """Worker lifecycle management"""
 
 # TODO: If infrastructure not yet deployed, see if still needed
+# TODO: Handle partial deletion of infra with multiple instances 
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -29,47 +30,49 @@ def update_status(db, workers_list):
     Update status of infrastructures
     """
     # Update workers to visible status
-    infras = db.deployment_get_infra_in_state_cloud('running')
+    infras = db.deployment_get_infra_in_state_cloud_log('running')
     for infra in infras:
         for worker in workers_list:
-            if worker['id'] == infra['id']:
-                logger.info('Changing status of infra %s to visible', infra['id'])
-                db.deployment_update_status(infra['id'], 'visible')
+            if worker['unique_id'] == infra['unique_id']:
+                logger.info('Changing status of infra %s and unique id %s to visible', infra['id'], infra['unique_id'])
+                db.deployment_update_status_log(infra['unique_id'], 'visible')
 
     # Update workers to left status
-    infras = db.deployment_get_infra_in_state_cloud('visible')
+    infras = db.deployment_get_infra_in_state_cloud_log('visible')
     for infra in infras:
         found = False
         for worker in workers_list:
-            if worker['id'] == infra['id']:
+            if worker['unique_id'] == infra['unique_id']:
                 found = True
         if not found:
-            logger.info('Changing status of infra %s to left', infra['id'])
-            db.deployment_update_status(infra['id'], 'left')
+            logger.info('Changing status of infra %s and unique id %s to left', infra['id'], infra['unique_id'])
+            db.deployment_update_status_log(infra['unique_id'], 'left')
 
     # Check for workers which have returned and workers which should be deleted
-    infras = db.deployment_get_infra_in_state_cloud('left')
+    infras = db.deployment_get_infra_in_state_cloud_log('left')
     for infra in infras:
         found = False
         for worker in workers_list:
-            if worker['id'] == infra['id']:
-                db.deployment_update_status(worker['id'], 'visible')
+            if worker['unique_id'] == infra['unique_id']:
+                db.deployment_update_status_log(worker['unique_id'], 'visible')
                 found = True
         if not found and time.time() - infra['updated'] > int(CONFIG.get('workers', 'time_after_left')):
-            logger.info('Worker with id %s left the pool, so deleting', infra['id'])
+            logger.info('Worker with id %s and unique id %s left the pool, so deleting', infra['id'], infra['unique_id'])
             db.deployment_update_status(infra['id'], 'deletion-requested')
-        
+            db.deployment_update_status_log(infra['unique_id'], 'deletion-requested')
+
     # Delete workers which never became visible
-    infras = db.deployment_get_infra_in_state_cloud('running')
+    infras = db.deployment_get_infra_in_state_cloud_log('running')
     for infra in infras:
         if time.time() - infra['updated'] > int(CONFIG.get('workers', 'max_time_since_creation')):
             found = False
             for worker in workers_list:
-                if worker['id'] == infra['id']:
+                if worker['unique_id'] == infra['unique_id']:
                     found = True
             if not found:
-                logger.info('Worker with id %s never joined the pool, so deleting', infra['id'])
+                logger.info('Worker with id %s and unique id %s never joined the pool, so deleting', infra['id'], infra['unique_id'])
                 db.deployment_update_status(infra['id'], 'deletion-requested')
+                db.deployment_update_status_log(infra['unique_id'], 'deletion-requested')
 
 if __name__ == "__main__":
     while True:

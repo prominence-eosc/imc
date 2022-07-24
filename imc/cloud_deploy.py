@@ -155,6 +155,7 @@ def deploy(instance, image, flavor, disk, cloud, region, clouds_info_list, time_
                 if state == 'running':
                     logger.info('Successfully deployed infrastructure on cloud %s, took %d secs', cloud, time.time() - time_begin_this_cloud)
                     db.set_deployment_stats(unique_infra_id, enums.DeploymentStatus.SUCCESS.value)
+                    db.deployment_update_status_log(unique_infra_id, 'running')
                     success = True
                     return (infrastructure_id, None)
 
@@ -163,6 +164,7 @@ def deploy(instance, image, flavor, disk, cloud, region, clouds_info_list, time_
                     logger.warning('Waiting too long for infrastructure to enter the running state, so destroying')
                     db.set_deployment_stats(unique_infra_id, enums.DeploymentStatus.NOT_YET_RUNNING.value)
                     client.delete_instance(name, infrastructure_id)
+                    db.deployment_update_status_log(unique_infra_id, 'failed')
                     break
 
                 # Destroy infrastructure for which deployment failed
@@ -170,10 +172,12 @@ def deploy(instance, image, flavor, disk, cloud, region, clouds_info_list, time_
                     logger.warning('Infrastructure creation failed on cloud %s, so destroying', cloud)
                     db.set_deployment_stats(unique_infra_id, enums.DeploymentStatus.FAILED.value)
                     client.delete_instance(name, infrastructure_id)
+                    db.deployment_update_status_log(unique_infra_id, 'failed')
                     break
 
         else:
             logger.warning('Deployment failure on cloud %s with id %s with msg="%s"', cloud, infrastructure_id, msg)
+            db.deployment_update_status_log(unique_infra_id, 'failed')
 
             if 'Quota exceeded' in msg or 'LimitExceeded' in msg or 'quota' in msg:
                 logger.info('Infrastructure creation failed due to quota exceeded on cloud %s, our id=%s', cloud, unique_id)

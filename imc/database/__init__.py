@@ -56,16 +56,19 @@ class Database(object):
                         delete_token
 
     from .deployment import deployment_get_infra_in_state_cloud, \
+                            deployment_get_infra_in_state_cloud_log, \
                             deployment_check_infra_id, \
                             deployment_get_status_reason, \
                             deployment_get_identity, \
                             deployment_get_identities, \
                             deployment_get_json, \
                             deployment_get_infra_id, \
+                            deployment_get, \
                             deployment_create, \
                             deployment_remove, \
                             deployment_log_remove, \
                             deployment_update_status, \
+                            deployment_update_status_log, \
                             deployment_update_status_reason, \
                             deployment_update_resources, \
                             get_infra_from_infra_id, \
@@ -174,11 +177,13 @@ class Database(object):
             cursor.execute('''CREATE TABLE IF NOT EXISTS
                               deployment_log(unique_infra_id TEXT NOT NULL PRIMARY KEY,
                                              instance INT NOT NULL,
+                                             status TEXT NOT NULL,
                                              cloud TEXT NOT NULL,
                                              cloud_infra_id TEXT,
                                              id TEXT NOT NULL,
                                              identity TEXT NOT NULL,
                                              created INT NOT NULL,
+                                             updated INT,
                                              reason INT,
                                              CONSTRAINT fk_infra
                                              FOREIGN KEY(id)

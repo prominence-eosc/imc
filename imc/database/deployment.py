@@ -5,6 +5,49 @@ from psycopg2.extras import Json
 # Logging
 logger = logging.getLogger(__name__)
 
+def deployment_get_infra_in_state_cloud_log(self, state):
+    """
+    """
+    infra = []
+    try:
+        cursor = self._connection.cursor()
+        cursor.execute("SELECT id,unique_infra_id,instance,created,updated,identity FROM deployment_log WHERE status='%s'" % state)
+        for row in cursor:
+            infra.append({"id":row[0],
+                          "unique_id": row[1],
+                          "instance": row[2],
+                          "created": row[3],
+                          "updated": row[4],
+                          "identity": row[5]})
+        cursor.close()
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get_infra_in_state_cloud due to: %s', err)
+    return infra
+
+def deployment_get(self, unique_infra_id):
+    """
+    """
+    data = {}
+    try:
+        cursor = self._connection.cursor()
+        cursor.execute("SELECT id,instance,created,updated,status,identity,cloud FROM deployment_log WHERE unique_infra_id='%s'" % unique_infra_id)
+        result = cursor.fetchone()
+        if result:
+            data = {"id": result[0],
+                    "instance": result[1],
+                    "created": result[2],
+                    "updated": result[3],
+                    "status": result[4],
+                    "identity": result[5],
+                    "cloud": result[6]}
+                    
+        cursor.close()
+    except Exception as err:
+        logger.critical('Unable to execute query in deployment_get due to: %s', err)
+
+    return data
+
+
 def deployment_get_infra_in_state_cloud(self, state, cloud=None, order=False):
     """
     Return a list of all infrastructure IDs for infrastructure in the specified state and cloud
@@ -19,7 +62,7 @@ def deployment_get_infra_in_state_cloud(self, state, cloud=None, order=False):
         cursor = self._connection.cursor()
         cursor.execute("SELECT id,creation,updated,identity FROM deployments WHERE status='%s' %s" % (state, query))
         for row in cursor:
-            infra.append({"id":row[0], "created":row[1], "updated":row[2], "identity":row[3]})
+            infra.append({"id": row[0], "created": row[1], "updated": row[2], "identity": row[3]})
         cursor.close()
     except Exception as err:
         logger.critical('Unable to execute query in deployment_get_infra_in_state_cloud due to: %s', err)
@@ -169,8 +212,8 @@ def create_cloud_deployment(self, infra_id, instance, unique_infra_id, cloud, id
     """
     Log deployment
     """
-    return self.execute("INSERT INTO deployment_log (id, instance, unique_infra_id, cloud, identity, created) VALUES (%s, %s,%s,%s,%s,%s)",
-                        (infra_id, instance, unique_infra_id, cloud, identity, time.time()))
+    return self.execute("INSERT INTO deployment_log (id, instance, unique_infra_id, cloud, identity, created, updated, status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                        (infra_id, instance, unique_infra_id, cloud, identity, time.time(), time.time(), 'creating'))
 
 def update_cloud_deployment(self, unique_infra_id, cloud_infra_id):
     """
@@ -259,6 +302,15 @@ def deployment_log_remove(self, infra_id):
     Remove an infrastructure from the DB
     """
     return self.execute("DELETE FROM deployment_log WHERE id='%s'" % infra_id)
+
+def deployment_update_status_log(self, unique_infra_id, status):
+    """
+    Update deployment status
+    """
+    if status in ('left', 'visible', 'running', 'waiting', 'unable', 'creating'):
+        return self.execute("UPDATE deployment_log SET status='%s',updated=%d WHERE unique_infra_id='%s' AND status NOT IN ('deleted', 'deleting', 'deletion-requested', 'deletion-failed')" % (status, time.time(), unique_infra_id))
+    else:
+        return self.execute("UPDATE deployment_log SET status='%s',updated=%d WHERE unique_infra_id='%s'" % (status, time.time(), unique_infra_id))
 
 def deployment_update_status(self, infra_id, status=None, cloud=None, cloud_infra_id=None, resource_type='cloud'):
     """
