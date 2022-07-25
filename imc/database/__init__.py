@@ -183,7 +183,7 @@ class Database(object):
                                              id TEXT NOT NULL,
                                              identity TEXT NOT NULL,
                                              created INT NOT NULL,
-                                             updated INT,
+                                             updated INT NOT NULL,
                                              reason INT,
                                              CONSTRAINT fk_infra
                                              FOREIGN KEY(id)
