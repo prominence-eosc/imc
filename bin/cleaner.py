@@ -125,7 +125,7 @@ def find_and_delete_phantoms(db, workers):
                                             instance['id'])
                                 db.deployment_update_status(infra_id_from_cloud, 'deletion-requested')
                     else:
-                        logger.info('Instance is not in db, deleting...')
+                        logger.info('Instance is not in db but was created by us, deleting...')
                         db.deployment_update_status(infra_id_from_cloud, 'deletion-requested')
 
 if __name__ == "__main__":
