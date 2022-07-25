@@ -59,8 +59,10 @@ def delete(db, infra_id):
             if not status:
                 overall_status = False
                 logger.critical('Unable to destroy infrastructure with infrastructure id %s', infrastructure['id'])
+                db.deployment_update_status_log(infrastructure['unique_id'], 'deletion-failed')
             else:
                 logger.info('Destroyed infrastructure with name %s and infrastructure id %s', name, infrastructure['id'])
+                db.deployment_update_status_log(infrastructure['unique_id'], 'deleted')
 
     if overall_status:
         db.deployment_update_status(infra_id, 'deleted')
