@@ -48,6 +48,7 @@ def provisioner(db, unique_id):
     if not clouds_check:
         logger.critical('No clouds exist which meet the requested requirements')
         db.deployment_update_status_reason(unique_id, 'NoMatchingResources')
+        db.deployment_update_status(unique_id, 'unable')
         return None
 
     # Update quotas if necessary
@@ -62,6 +63,7 @@ def provisioner(db, unique_id):
     if not clouds:
         logger.critical('No resources exist which meet the requested requirements')
         db.deployment_update_status_reason(unique_id, 'NoMatchingResourcesAvailable')
+        db.deployment_update_status(unique_id, 'waiting')
         return False
 
     # Shuffle list of clouds
@@ -73,7 +75,7 @@ def provisioner(db, unique_id):
 
     # Check if we still have any clouds meeting requirements & preferences
     if not clouds_ranked:
-        logger.critical('No suitables clouds after ranking - if we get to this point there must be a bug in the policies')
+        logger.critical('No suitable clouds after ranking - if we get to this point there must be a bug in the policies')
         db.deployment_update_status_reason(unique_id, 'DeploymentFailed')
         return False
 
